@@ -1,0 +1,15 @@
+*.o
+*.log
+*~
+*#*
+*.DS_Store
+*.swp
+*.sass-cache
+**.swp
+**/.bundle
+
+**/log/**
+**/logs/**
+**/tmp/**
+
+node_modules
