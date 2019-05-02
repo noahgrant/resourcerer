@@ -1,6 +1,7 @@
+var webpack = require('webpack');
+
 module.exports = (config) => {
   config.set({
-    basePath: './',
     browsers: ['ChromeCustom'],
     customLaunchers: {
       ChromeCustom: {
@@ -9,47 +10,41 @@ module.exports = (config) => {
       }
     },
     client: {captureConsole: false},
-    files: [
-      'lib/*.js',
-      'test/*.js'
-    ],
+    files: ['test/setup.js'],
     frameworks: ['jasmine'],
     plugins: [
       'karma-chrome-launcher',
       'karma-jasmine',
       'karma-jasmine-html-reporter',
-      'karma-babel-preprocessor',
       'karma-webpack'
     ],
-    port: 5324,
+    port: 9876,
     preprocessors: {
-      'lib/*.js': ['babel', 'webpack'],
-      'test/*.js': ['babel', 'webpack']
-    },
-    babelPreprocessor: {
-      options: {
-        presets: ['@babel/react'],
-        plugins: [
-          ['@babel/proposal-decorators', {legacy: true}]
-        ],
-        ignore: ['node_modules/**']
-      }
+      'lib/*.js*': ['webpack'],
+      'test/*.js*': ['webpack']
     },
     reporters: ['progress', 'kjhtml'],
     singleRun: true,
     webpack: {
-      entry: './lib/index.js',
-      mode: 'production',
+      mode: 'development',
       module: {
         rules: [{
           test: /\.jsx?$/,
           exclude: /node_modules/,
-          use: 'babel-loader?cacheDirectory=true'
+          use: {
+            loader: 'babel-loader?cacheDirectory=true',
+            options: {
+              presets: [['@babel/env', {targets: {chrome: '67'}, modules: 'cjs'}], '@babel/react'],
+              plugins: [['@babel/proposal-decorators', {legacy: true}]],
+              ignore: ['node_modules/**']
+            }
+          }
         }, {
-          test: /backbone.js$/,
+          test: /schmackbone.js$/,
           use: 'imports-loader?define=>false'
         }]
-      }
+      },
+      plugins: [new webpack.NormalModuleReplacementPlugin(/^backbone$/, 'schmackbone')]
     }
   });
 };
