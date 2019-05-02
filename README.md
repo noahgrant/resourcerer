@@ -1,5 +1,7 @@
 # with-resources
 
+[![CircleCI](https://circleci.com/gh/SiftScience/with-resources/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)]
+
 ### Tests
 The `with-resources` package is written in ESNext and will rely on users' build systems to transpile into appropriate JavaScript. There
 is a webpack and babel build for testing purposes via [karma](https://karma-runner.github.io), and can be triggered with:

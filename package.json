@@ -10,8 +10,9 @@
   ],
   "main": "index.js",
   "scripts": {
-    "test": "NODE_ENV=test && karma start && npm run lint",
-    "lint": "eslint lib/*.js test/*.js"
+    "checks": "npm test && npm run lint",
+    "test": "NODE_ENV=test && karma start",
+    "lint": "eslint lib/*.js* test/*.js*"
   },
   "author": "",
   "devDependencies": {
