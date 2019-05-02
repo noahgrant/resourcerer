@@ -1,0 +1,1096 @@
+import * as Fetch from '../lib/fetch';
+
+import {_hasErrored, _hasLoaded, _isLoading, noOp} from '../lib/utils';
+import {ModelMap, ResourceKeys} from '../lib/config';
+import withResources, {
+  EMPTY_COLLECTION,
+  EMPTY_MODEL,
+  getCacheKey
+} from '../lib/with_resources.jsx';
+
+import Backbone from 'backbone';
+import ErrorBoundary from '../lib/error_boundary.jsx';
+import {LoadingStates} from '../lib/constants';
+import ModelCache from '../lib/model_cache';
+import React from 'react';
+import ReactDOM from 'react-dom';
+import {scryRenderedComponentsWithType} from 'react-dom/test-utils';
+import {UserModel} from './model_mocks';
+import {waitsFor} from './test_utils';
+
+var measure,
+    causeLogicError;
+
+const transformSpy = jasmine.createSpy('transform');
+const jasmineNode = document.createElement('div');
+
+@withResources((props) => ({
+  [ResourceKeys.ANALYSTS]: {noncritical: true},
+  [ResourceKeys.DECISIONS]: {
+    ...(props.includeDeleted ? {data: {include_deleted: true}} : {}),
+    listen: true,
+    measure,
+    status: props.status
+  },
+  [ResourceKeys.NOTES]: {noncritical: true, depends: ['noah']},
+  [ResourceKeys.USER]: {
+    fields: ['userId', 'fraudLevel'],
+    options: {
+      userId: props.userId,
+      fraudLevel: props.fraudLevel,
+      ...(props.delay ? {delay: props.delay} : {})
+    }
+  },
+  ...props.prefetch ? {
+    [ResourceKeys.SEARCH_QUERY]: {
+      fields: ['page'],
+      data: {from: props.page},
+      prefetches: [{page: props.page + 10}]
+    }
+  } : {},
+  ...props.fetchSignals ? {[ResourceKeys.SIGNALS]: {}} : {},
+  ...props.serial ? {
+    [ResourceKeys.ACTIONS]: {
+      provides: props.spread ?
+        {_: transformSpy.and.returnValue({provides1: 'moose', provides2: 'theberner'})} :
+        {serialProp: transformSpy.and.returnValue(42)}
+    },
+    [ResourceKeys.DECISION_LOGS]: {fields: ['serialProp'], depends: ['serialProp']}
+  } : {},
+  ...props.customName ? {
+    customDecisions: {
+      modelKey: ResourceKeys.DECISIONS,
+      status: true,
+      provides: {sift: () => 'science'}
+    }
+  } : {},
+  ...props.unfetch ? {[ResourceKeys.ACCOUNT_CONFIG]: {}} : {}
+}))
+class TestComponent extends React.Component {
+  render() {
+    var idontexist;
+
+    if (causeLogicError && _hasLoaded(this.props.decisionsLoadingState)) {
+      idontexist.neitherDoI;
+    }
+
+    return <div />;
+  }
+}
+
+/**
+ * Note we need to ensure the component has loaded in most cases before we
+ * unmount so that we don't empty the cache before the models get loaded.
+ */
+/* eslint-disable max-nested-callbacks */
+describe('withResources', () => {
+  var originalPerf = window.performance,
+      dataChild,
+      dataCarrier,
+      resources,
+
+      fetchSpy,
+      shouldResourcesError,
+      cached,
+      delayedResourceComplete,
+
+      defaultProps = {
+        userId: 'noah',
+        fraudLevel: 'high',
+        page: 0
+      },
+
+      renderWithResources = (props={}) =>
+        ReactDOM.render(<TestComponent {...defaultProps} {...props} />, jasmineNode);
+
+  beforeEach(() => {
+    UserModel.realCacheFields = UserModel.cacheFields;
+    UserModel.cacheFields = ['userId', 'fraudLevel'];
+    document.body.appendChild(jasmineNode);
+
+    fetchSpy = spyOn(Fetch, 'fetch').and.callFake((key, Model, options) => {
+      // mock fetch model cache behavior, where we put it in the cache immediately,
+      // then request the model, and only if it errors do we remove it from cache
+      var model = new Backbone.Model({key, ...(options.fetchData || {})});
+
+      ModelCache.put(key, model, options.component);
+
+      return new Promise((res, rej) => {
+        if ((options.options || {}).delay) {
+          return window.setTimeout(() => {
+            delayedResourceComplete = true;
+            ModelCache.remove(key);
+            rej(model);
+          }, options.options.delay);
+        }
+
+        if (cached) {
+          // treat model as though it were cached by resolving promise immediately
+          return res(model);
+        }
+
+        // put requests in a RAF to 'mimic' the procession of non-cached
+        // resources (ie, loading states get set because we don't immediately
+        // resolve the promise)
+        window.requestAnimationFrame(() => {
+          if (shouldResourcesError) {
+            model.status = 404;
+            ModelCache.remove(key);
+
+            rej(model);
+          } else {
+            model.status = 200;
+            res(model);
+          }
+        });
+      });
+    });
+
+    // phantomjs has a performance object, but no individual methods
+    window.performance = {
+      mark: noOp,
+      measure: noOp,
+      getEntriesByName: () => [{duration: 5}],
+      clearMarks: noOp,
+      clearMeasures: noOp,
+      now: noOp
+    };
+
+    spyOn(ModelCache, 'put').and.callThrough();
+  });
+
+  afterEach(() => {
+    UserModel.cacheFields = UserModel.realCacheFields;
+
+    window.performance = originalPerf;
+    unmountAndClearModelCache();
+    jasmineNode.remove();
+    causeLogicError = false;
+    shouldResourcesError = false;
+  });
+
+  it('fetches all resources before mounting', () => {
+    // syncronify fetchSpy since we don't need it to actually get anything
+    // or store anything in the cache
+    fetchSpy.and.returnValue({then: (res) => ({catch: () => false})});
+    dataChild = renderWithResources();
+    expect(fetchSpy.calls.count()).toEqual(3);
+  });
+
+  it('passed loading states for all resources down as props', async(done) => {
+    dataChild = renderWithResources().dataChild;
+    expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADING);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.notesLoadingState).toBe(LoadingStates.PENDING);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADED);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADED);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADED);
+    expect(dataChild.props.notesLoadingState).toBe(LoadingStates.PENDING);
+    done();
+  });
+
+  it('resources marked as noncritical don\'t factor into the loading props', async(done) => {
+    resources = renderWithResources();
+    dataChild = resources.dataChild;
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    resources.dataCarrier.setState({analystsLoadingState: LoadingStates.LOADING});
+    expect(dataChild.props.hasLoaded).toBe(true);
+    expect(dataChild.props.hasInitiallyLoaded).toBe(true);
+    expect(dataChild.props.isLoading).toBe(false);
+    expect(dataChild.props.hasErrored).toBe(false);
+    done();
+  });
+
+  it('global state keys get turned into props of the same name, with \'Model\' or ' +
+      '\'Collection\' appended as appropriate', async(done) => {
+    dataChild = renderWithResources().dataChild;
+
+    // keys in this case represent the returned models (since we're stubbing fetch)
+    expect(dataChild.props.decisionsCollection.get('key')).toEqual(ResourceKeys.DECISIONS);
+    expect(dataChild.props.userModel.get('key')).toBe('userfraudLevel=high_userId=noah');
+    expect(dataChild.props.analystsCollection.get('key')).toBe(ResourceKeys.ANALYSTS);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+    done();
+  });
+
+  it('has a setResourceState prop that allows a state-carrying wrapper to change props',
+    async(done) => {
+      resources = renderWithResources();
+      resources.dataCarrier.props.setResourceState({userId: 'alex'});
+      expect(resources.dataCarrier.props.userId).toEqual('alex');
+      await waitsFor(() => resources.dataChild.props.hasLoaded);
+      done();
+    });
+
+  describe('updates a resource', () => {
+    it('when a prop changes that is specified in its fields option', async(done) => {
+      resources = renderWithResources();
+      expect(fetchSpy.calls.count()).toEqual(3);
+      resources.dataCarrier.props.setResourceState({userId: 'alex'});
+      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(fetchSpy.calls.mostRecent().args[0]).toEqual('userfraudLevel=high_userId=alex');
+      expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.USER]);
+      expect(fetchSpy.calls.mostRecent().args[2].options).toEqual({
+        userId: 'alex',
+        fraudLevel: 'high'
+      });
+
+      await waitsFor(() => resources.dataChild.props.hasLoaded);
+
+      done();
+    });
+
+    it('when its cache key changes with nextProps', async(done) => {
+      // decisions collection doesn't have a `fields` prop in this component,
+      // but it should still update when passed `include_deleted`, since that
+      // exists on its cacheFields property
+      resources = renderWithResources();
+      expect(fetchSpy.calls.count()).toEqual(3);
+
+      resources.dataCarrier.props.setResourceState({includeDeleted: true});
+      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(fetchSpy.calls.mostRecent().args[0]).toEqual('decisionsinclude_deleted=true');
+      expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.DECISIONS]);
+      expect(fetchSpy.calls.mostRecent().args[2].fetchData).toEqual({include_deleted: true});
+
+      await waitsFor(() => resources.dataChild.props.hasLoaded);
+
+      done();
+    });
+
+    it('when all its dependencies are present for the first time', async(done) => {
+      resources = renderWithResources();
+      expect(resources.dataCarrier.state.notesLoadingState).toEqual(LoadingStates.PENDING);
+      expect(fetchSpy.calls.count()).toEqual(3);
+      resources.dataCarrier.props.setResourceState({noah: true});
+      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(resources.dataCarrier.state.notesLoadingState).toEqual(LoadingStates.LOADING);
+      // depends prop won't factor into cache key unless part of fields
+      expect(fetchSpy.calls.mostRecent().args[0]).toEqual('notes');
+      expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.NOTES]);
+
+      await waitsFor(() => resources.dataChild.props.hasLoaded);
+      expect(resources.dataCarrier.state.notesLoadingState).toEqual(LoadingStates.LOADED);
+      done();
+    });
+  });
+
+  describe('unregisters the component from the ModelCache', () => {
+    var unregisterSpy;
+
+    beforeEach(async(done) => {
+      unregisterSpy = spyOn(ModelCache, 'unregister').and.callThrough();
+      resources = renderWithResources();
+      await waitsFor(() => resources.dataChild.props.hasLoaded);
+      done();
+    });
+
+    it('when a resource\'s field prop changes', () => {
+      expect(unregisterSpy).not.toHaveBeenCalled();
+      resources.dataCarrier.props.setResourceState({userId: 'zorah'});
+      expect(unregisterSpy).toHaveBeenCalledWith(
+        resources.dataCarrier,
+        'userfraudLevel=high_userId=noah'
+      );
+    });
+
+    it('when a component unmounts', () => {
+      // note: assign dataCarrier reference here because after unmount the ref becomes null
+      dataCarrier = resources.dataCarrier;
+      expect(unregisterSpy).not.toHaveBeenCalled();
+      unmountAndClearModelCache();
+      expect(unregisterSpy).toHaveBeenCalledWith(dataCarrier);
+    });
+  });
+
+  it('fetches a resource if newly specified', async(done) => {
+    resources = renderWithResources();
+    expect(fetchSpy.calls.count()).toEqual(3);
+    expect(fetchSpy.calls.all().map((call) => call.args[0])
+        .includes(ResourceKeys.SIGNALS)).toBe(false);
+
+    resources.dataCarrier.props.setResourceState({fetchSignals: true});
+    expect(fetchSpy.calls.count()).toEqual(4);
+    expect(fetchSpy.calls.mostRecent().args[0]).toEqual(ResourceKeys.SIGNALS);
+    expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.SIGNALS]);
+    await waitsFor(() => resources.dataChild.props.hasLoaded);
+    done();
+  });
+
+  it('only listens to resources passed with a \'listen\' option', async(done) => {
+    var modelsSubscribed;
+
+    resources = renderWithResources();
+
+    await waitsFor(() => resources.dataChild.props.hasLoaded);
+    modelsSubscribed = resources.dataCarrier._getBackboneModels();
+
+    expect(modelsSubscribed.length).toEqual(1);
+    expect(modelsSubscribed[0].get('key')).toEqual('decisions');
+    done();
+  });
+
+  it('does not fetch resources that are passed in via props', () => {
+    dataChild = renderWithResources({
+      userModel: new Backbone.Model(),
+      analystsCollection: new Backbone.Collection(),
+      decisionsCollection: new Backbone.Collection()
+    });
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    ReactDOM.unmountComponentAtNode(jasmineNode);
+
+    // the models passed down are not fetched
+    dataChild = renderWithResources({
+      userModel: new Backbone.Model(),
+      decisionsCollection: new Backbone.Collection()
+    });
+
+    expect(fetchSpy.calls.count()).toEqual(1);
+    expect(fetchSpy.calls.mostRecent().args[0]).toEqual('analysts');
+  });
+
+  it('does not set loading states if the component unmounts before the request returns',
+    async(done) => {
+      var attachListenersSpy,
+          nextTick;
+
+      resources = renderWithResources();
+      ({dataCarrier, dataChild} = resources);
+
+      attachListenersSpy = spyOn(dataCarrier, '_attachModelListeners');
+
+      // start mock clock now because we need to make assertions between when
+      // the component is removed and when we want the models to be removed
+      jasmine.clock().install();
+      ReactDOM.unmountComponentAtNode(jasmineNode);
+      window.requestAnimationFrame(() => nextTick = true);
+
+      // wait til the next tick to ensure our resources have been 'fetched'
+      await waitsFor(() => nextTick);
+
+      expect(dataCarrier._getBackboneModels().length).toEqual(1);
+      expect(attachListenersSpy).not.toHaveBeenCalled();
+      expect(dataCarrier.state.decisionsLoadingState).toEqual(LoadingStates.LOADING);
+      expect(dataCarrier.state.analystsLoadingState).toEqual(LoadingStates.LOADING);
+      expect(dataCarrier.state.userLoadingState).toEqual(LoadingStates.LOADING);
+
+      // now finish model removal
+      jasmine.clock().tick(150000);
+      jasmine.clock().uninstall();
+      done();
+    });
+
+  it('prioritizes critical resource requests before noncritical requests before prefetch', () => {
+    renderWithResources({prefetch: true});
+    expect(fetchSpy.calls.argsFor(0)[0]).toEqual('decisions');
+    expect(fetchSpy.calls.argsFor(1)[0]).toEqual('userfraudLevel=high_userId=noah');
+    expect(fetchSpy.calls.argsFor(2)[0]).toEqual('searchQuery');
+    expect(fetchSpy.calls.argsFor(2)[2].prefetch).not.toBeDefined();
+    // noncritical call is second-to-last
+    expect(fetchSpy.calls.argsFor(3)[0]).toEqual('analysts');
+    // prefetch call is last
+    expect(fetchSpy.calls.argsFor(4)[0]).toEqual('searchQueryfrom=10');
+    expect(fetchSpy.calls.argsFor(4)[2].prefetch).toBeDefined();
+  });
+
+  it('passes a false \'fetch\' option if the model key is of an unfetched model', () => {
+    fetchSpy.and.returnValue(Promise.resolve());
+    renderWithResources({unfetch: true});
+
+    expect(fetchSpy.calls.argsFor(0)[2].fetch).toBe(true);
+    expect(fetchSpy.calls.argsFor(1)[2].fetch).toBe(true);
+    // third call is the unfetched resource
+    expect(fetchSpy.calls.argsFor(2)[0]).toEqual('accountConfig');
+    expect(fetchSpy.calls.argsFor(2)[2].fetch).toBe(false);
+    expect(fetchSpy.calls.argsFor(3)[2].fetch).toBe(true);
+  });
+
+  describe('creates a cache key', () => {
+    describe('when a model has a cacheFields property', () => {
+      it('with the GS key as the base, keys from the cacheFields, and values from \'data\'', () => {
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          data: {
+            userId: 'noah',
+            fraudLevel: 'high',
+            lastName: 'grant'
+          }
+        })).toEqual('userfraudLevel=high_userId=noah');
+
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          data: {
+            userId: 'alex',
+            fraudLevel: 'low',
+            lastName: 'lopatron'
+          }
+        })).toEqual('userfraudLevel=low_userId=alex');
+      });
+
+      it('prioritizes cacheFields in \'options\' or \'attriModels\' config properties', () => {
+        expect(getCacheKey({
+          attriModels: {fraudLevel: 'miniscule'},
+          modelKey: ResourceKeys.USER,
+          options: {userId: 'theboogieman'}
+        })).toEqual('userfraudLevel=miniscule_userId=theboogieman');
+      });
+
+      it('can invoke a cacheFields function entry', () => {
+        UserModel.cacheFields = ['userId',
+          ({fraudLevel, lastName}) => ({
+            fraudLevel: fraudLevel + lastName,
+            lastName
+          })];
+
+        expect(getCacheKey({
+          attriModels: {userId: 'noah'},
+          modelKey: ResourceKeys.USER,
+          data: {
+            fraudLevel: 'high',
+            lastName: 'grant'
+          }
+        })).toEqual('userfraudLevel=highgrant_lastName=grant_userId=noah');
+      });
+    });
+
+    describe('when a model does not have a cacheFields property', () => {
+      beforeEach(() => {
+        UserModel.cacheFields = null;
+      });
+
+      it('with the GS key as the base and value fields alphabetized', () => {
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          fields: ['userId', 'fraudLevel', 'lastName']
+        }, {
+          userId: 'noah',
+          fraudLevel: 'high',
+          lastName: 'grant'
+        })).toEqual('usergrant_high_noah');
+
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          fields: ['userId', 'fraudLevel', 'lastName']
+        }, {
+          userId: 'alex',
+          fraudLevel: 'low',
+          lastName: 'lopatron'
+        })).toEqual('useralex_lopatron_low');
+
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          fields: ['userId', 'score', 'lastName', 'someNumber']
+        }, {
+          userId: 'alex',
+          score: 12,
+          lastName: 'lopatron',
+          someNumber: 2
+        })).toEqual('user12_2_alex_lopatron');
+      });
+
+      it('ignoring any fields with \'cacheIgnore\': true', () => {
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          fields: ['userId', {name: 'fraudLevel', cacheIgnore: true}, 'lastName']
+        }, {
+          userId: 'noah',
+          fraudLevel: 'high',
+          lastName: 'grant'
+        })).toEqual('usergrant_noah');
+      });
+
+      it('that modifies any prop value if a field has a \'map\' property', () => {
+        expect(getCacheKey({
+          modelKey: ResourceKeys.USER,
+          fields: [
+            {name: 'userId', map: (val, props) => `super${props.fraudLevel}${val}`},
+            'fraudLevel',
+            'lastName'
+          ]
+        }, {
+          userId: 'noah',
+          fraudLevel: 'high',
+          lastName: 'grant'
+        })).toEqual('usergrant_high_superhighnoah');
+      });
+    });
+  });
+
+  describe('does not update resource loading state if the fetched resource is not current', () => {
+    beforeEach(() => {
+      jasmine.clock().install();
+    });
+
+    afterEach(() => {
+      delayedResourceComplete = null;
+      cached = null;
+      jasmine.clock().uninstall();
+    });
+
+    it('for a non-cached resource', async(done) => {
+      dataChild = renderWithResources({delay: 5000}).dataChild;
+      expect(fetchSpy.calls.count()).toEqual(3);
+      dataChild = renderWithResources({userId: 'zorah'}).dataChild;
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(fetchSpy.calls.count()).toEqual(4);
+      jasmine.clock().tick(6000);
+
+      await waitsFor(() => delayedResourceComplete);
+      // even though old resource errored, we're still in a loaded state!
+      expect(dataChild.props.hasLoaded).toBe(true);
+      done();
+    });
+
+    it('for a cached resource', async(done) => {
+      // this test is just to ensure that, when a cached resource is requested
+      // on an update (via cWRP), which means it resolves its promise
+      // immediately, that the loading state is still set (because the cache key,
+      // which uses nextProps in cWRP, should equal the cache key check in the
+      // resolve handler, which uses this.props.
+      //
+      // NOTE: this won't be necessary when we move _fetchResources to cDU
+      ({dataChild, dataCarrier} = renderWithResources());
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+      // force it to an error state so that we can see the state change
+      dataCarrier.setState({userLoadingState: 'error'});
+      expect(dataChild.props.userLoadingState).toEqual('error');
+
+      // trigger cWRP with a new user, but the user that's 'already cached'
+      cached = true;
+      dataChild = renderWithResources({userId: 'zorah', fraudLevel: null}).dataChild;
+
+      // now assert that we turn back to a loaded state from the cached resource
+      await waitsFor(() => dataChild.props.hasLoaded);
+      expect(dataChild.props.userModel.get('key')).toEqual('useruserId=zorah');
+      done();
+    });
+  });
+
+  describe('passes down empty models or collections', () => {
+    it('for pending or errored resources (because their keys are not in cache)', async(done) => {
+      dataChild = renderWithResources().dataChild;
+
+      // these are our two critical resources, whose models have been placed in
+      // the cache before fetching
+      expect(dataChild.props.decisionsCollection).not.toEqual(EMPTY_COLLECTION);
+      expect(dataChild.props.userModel).not.toEqual(EMPTY_MODEL);
+
+      // however, this is a pending resource, so it should not be in the cache
+      expect(dataChild.props.notesModel).toEqual(EMPTY_MODEL);
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+      unmountAndClearModelCache();
+
+      // the models are removed from the cache after erroring
+      shouldResourcesError = true;
+      dataChild = renderWithResources().dataChild;
+
+      await waitsFor(() => dataChild.props.hasErrored);
+
+      expect(dataChild.props.decisionsCollection).toEqual(EMPTY_COLLECTION);
+      expect(dataChild.props.userModel).toEqual(EMPTY_MODEL);
+      done();
+    });
+
+    it('that cannot be modified', async(done) => {
+      var decisionsCollection,
+          userModel;
+
+      shouldResourcesError = true;
+      dataChild = renderWithResources().dataChild;
+
+      await waitsFor(() => dataChild.props.hasErrored);
+      // we know these are the empty models from the previous test
+      ({decisionsCollection, userModel} = dataChild.props);
+
+      expect(() => decisionsCollection.frontend = 'farmers').toThrow();
+      expect(decisionsCollection.frontend).not.toBeDefined();
+      expect(() => userModel.frontend = 'farmers').toThrow();
+      expect(userModel.frontend).not.toBeDefined();
+
+      expect(() => decisionsCollection.models.push({frontend: 'farmers'})).toThrow();
+      expect(decisionsCollection.length).toEqual(0);
+      decisionsCollection.add({frontend: 'farmers'});
+      expect(decisionsCollection.length).toEqual(0);
+
+      expect(() => userModel.attributes.frontend = 'farmers').toThrow();
+      expect(userModel.attributes.frontend).not.toBeDefined();
+      userModel.set('frontend', 'farmers');
+      expect(userModel.attributes.frontend).not.toBeDefined();
+
+      done();
+    });
+  });
+
+  describe('if a model has a \'providesModels\' function', () => {
+    // let's say user model provides two unfetched models:
+    // a decision instance and a label instance
+    var oldProvides,
+        newProvides;
+
+    beforeEach(() => {
+      newProvides = [{
+        attriModels: {content_abuse: {id: 'content_decision'}},
+        shouldCache: () => true,
+        modelKey: ResourceKeys.DECISION_INSTANCE,
+        options: {entityId: 'noah', entityType: 'content'}
+      }, {
+        modelKey: ResourceKeys.LABEL_INSTANCE,
+        options: {userId: 'noah'}
+      }];
+    });
+
+    afterEach(() => {
+      Fetch.fetch.calls.reset();
+      ModelCache.put.calls.reset();
+      ModelMap[ResourceKeys.USER].providesModels = oldProvides;
+    });
+
+    it('caches instantiated unfetched models when the parent model returns', async(done) => {
+      ModelMap[ResourceKeys.USER].providesModels = () => newProvides;
+      ({dataChild, dataCarrier} = renderWithResources());
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(ModelCache.put.calls.count()).toEqual(5);
+      expect(ModelCache.put.calls.argsFor(3)[0])
+          .toEqual('decisionInstanceentityId=noah_entityType=content');
+      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.DECISION_INSTANCE])
+          .toBe(true);
+      expect(ModelCache.put.calls.argsFor(3)[2]).toEqual(dataCarrier);
+
+      expect(ModelCache.put.calls.argsFor(4)[0])
+          .toEqual('labelInstanceuserId=noah');
+      expect(ModelCache.put.calls.argsFor(4)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
+          .toBe(true);
+      expect(ModelCache.put.calls.argsFor(4)[2]).toEqual(dataCarrier);
+
+      done();
+    });
+
+    it('updates previously existing models if they exist', async(done) => {
+      var testModel = new Backbone.Model({content_abuse: {id: 'another_content_decision'}}),
+          testKey = 'decisionInstanceentityId=noah_entityType=content';
+
+      ModelMap[ResourceKeys.USER].providesModels = () => newProvides;
+      ModelCache.put(testKey, testModel);
+      ModelCache.put.calls.reset();
+      expect(ModelCache.get(testKey).get('content_abuse').id).toEqual('another_content_decision');
+
+      ({dataChild, dataCarrier} = renderWithResources());
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(ModelCache.put.calls.count()).toEqual(4);
+      // model cache is called, but never for our existing model
+      expect([
+        ModelCache.put.calls.argsFor(0)[0],
+        ModelCache.put.calls.argsFor(1)[0],
+        ModelCache.put.calls.argsFor(2)[0],
+        ModelCache.put.calls.argsFor(3)[0]
+      ]).not.toContain(testKey);
+
+      // label still gets called!
+      expect(ModelCache.put.calls.argsFor(3)[0])
+          .toEqual('labelInstanceuserId=noah');
+      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
+          .toBe(true);
+      expect(ModelCache.put.calls.argsFor(3)[2]).toEqual(dataCarrier);
+
+      // same test model should exist at the test key
+      expect(ModelCache.get(testKey)).toEqual(testModel);
+      // but its contents have been changed!
+      expect(ModelCache.get(testKey).get('content_abuse').id).toEqual('content_decision');
+
+      done();
+    });
+
+    it('does nothing if the shouldCache function returns false', async(done) => {
+      ModelMap[ResourceKeys.USER].providesModels = () => newProvides.map((config) => ({
+        ...config,
+        shouldCache: () => false
+      }));
+      ({dataChild, dataCarrier} = renderWithResources());
+
+      await waitsFor(() => Fetch.fetch.calls.count() === 3);
+      expect(ModelCache.put.calls.count()).toEqual(3);
+      done();
+    });
+  });
+
+  /*
+  describe('has a \'measure\' option', () => {
+    var markCount = 0,
+        markName = '',
+        measureCount = 0,
+        measureName = '';
+
+    beforeEach(() => {
+      // React 16 calls the performance object all over the place, so we can't
+      // really count on the spying directly for tests. We kinda need to hack
+      // around it.
+      spyOn(window.performance, 'mark').and.callFake((...args) => {
+        if (args[0] === 'decisions') {
+          markCount++;
+          markName = args[0];
+
+          return;
+        }
+
+        return originalPerf.mark(...args);
+      });
+
+      spyOn(window.performance, 'measure').and.callFake((...args) => {
+        if (args[0] === 'decisionsFetch') {
+          measureCount++;
+          measureName = args[1];
+
+          return;
+        }
+
+        return originalPerf.measure(...args);
+      });
+    });
+
+    afterEach(() => {
+      markCount = 0;
+      markName = '';
+      measureCount = 0;
+      measureName = '';
+    });
+
+    it('that does not measure by default', (done) => {
+      dataChild = renderWithResources().dataChild;
+
+      waitsFor(() => dataChild.props.hasLoaded).then(() => {
+        expect(markCount).toEqual(0);
+        expect(measureCount).toEqual(0);
+        expect(mixpanel.trackMixpanelEvent).not.toHaveBeenCalled();
+        done();
+      });
+    });
+
+    describe('that when set to true', () => {
+      beforeEach((done) => {
+        measure = true;
+        spyOn(ModelCache, 'get').and.returnValue(undefined);
+        dataChild = renderWithResources().dataChild;
+        waitsFor(() => dataChild.props.hasLoaded).then(done);
+      });
+
+      it('measures the request time', () => {
+        expect(markName).toEqual(ResourceKeys.DECISIONS);
+        expect(measureCount).toEqual(1);
+        expect(measureName).toEqual(ResourceKeys.DECISIONS);
+      });
+
+      it('sends the request to mixpanel', () => {
+        expect(mixpanel.trackMixpanelEvent).toHaveBeenCalledWith('API Fetch', {
+          Resource: ResourceKeys.DECISIONS,
+          data: undefined,
+          options: undefined,
+          duration: 5
+        });
+      });
+    });
+  });
+  */
+
+  describe('for a resource with a \'depends\' option', () => {
+    beforeEach(() => {
+      resources = renderWithResources({serial: true});
+      ({dataCarrier, dataChild} = resources);
+    });
+
+    it('will not fetch until the dependent prop is available', async(done) => {
+      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(fetchSpy.calls.all().map((call) => call.args[0])
+          .includes(ResourceKeys.ACTIONS)).toBe(true);
+      expect(fetchSpy.calls.mostRecent().args[0]).not.toMatch(ResourceKeys.DECISION_LOGS);
+
+      await waitsFor(() => dataCarrier.props.serialProp);
+      expect(fetchSpy.calls.count()).toEqual(5);
+      expect(fetchSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+      done();
+    });
+
+    it('reverts back to pending state if its dependencies are removed', async(done) => {
+      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
+
+      await waitsFor(() => dataCarrier.props.serialProp);
+      expect(_isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
+      expect(fetchSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+
+      await waitsFor(() => _hasLoaded(dataCarrier.state.decisionLogsLoadingState));
+      resources.setState({serialProp: null});
+
+      await waitsFor(() => !dataCarrier.props.serialProp);
+      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
+      // we have a new model cache key for the dependent model because
+      // the value of serialProp has changed. so the cache lookup should
+      // again be empty
+      expect(dataChild.props.decisionLogsCollection).toEqual(EMPTY_COLLECTION);
+      done();
+    });
+  });
+
+  describe('for a resource with a \'provides\' option', () => {
+    it('will set the provided prop from its resource via the transform value', async(done) => {
+      var actionsModel;
+
+      dataCarrier = renderWithResources({serial: true}).dataCarrier;
+
+      expect(dataCarrier.props.serialProp).not.toBeDefined();
+      expect(transformSpy).toHaveBeenCalled();
+      actionsModel = transformSpy.calls.mostRecent().args[0];
+      expect(actionsModel instanceof Backbone.Model).toBe(true);
+      expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
+
+      await waitsFor(() => dataCarrier.props.serialProp);
+      expect(dataCarrier.props.serialProp).toEqual(42);
+      done();
+    });
+
+    it('will set dynamic props if passed the spread character as a key', async(done) => {
+      var actionsModel;
+
+      dataCarrier = renderWithResources({serial: true, spread: true}).dataCarrier;
+
+      expect(dataCarrier.props.provides1).not.toBeDefined();
+      expect(dataCarrier.props.provides2).not.toBeDefined();
+      expect(transformSpy).toHaveBeenCalled();
+
+      actionsModel = transformSpy.calls.mostRecent().args[0];
+      expect(actionsModel instanceof Backbone.Model).toBe(true);
+      expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
+
+      await waitsFor(() => dataCarrier.props.provides1);
+      expect(dataCarrier.props.provides1).toEqual('moose');
+      expect(dataCarrier.props.provides2).toEqual('theberner');
+      done();
+    });
+  });
+
+  describe('accepts an array of configuration options', () => {
+    it('that passes the first entry down as the model prop', async(done) => {
+      ({dataChild} = renderWithResources({prefetch: true}));
+
+      // first entry has data: {from: 0}
+      await waitsFor(() => dataChild.props.searchQueryModel);
+      expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
+      done();
+    });
+
+    describe('that prefetches the other entries', () => {
+      it('and does not send them down as props', async(done) => {
+        ({dataChild} = renderWithResources({prefetch: true}));
+
+        expect(fetchSpy.calls.count()).toEqual(5);
+        // should have two search query calls, but the props on searchQueryModel
+        // should have from = 0
+        expect(fetchSpy.calls.all()
+            .map((call) => call.args[0])
+            .filter((key) => /^searchQuery/.test(key)).length).toEqual(2);
+
+        await waitsFor(() => dataChild.props.searchQueryModel);
+        expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
+        done();
+      });
+
+      it('that are not taken into account for component loading states', async(done) => {
+        var prefetchLoading = true,
+            prefetchError,
+            searchQueryLoading,
+            haveCalledPrefetch,
+            haveCalledSearchQuery;
+
+        fetchSpy.and.callFake((key, Model, options={}) => new Promise((res, rej) => {
+          window.requestAnimationFrame(() => {
+            var model = new Backbone.Model({key, ...(options.fetchData || {})});
+
+            if (options.prefetch) {
+              haveCalledPrefetch = true;
+
+              // never-resolving promise to mock long-loading request
+              if (prefetchLoading) {
+                return false;
+              } else if (prefetchError) {
+                return rej(model);
+              }
+
+              ModelCache.put(key, model, options.component);
+              res(model);
+            } else {
+              if (/searchQuery/.test(key) && searchQueryLoading) {
+                haveCalledSearchQuery = true;
+
+                return false;
+              }
+
+              ModelCache.put(key, model, options.component);
+              res(model);
+            }
+          });
+        }));
+
+        ({dataChild} = renderWithResources({prefetch: true}));
+
+        // first test the case where the prefetch takes a long time--we should still be in
+        // a loaded state
+        await waitsFor(() => dataChild.props.searchQueryModel && haveCalledPrefetch);
+        expect(dataChild.props.hasLoaded).toBe(true);
+
+        ReactDOM.unmountComponentAtNode(jasmineNode);
+        prefetchLoading = false;
+        prefetchError = true;
+        haveCalledPrefetch = false;
+        ({dataChild} = renderWithResources({prefetch: true}));
+
+        // now test when the prefetch has errored--we should still be in a loaded state
+        await waitsFor(() => dataChild.props.searchQueryModel && haveCalledPrefetch);
+        expect(dataChild.props.hasLoaded).toBe(true);
+
+        ReactDOM.unmountComponentAtNode(jasmineNode);
+        prefetchError = false;
+        searchQueryLoading = true;
+        haveCalledPrefetch = false;
+        ({dataChild} = renderWithResources({prefetch: true}));
+
+        // finally, let's say the prefetch resolves but our first query is still loading.
+        // we should be in a loading state.
+        await waitsFor(() => haveCalledPrefetch && haveCalledSearchQuery);
+        expect(dataChild.props.isLoading).toBe(true);
+
+        searchQueryLoading = false;
+        haveCalledPrefetch = false;
+        haveCalledSearchQuery = false;
+        done();
+      });
+    });
+  });
+
+  describe('for a response with \'status\'', () => {
+    it('sets the status when resource loads', async(done) => {
+      dataChild = renderWithResources({status: true}).dataChild;
+      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADING);
+      expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
+      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
+      expect(dataChild.props.decisionsStatus).toEqual(undefined);
+      expect(dataChild.props.userStatus).toEqual(undefined);
+      expect(dataChild.props.analystsStatus).toEqual(undefined);
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADED);
+      expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADED);
+      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADED);
+      expect(dataChild.props.decisionsStatus).toBe(200);
+      expect(dataChild.props.userStatus).toEqual(undefined);
+      expect(dataChild.props.analystsStatus).toEqual(undefined);
+      done();
+    });
+
+    it('sets the status when resource errors', async(done) => {
+      shouldResourcesError = true;
+      dataChild = renderWithResources({status: true}).dataChild;
+      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADING);
+      expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
+      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
+      expect(dataChild.props.decisionsStatus).toEqual(undefined);
+      expect(dataChild.props.userStatus).toEqual(undefined);
+      expect(dataChild.props.analystsStatus).toEqual(undefined);
+
+      await waitsFor(() => dataChild.props.hasErrored && !dataChild.props.isLoading);
+
+      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.ERROR);
+      expect(dataChild.props.userLoadingState).toBe(LoadingStates.ERROR);
+      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.ERROR);
+      expect(dataChild.props.decisionsStatus).toBe(404);
+      expect(dataChild.props.userStatus).toEqual(undefined);
+      expect(dataChild.props.analystsStatus).toEqual(undefined);
+      done();
+    });
+  });
+
+  it('sets an error state when a resource errors, but does not log', async(done) => {
+    shouldResourcesError = true;
+    dataChild = renderWithResources().dataChild;
+    expect(_isLoading(dataChild.props.decisionsLoadingState)).toBe(true);
+
+    await waitsFor(() => dataChild.props.hasErrored);
+    expect(_hasErrored(dataChild.props.decisionsLoadingState)).toBe(true);
+    done();
+  });
+
+  it('sets an error state and logs when a component errors after returning a resource',
+    async(done) => {
+      var boundary,
+          originalError = window.onerror;
+
+      window.onerror = noOp();
+      causeLogicError = true;
+
+      dataCarrier = renderWithResources().dataCarrier;
+      expect(_isLoading(dataCarrier.state.decisionsLoadingState)).toBe(true);
+      expect(_isLoading(dataCarrier.state.decisionsLoadingState)).toBe(true);
+      boundary = scryRenderedComponentsWithType(dataCarrier, ErrorBoundary)[0];
+
+      await waitsFor(() => boundary.state.caughtError);
+      // expect(scryRenderedComponentsWithType(dataCarrier, UXState).length).toEqual(1);
+
+      window.onerror = originalError;
+      done();
+    });
+
+  it('accepts custom resource names for local model, loading state, and status names',
+    async(done) => {
+      dataChild = renderWithResources({customName: true}).dataChild;
+      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(fetchSpy.calls.all().map((call) => call.args[0])).toEqual([
+        'decisions',
+        'userfraudLevel=high_userId=noah',
+        'decisions',
+        'analysts'
+      ]);
+
+      expect(dataChild.props.decisionsLoadingState).toEqual('loading');
+      expect(dataChild.props.decisionsCollection.get('key')).toEqual('decisions');
+      expect(dataChild.props.customDecisionsLoadingState).toEqual('loading');
+      // key should be the same as for decisions, signaling that while fetch is
+      // called ones for each resource, only one fetch would be made
+      expect(dataChild.props.customDecisionsCollection.get('key')).toEqual('decisions');
+      expect(dataChild.props.sift).not.toBeDefined();
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(dataChild.props.decisionsLoadingState).toEqual('loaded');
+      expect(dataChild.props.customDecisionsLoadingState).toEqual('loaded');
+      expect(dataChild.props.customDecisionsStatus).toEqual(200);
+      expect(dataChild.props.sift).toEqual('science');
+      done();
+    });
+});
+/* eslint-enable max-nested-callbacks */
+
+/**
+ * Unmount react test component and install clock mock to ensure that all
+ * models have been removed for the next test.
+ */
+function unmountAndClearModelCache() {
+  jasmine.clock().install();
+  ReactDOM.unmountComponentAtNode(jasmineNode);
+  jasmine.clock().tick(150000);
+  jasmine.clock().uninstall();
+}

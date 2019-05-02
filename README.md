@@ -7,3 +7,6 @@ is a webpack and babel build for testing purposes via [karma](https://karma-runn
 `$ npm test`
 
 This will build and transpile the files, run the tests, and then finally run the linter.
+
+**This package does employ [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md),
+and you may need to update your [babel config](https://babeljs.io/docs/en/babel-plugin-proposal-decorators#legacy) appropriately in order to successfully transpile it.**
