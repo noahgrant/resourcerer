@@ -1,5 +1,6 @@
 import _ from 'underscore';
 import React from 'react';
+import {ResourcesConfig} from './config';
 
 /**
  * As of React 16, Error Boundaries (components with a componentDidCatch method)
@@ -23,7 +24,7 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(err, info) {
     this.setState({caughtError: true});
-    // log here, from config? TODO
+    ResourcesConfig.log(err);
   }
 
   render() {
