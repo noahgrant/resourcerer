@@ -1,4 +1,4 @@
-import {_hasErrored, _hasLoaded, _isLoading} from '../lib/utils';
+import {_hasErrored, _hasLoaded, _isLoading, _isPending} from '../lib/utils';
 import {LoadingStates} from '../lib/constants';
 
 describe('modelLoadingStatus', () => {
@@ -48,6 +48,22 @@ describe('modelLoadingStatus', () => {
 
     it('returns false if an undefined loading state is passed', () => {
       expect(_hasLoaded(undefined)).toBe(false);
+    });
+  });
+
+  describe('_isPending method', () => {
+    it('returns true if any loading state is pending', () => {
+      expect(_isPending([LoadingStates.PENDING, LoadingStates.LOADING])).toBe(true);
+      expect(_isPending(LoadingStates.PENDING)).toBe(true);
+    });
+
+    it('returns false if no loading states are pending', () => {
+      expect(_isPending([LoadingStates.LOADED, LoadingStates.LOADING])).toBe(false);
+      expect(_isPending(LoadingStates.LOADED)).toBe(false);
+    });
+
+    it('returns false if an undefined loading state is passed', () => {
+      expect(_isPending(undefined)).toBe(false);
     });
   });
 });

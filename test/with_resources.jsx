@@ -1,7 +1,7 @@
 import * as Fetch from '../lib/fetch';
 
 import {_hasErrored, _hasLoaded, _isLoading, noOp} from '../lib/utils';
-import {ModelMap, ResourceKeys} from '../lib/config';
+import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 import withResources, {
   EMPTY_COLLECTION,
   EMPTY_MODEL,
@@ -730,7 +730,6 @@ describe('withResources', () => {
     });
   });
 
-  /*
   describe('has a \'measure\' option', () => {
     var markCount = 0,
         markName = '',
@@ -738,6 +737,7 @@ describe('withResources', () => {
         measureName = '';
 
     beforeEach(() => {
+      spyOn(ResourcesConfig, 'track');
       // React 16 calls the performance object all over the place, so we can't
       // really count on the spying directly for tests. We kinda need to hack
       // around it.
@@ -771,23 +771,24 @@ describe('withResources', () => {
       measureName = '';
     });
 
-    it('that does not measure by default', (done) => {
+    it('that does not measure by default', async(done) => {
       dataChild = renderWithResources().dataChild;
 
-      waitsFor(() => dataChild.props.hasLoaded).then(() => {
-        expect(markCount).toEqual(0);
-        expect(measureCount).toEqual(0);
-        expect(mixpanel.trackMixpanelEvent).not.toHaveBeenCalled();
-        done();
-      });
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(markCount).toEqual(0);
+      expect(measureCount).toEqual(0);
+      expect(ResourcesConfig.track).not.toHaveBeenCalled();
+      done();
     });
 
     describe('that when set to true', () => {
-      beforeEach((done) => {
+      beforeEach(async(done) => {
         measure = true;
         spyOn(ModelCache, 'get').and.returnValue(undefined);
         dataChild = renderWithResources().dataChild;
-        waitsFor(() => dataChild.props.hasLoaded).then(done);
+        await waitsFor(() => dataChild.props.hasLoaded);
+        done();
       });
 
       it('measures the request time', () => {
@@ -796,8 +797,8 @@ describe('withResources', () => {
         expect(measureName).toEqual(ResourceKeys.DECISIONS);
       });
 
-      it('sends the request to mixpanel', () => {
-        expect(mixpanel.trackMixpanelEvent).toHaveBeenCalledWith('API Fetch', {
+      it('tracks the request', () => {
+        expect(ResourcesConfig.track).toHaveBeenCalledWith('API Fetch', {
           Resource: ResourceKeys.DECISIONS,
           data: undefined,
           options: undefined,
@@ -806,7 +807,6 @@ describe('withResources', () => {
       });
     });
   });
-  */
 
   describe('for a resource with a \'depends\' option', () => {
     beforeEach(() => {

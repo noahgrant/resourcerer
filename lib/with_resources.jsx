@@ -1,6 +1,6 @@
-import {_hasErrored, _hasLoaded, _isLoading, not} from './utils';
+import {_hasErrored, _hasLoaded, _isLoading} from './utils';
 import {fetch, get} from './fetch';
-import {ModelMap, ResourceKeys, UnfetchedResources} from './config';
+import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from './config';
 
 import _ from 'underscore';
 import Backbone from 'backbone';
@@ -401,14 +401,13 @@ const withResources = (getResources) =>
       }
 
       /**
-       * Measures the duration of the request and sends it to mixpanel before
-       * clearing the performance markers.
+       * Measures the duration of the request and calls the `track` config
+       * method before clearing the performance markers.
        *
        * @param {string} name - resource name
        * @param {object<data: object, options: object>} fetch data and options
        */
       _trackRequestTime(name, {data, options}) {
-        /*
         var measurementName = `${name}Fetch`,
             fetchEntry;
 
@@ -417,7 +416,7 @@ const withResources = (getResources) =>
           window.performance.measure(measurementName, name);
           fetchEntry = window.performance.getEntriesByName(measurementName).pop();
 
-          trackMixpanelEvent('API Fetch', {
+          ResourcesConfig.track('API Fetch', {
             Resource: name,
             data,
             options,
@@ -427,7 +426,6 @@ const withResources = (getResources) =>
           window.performance.clearMarks(name);
           window.performance.clearMeasures(measurementName);
         }
-          */
       }
 
       render() {
@@ -632,6 +630,17 @@ function withoutNoncritical([, config]) {
  */
 function shouldBypassFetch(props, [name, {modelKey}]) {
   return props.hasOwnProperty(getResourcePropertyName(name, modelKey));
+}
+
+/**
+ * Negates the return value of an input function, like _.reject, but we can
+ * use this within native filter methods.
+ *
+ * @param {function} fn - input function to negate
+ * @return {function} a function that negates the return value of the input function
+ */
+function not(fn) {
+  return (...args) => !fn(...args);
 }
 
 export default withResources;
