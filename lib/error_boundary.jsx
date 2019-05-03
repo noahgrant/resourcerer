@@ -29,8 +29,7 @@ export default class ErrorBoundary extends React.Component {
 
   render() {
     if (this.state.caughtError) {
-      // TODO....
-      return 'An error occurred.';
+      return ResourcesConfig.errorBoundaryChild;
     }
 
     return React.cloneElement(this.props.children, _.omit(this.props, 'children'));

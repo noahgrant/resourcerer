@@ -2,6 +2,10 @@ import * as Fetch from '../lib/fetch';
 
 import {_hasErrored, _hasLoaded, _isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
+import {
+  scryRenderedComponentsWithType,
+  scryRenderedDOMComponentsWithClass
+} from 'react-dom/test-utils';
 import withResources, {
   EMPTY_COLLECTION,
   EMPTY_MODEL,
@@ -14,7 +18,6 @@ import {LoadingStates} from '../lib/constants';
 import ModelCache from '../lib/model_cache';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {scryRenderedComponentsWithType} from 'react-dom/test-utils';
 import {UserModel} from './model_mocks';
 import {waitsFor} from './test_utils';
 
@@ -1048,7 +1051,7 @@ describe('withResources', () => {
       boundary = scryRenderedComponentsWithType(dataCarrier, ErrorBoundary)[0];
 
       await waitsFor(() => boundary.state.caughtError);
-      // expect(scryRenderedComponentsWithType(dataCarrier, UXState).length).toEqual(1);
+      expect(scryRenderedDOMComponentsWithClass(dataCarrier, 'caught-error').length).toEqual(1);
 
       window.onerror = originalError;
       done();
