@@ -1028,12 +1028,14 @@ describe('withResources', () => {
   });
 
   it('sets an error state when a resource errors, but does not log', async(done) => {
+    spyOn(ResourcesConfig, 'log');
     shouldResourcesError = true;
     dataChild = renderWithResources().dataChild;
     expect(_isLoading(dataChild.props.decisionsLoadingState)).toBe(true);
 
     await waitsFor(() => dataChild.props.hasErrored);
     expect(_hasErrored(dataChild.props.decisionsLoadingState)).toBe(true);
+    expect(ResourcesConfig.log).not.toHaveBeenCalled();
     done();
   });
 
@@ -1042,6 +1044,7 @@ describe('withResources', () => {
       var boundary,
           originalError = window.onerror;
 
+      spyOn(ResourcesConfig, 'log');
       window.onerror = noOp();
       causeLogicError = true;
 
@@ -1051,6 +1054,7 @@ describe('withResources', () => {
       boundary = scryRenderedComponentsWithType(dataCarrier, ErrorBoundary)[0];
 
       await waitsFor(() => boundary.state.caughtError);
+      expect(ResourcesConfig.log).toHaveBeenCalled();
       expect(scryRenderedDOMComponentsWithClass(dataCarrier, 'caught-error').length).toEqual(1);
 
       window.onerror = originalError;
