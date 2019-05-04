@@ -435,7 +435,11 @@ const withResources = (getResources) =>
         return (
           <ErrorBoundary>
             <Component
-              ref={this.props.attachDataChildRef}
+              ref={(dataChild) => {
+                this.props.attachDataChildRef(dataChild);
+                // allows for backbone mixin to call forceUpdate in this context
+                this.backboneContext = dataChild;
+              }}
               // here we pass down our models
               {...resources.reduce((models, [name, config]) => ({
                 ...models,

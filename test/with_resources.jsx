@@ -340,6 +340,30 @@ describe('withResources', () => {
     done();
   });
 
+  it('updates even PureComponents when passed a \'listen\' option', async(done) => {
+    var purey;
+
+    @withResources((props) => ({[ResourceKeys.DECISIONS]: {listen: true}}))
+    class Purey extends React.PureComponent {
+      render() {
+        // for testing, all models are Models, not Collections
+        return <p>{this.props.decisionsCollection.get('id')}</p>;
+      }
+    }
+
+    ReactDOM.unmountComponentAtNode(jasmineNode);
+    purey = ReactDOM.render(<Purey />, jasmineNode).dataChild;
+
+    await waitsFor(() => purey.props.hasLoaded);
+
+    expect(ReactDOM.findDOMNode(purey).textContent).toEqual('');
+    purey.props.decisionsCollection.set('id', 'adifferentid');
+    // it should update!!
+    expect(ReactDOM.findDOMNode(purey).textContent).toEqual('adifferentid');
+
+    done();
+  });
+
   it('does not fetch resources that are passed in via props', () => {
     dataChild = renderWithResources({
       userModel: new Backbone.Model(),
