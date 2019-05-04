@@ -24,9 +24,9 @@ Object.freeze(EMPTY_COLLECTION.models);
 /**
  * This HOC is a light wrapper around the DataCarrier component for setting
  * state that should trigger resource updates. Some things won't need this, ie
- * a url update that passes its query params down as props.urlParams. But it
- * provides a setResourceState method to wrap any necessary state that may
- * cause a resource update in DataCarrier's componentWillReceiveProps.
+ * a url update that passes its query params down as props[queryParamsPropName].
+ * But it provides a setResourceState method to wrap any necessary state that
+ * may cause a resource update in DataCarrier's componentWillReceiveProps.
  */
 const resourceState = (Component) =>
   class ResourceStateWrapper extends React.Component {
@@ -51,7 +51,7 @@ const resourceState = (Component) =>
           // spread url params and merge with state. url should take priority
           // over passed props (like defaultProps), but state should take
           // precedence over all
-          {...this.props.urlParams || {}}
+          {...this.props[ResourcesConfig.queryParamsPropName] || {}}
           {...this.state}
           setResourceState={this.setResourceState.bind(this)}
         />
