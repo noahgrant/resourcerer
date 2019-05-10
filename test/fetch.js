@@ -1,4 +1,4 @@
-import {exists, fetch, get} from '../lib/fetch';
+import {existsInCache, getFromCache, request} from '../lib/fetch';
 
 import Backbone from 'backbone';
 import ModelCache from '../lib/model_cache';
@@ -10,11 +10,10 @@ const component = {},
 /* eslint-disable max-nested-callbacks */
 describe('Fetch', () => {
   var waitSuccess,
-      reject,
-      fetchSpy;
+      reject;
 
   beforeEach(() => {
-    fetchSpy = spyOn(Backbone.Model.prototype, 'fetch').and.callFake(function(options) {
+    spyOn(Backbone.Model.prototype, 'fetch').and.callFake(function(options) {
       if (waitSuccess) {
         // use this to ensure that a model gets removed from the loadingCache
         // before other synchronous actions take place
@@ -35,22 +34,22 @@ describe('Fetch', () => {
   });
 
   afterEach(() => {
-    fetchSpy.calls.reset();
+    Backbone.Model.prototype.fetch.calls.reset();
     waitSuccess = null;
     reject = null;
     unregisterComponent(component);
   });
 
-  it('when calling \'exists\' returns true if the model exists in the model cache', () => {
-    expect(exists('foo')).toBe(false);
+  it('when calling \'existsInCache\' returns true if the model exists in the model cache', () => {
+    expect(existsInCache('foo')).toBe(false);
     ModelCache.put('foo', new Backbone.Model(), component);
-    expect(exists('foo')).toBe(true);
+    expect(existsInCache('foo')).toBe(true);
   });
 
-  describe('when using fetch', () => {
+  describe('when using request', () => {
     it('returns a promise if the model does not exist', async(done) => {
       var model,
-          promise = fetch('foo', Backbone.Model, {component}).then((_model) => {
+          promise = request('foo', Backbone.Model, {component}).then((_model) => {
             model = _model;
           });
 
@@ -67,9 +66,9 @@ describe('Fetch', () => {
         var model;
 
         // put it in the cache
-        fetch('foo', Backbone.Model, {component});
+        request('foo', Backbone.Model, {component});
         // now call it again
-        fetch('foo').then((_model) => model = _model);
+        request('foo').then((_model) => model = _model);
 
         await waitsFor(() => model instanceof Backbone.Model);
 
@@ -80,14 +79,14 @@ describe('Fetch', () => {
       it('registers the component if passed one', async(done) => {
         waitSuccess = true;
         // put it in the cache
-        await fetch('newModel', Backbone.Model, {component});
+        await request('newModel', Backbone.Model, {component});
 
         expect(ModelCache.register).toHaveBeenCalled();
         waitSuccess = null;
         // now call it again, since we already have it in the cache
-        fetch('newModel', Backbone.Model, {component});
+        request('newModel', Backbone.Model, {component});
         // no new fetch, but a new register call
-        expect(fetchSpy.calls.count()).toEqual(1);
+        expect(Backbone.Model.prototype.fetch.calls.count()).toEqual(1);
         expect(ModelCache.register.calls.count()).toEqual(2);
 
         done();
@@ -96,23 +95,23 @@ describe('Fetch', () => {
 
     it('puts a model in the ModelCache', async(done) => {
       waitSuccess = true;
-      await fetch('newModel', Backbone.Model, {component});
+      await request('newModel', Backbone.Model, {component});
 
-      expect(exists('newModel')).toBe(true);
+      expect(existsInCache('newModel')).toBe(true);
       expect(ModelCache.get('newModel')).toBeDefined();
       expect(ModelCache.put).toHaveBeenCalled();
 
       unregisterComponent(component);
 
-      await fetch('newModel2', Backbone.Model, {prefetch: true});
+      await request('newModel2', Backbone.Model, {prefetch: true});
 
-      expect(exists('newModel2')).toBe(true);
+      expect(existsInCache('newModel2')).toBe(true);
       expect(ModelCache.get('newModel2')).toBeDefined();
       expect(ModelCache.put.calls.count()).toEqual(2);
       // haven't called register since no component was passed
       expect(ModelCache.register.calls.count()).toEqual(1);
 
-      await fetch('newModel2', Backbone.Model, {prefetch: true});
+      await request('newModel2', Backbone.Model, {prefetch: true});
       done();
     });
 
@@ -120,7 +119,7 @@ describe('Fetch', () => {
       it('calls the resolve immediately', async(done) => {
         var model;
 
-        fetch('nofetch', Backbone.Model, {component, fetch: false})
+        request('nofetch', Backbone.Model, {component, fetch: false})
             .then((_model) => model = _model);
 
         await waitsFor(() => model instanceof Backbone.Model);
@@ -133,7 +132,7 @@ describe('Fetch', () => {
         var model;
 
         expect(ModelCache.get('nofetch')).not.toBeDefined();
-        fetch('nofetch', Backbone.Model, {component, fetch: false})
+        request('nofetch', Backbone.Model, {component, fetch: false})
             .then((_model) => model = _model);
 
         await waitsFor(() => model instanceof Backbone.Model);
@@ -157,9 +156,9 @@ describe('Fetch', () => {
         thenSpy1 = jasmine.createSpy('thenSpy1');
         thenSpy2 = jasmine.createSpy('thenSpy2');
 
-        promise = fetch('foo', Backbone.Model);
+        promise = request('foo', Backbone.Model);
         // call it again
-        promise2 = fetch('foo', Backbone.Model);
+        promise2 = request('foo', Backbone.Model);
       });
 
       afterEach(() => {
@@ -200,11 +199,11 @@ describe('Fetch', () => {
         it('registers the component of the second call with the model cache', () => {
           ModelCache.register.calls.reset();
           // prefetch call, no component
-          fetch('prefetch', Backbone.Model);
+          request('prefetch', Backbone.Model);
           expect(ModelCache.register).not.toHaveBeenCalled();
 
           // call it again with a component
-          fetch('prefetch', Backbone.Model, {component});
+          request('prefetch', Backbone.Model, {component});
           expect(ModelCache.register).toHaveBeenCalled();
         });
       });
@@ -215,7 +214,7 @@ describe('Fetch', () => {
 
       waitSuccess = true;
 
-      fetch('newModel', Backbone.Model, {component}).then((model) => {
+      request('newModel', Backbone.Model, {component}).then((model) => {
         resultingModel = model;
       });
 
@@ -231,7 +230,7 @@ describe('Fetch', () => {
       waitSuccess = true;
       reject = true;
 
-      fetch('newModel', Backbone.Model, {component}).catch((model) => {
+      request('newModel', Backbone.Model, {component}).catch((model) => {
         resultingModel = model;
       });
 
@@ -249,7 +248,7 @@ describe('Fetch', () => {
         waitSuccess = true;
         reject = true;
 
-        fetch(CACHE_KEY, Backbone.Model, {component}).catch((model) => {
+        request(CACHE_KEY, Backbone.Model, {component}).catch((model) => {
           resultingModel = model;
         });
 
@@ -261,12 +260,12 @@ describe('Fetch', () => {
         resultingModel = null;
 
         // now let's try legacy cache, without model cache
-        fetch(CACHE_KEY, Backbone.Model).catch((model) => {
+        request(CACHE_KEY, Backbone.Model).catch((model) => {
           resultingModel = model;
         });
 
         await waitsFor(() => resultingModel instanceof Backbone.Model);
-        expect(exists(CACHE_KEY)).toBe(false);
+        expect(existsInCache(CACHE_KEY)).toBe(false);
 
         waitSuccess = false;
         reject = false;
@@ -281,15 +280,15 @@ describe('Fetch', () => {
       beforeEach(async(done) => {
         waitSuccess = true;
 
-        startModel = await fetch('bar', Backbone.Model, {component});
-        fetchSpy.calls.reset();
+        startModel = await request('bar', Backbone.Model, {component});
+        Backbone.Model.prototype.fetch.calls.reset();
 
-        finalModel = await fetch('bar', Backbone.Model, {component, forceFetch: true});
+        finalModel = await request('bar', Backbone.Model, {component, forceFetch: true});
         done();
       });
 
       it('fetches the model anyway', () => {
-        expect(fetchSpy).toHaveBeenCalled();
+        expect(Backbone.Model.prototype.fetch).toHaveBeenCalled();
       });
 
       it('uses the same model instance if one already exists', () => {
@@ -298,7 +297,7 @@ describe('Fetch', () => {
     });
   });
 
-  describe('when using get', () => {
+  describe('when using getFromCache', () => {
     var model;
 
     beforeEach(() => {
@@ -307,9 +306,9 @@ describe('Fetch', () => {
     });
 
     it('returns the model if it exists in the ModelCache', () => {
-      expect(exists('foo')).toBe(true);
-      expect(get('foo')).toEqual(model);
-      expect(get('bar')).not.toBeDefined();
+      expect(existsInCache('foo')).toBe(true);
+      expect(getFromCache('foo')).toEqual(model);
+      expect(getFromCache('bar')).not.toBeDefined();
     });
   });
 });
