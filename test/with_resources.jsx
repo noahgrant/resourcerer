@@ -35,7 +35,7 @@ const jasmineNode = document.createElement('div');
     measure,
     status: props.status
   },
-  [ResourceKeys.NOTES]: {noncritical: true, depends: ['noah']},
+  [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
     fields: ['userId', 'fraudLevel'],
     options: {
@@ -58,7 +58,7 @@ const jasmineNode = document.createElement('div');
         {_: transformSpy.and.returnValue({provides1: 'moose', provides2: 'theberner'})} :
         {serialProp: transformSpy.and.returnValue(42)}
     },
-    [ResourceKeys.DECISION_LOGS]: {fields: ['serialProp'], depends: ['serialProp']}
+    [ResourceKeys.DECISION_LOGS]: {fields: ['serialProp'], dependsOn: ['serialProp']}
   } : {},
   ...props.customName ? {
     customDecisions: {
@@ -92,7 +92,7 @@ describe('withResources', () => {
       dataCarrier,
       resources,
 
-      fetchSpy,
+      requestSpy,
       shouldResourcesError,
       cached,
       delayedResourceComplete,
@@ -111,10 +111,10 @@ describe('withResources', () => {
     UserModel.cacheFields = ['userId', 'fraudLevel'];
     document.body.appendChild(jasmineNode);
 
-    fetchSpy = spyOn(Fetch, 'fetch').and.callFake((key, Model, options) => {
+    requestSpy = spyOn(Fetch, 'request').and.callFake((key, Model, options) => {
       // mock fetch model cache behavior, where we put it in the cache immediately,
       // then request the model, and only if it errors do we remove it from cache
-      var model = new Backbone.Model({key, ...(options.fetchData || {})});
+      var model = new Backbone.Model({key, ...(options.data || {})});
 
       ModelCache.put(key, model, options.component);
 
@@ -173,11 +173,11 @@ describe('withResources', () => {
   });
 
   it('fetches all resources before mounting', () => {
-    // syncronify fetchSpy since we don't need it to actually get anything
+    // syncronify requestSpy since we don't need it to actually get anything
     // or store anything in the cache
-    fetchSpy.and.returnValue({then: (res) => ({catch: () => false})});
+    requestSpy.and.returnValue({then: (res) => ({catch: () => false})});
     dataChild = renderWithResources();
-    expect(fetchSpy.calls.count()).toEqual(3);
+    expect(requestSpy.calls.count()).toEqual(3);
   });
 
   it('passed loading states for all resources down as props', async(done) => {
@@ -235,12 +235,12 @@ describe('withResources', () => {
   describe('updates a resource', () => {
     it('when a prop changes that is specified in its fields option', async(done) => {
       resources = renderWithResources();
-      expect(fetchSpy.calls.count()).toEqual(3);
+      expect(requestSpy.calls.count()).toEqual(3);
       resources.dataCarrier.props.setResourceState({userId: 'alex'});
-      expect(fetchSpy.calls.count()).toEqual(4);
-      expect(fetchSpy.calls.mostRecent().args[0]).toEqual('userfraudLevel=high_userId=alex');
-      expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.USER]);
-      expect(fetchSpy.calls.mostRecent().args[2].options).toEqual({
+      expect(requestSpy.calls.count()).toEqual(4);
+      expect(requestSpy.calls.mostRecent().args[0]).toEqual('userfraudLevel=high_userId=alex');
+      expect(requestSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.USER]);
+      expect(requestSpy.calls.mostRecent().args[2].options).toEqual({
         userId: 'alex',
         fraudLevel: 'high'
       });
@@ -255,13 +255,13 @@ describe('withResources', () => {
       // but it should still update when passed `include_deleted`, since that
       // exists on its cacheFields property
       resources = renderWithResources();
-      expect(fetchSpy.calls.count()).toEqual(3);
+      expect(requestSpy.calls.count()).toEqual(3);
 
       resources.dataCarrier.props.setResourceState({includeDeleted: true});
-      expect(fetchSpy.calls.count()).toEqual(4);
-      expect(fetchSpy.calls.mostRecent().args[0]).toEqual('decisionsinclude_deleted=true');
-      expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.DECISIONS]);
-      expect(fetchSpy.calls.mostRecent().args[2].fetchData).toEqual({include_deleted: true});
+      expect(requestSpy.calls.count()).toEqual(4);
+      expect(requestSpy.calls.mostRecent().args[0]).toEqual('decisionsinclude_deleted=true');
+      expect(requestSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.DECISIONS]);
+      expect(requestSpy.calls.mostRecent().args[2].data).toEqual({include_deleted: true});
 
       await waitsFor(() => resources.dataChild.props.hasLoaded);
 
@@ -271,13 +271,13 @@ describe('withResources', () => {
     it('when all its dependencies are present for the first time', async(done) => {
       resources = renderWithResources();
       expect(resources.dataCarrier.state.notesLoadingState).toEqual(LoadingStates.PENDING);
-      expect(fetchSpy.calls.count()).toEqual(3);
+      expect(requestSpy.calls.count()).toEqual(3);
       resources.dataCarrier.props.setResourceState({noah: true});
-      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(requestSpy.calls.count()).toEqual(4);
       expect(resources.dataCarrier.state.notesLoadingState).toEqual(LoadingStates.LOADING);
-      // depends prop won't factor into cache key unless part of fields
-      expect(fetchSpy.calls.mostRecent().args[0]).toEqual('notes');
-      expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.NOTES]);
+      // dependsOn prop won't factor into cache key unless part of fields
+      expect(requestSpy.calls.mostRecent().args[0]).toEqual('notes');
+      expect(requestSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.NOTES]);
 
       await waitsFor(() => resources.dataChild.props.hasLoaded);
       expect(resources.dataCarrier.state.notesLoadingState).toEqual(LoadingStates.LOADED);
@@ -315,14 +315,14 @@ describe('withResources', () => {
 
   it('fetches a resource if newly specified', async(done) => {
     resources = renderWithResources();
-    expect(fetchSpy.calls.count()).toEqual(3);
-    expect(fetchSpy.calls.all().map((call) => call.args[0])
+    expect(requestSpy.calls.count()).toEqual(3);
+    expect(requestSpy.calls.all().map((call) => call.args[0])
         .includes(ResourceKeys.SIGNALS)).toBe(false);
 
     resources.dataCarrier.props.setResourceState({fetchSignals: true});
-    expect(fetchSpy.calls.count()).toEqual(4);
-    expect(fetchSpy.calls.mostRecent().args[0]).toEqual(ResourceKeys.SIGNALS);
-    expect(fetchSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.SIGNALS]);
+    expect(requestSpy.calls.count()).toEqual(4);
+    expect(requestSpy.calls.mostRecent().args[0]).toEqual(ResourceKeys.SIGNALS);
+    expect(requestSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.SIGNALS]);
     await waitsFor(() => resources.dataChild.props.hasLoaded);
     done();
   });
@@ -371,7 +371,7 @@ describe('withResources', () => {
       decisionsCollection: new Backbone.Collection()
     });
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(requestSpy).not.toHaveBeenCalled();
 
     ReactDOM.unmountComponentAtNode(jasmineNode);
 
@@ -381,8 +381,8 @@ describe('withResources', () => {
       decisionsCollection: new Backbone.Collection()
     });
 
-    expect(fetchSpy.calls.count()).toEqual(1);
-    expect(fetchSpy.calls.mostRecent().args[0]).toEqual('analysts');
+    expect(requestSpy.calls.count()).toEqual(1);
+    expect(requestSpy.calls.mostRecent().args[0]).toEqual('analysts');
   });
 
   it('does not set loading states if the component unmounts before the request returns',
@@ -418,27 +418,27 @@ describe('withResources', () => {
 
   it('prioritizes critical resource requests before noncritical requests before prefetch', () => {
     renderWithResources({prefetch: true});
-    expect(fetchSpy.calls.argsFor(0)[0]).toEqual('decisions');
-    expect(fetchSpy.calls.argsFor(1)[0]).toEqual('userfraudLevel=high_userId=noah');
-    expect(fetchSpy.calls.argsFor(2)[0]).toEqual('searchQuery');
-    expect(fetchSpy.calls.argsFor(2)[2].prefetch).not.toBeDefined();
+    expect(requestSpy.calls.argsFor(0)[0]).toEqual('decisions');
+    expect(requestSpy.calls.argsFor(1)[0]).toEqual('userfraudLevel=high_userId=noah');
+    expect(requestSpy.calls.argsFor(2)[0]).toEqual('searchQuery');
+    expect(requestSpy.calls.argsFor(2)[2].prefetch).not.toBeDefined();
     // noncritical call is second-to-last
-    expect(fetchSpy.calls.argsFor(3)[0]).toEqual('analysts');
+    expect(requestSpy.calls.argsFor(3)[0]).toEqual('analysts');
     // prefetch call is last
-    expect(fetchSpy.calls.argsFor(4)[0]).toEqual('searchQueryfrom=10');
-    expect(fetchSpy.calls.argsFor(4)[2].prefetch).toBeDefined();
+    expect(requestSpy.calls.argsFor(4)[0]).toEqual('searchQueryfrom=10');
+    expect(requestSpy.calls.argsFor(4)[2].prefetch).toBeDefined();
   });
 
   it('passes a false \'fetch\' option if the model key is of an unfetched model', () => {
-    fetchSpy.and.returnValue(Promise.resolve());
+    requestSpy.and.returnValue(Promise.resolve());
     renderWithResources({unfetch: true});
 
-    expect(fetchSpy.calls.argsFor(0)[2].fetch).toBe(true);
-    expect(fetchSpy.calls.argsFor(1)[2].fetch).toBe(true);
+    expect(requestSpy.calls.argsFor(0)[2].fetch).toBe(true);
+    expect(requestSpy.calls.argsFor(1)[2].fetch).toBe(true);
     // third call is the unfetched resource
-    expect(fetchSpy.calls.argsFor(2)[0]).toEqual('accountConfig');
-    expect(fetchSpy.calls.argsFor(2)[2].fetch).toBe(false);
-    expect(fetchSpy.calls.argsFor(3)[2].fetch).toBe(true);
+    expect(requestSpy.calls.argsFor(2)[0]).toEqual('accountConfig');
+    expect(requestSpy.calls.argsFor(2)[2].fetch).toBe(false);
+    expect(requestSpy.calls.argsFor(3)[2].fetch).toBe(true);
   });
 
   describe('creates a cache key', () => {
@@ -463,9 +463,9 @@ describe('withResources', () => {
         })).toEqual('userfraudLevel=low_userId=alex');
       });
 
-      it('prioritizes cacheFields in \'options\' or \'attriModels\' config properties', () => {
+      it('prioritizes cacheFields in \'options\' or \'attributes\' config properties', () => {
         expect(getCacheKey({
-          attriModels: {fraudLevel: 'miniscule'},
+          attributes: {fraudLevel: 'miniscule'},
           modelKey: ResourceKeys.USER,
           options: {userId: 'theboogieman'}
         })).toEqual('userfraudLevel=miniscule_userId=theboogieman');
@@ -479,7 +479,7 @@ describe('withResources', () => {
           })];
 
         expect(getCacheKey({
-          attriModels: {userId: 'noah'},
+          attributes: {userId: 'noah'},
           modelKey: ResourceKeys.USER,
           data: {
             fraudLevel: 'high',
@@ -565,12 +565,12 @@ describe('withResources', () => {
 
     it('for a non-cached resource', async(done) => {
       dataChild = renderWithResources({delay: 5000}).dataChild;
-      expect(fetchSpy.calls.count()).toEqual(3);
+      expect(requestSpy.calls.count()).toEqual(3);
       dataChild = renderWithResources({userId: 'zorah'}).dataChild;
 
       await waitsFor(() => dataChild.props.hasLoaded);
 
-      expect(fetchSpy.calls.count()).toEqual(4);
+      expect(requestSpy.calls.count()).toEqual(4);
       jasmine.clock().tick(6000);
 
       await waitsFor(() => delayedResourceComplete);
@@ -669,7 +669,7 @@ describe('withResources', () => {
 
     beforeEach(() => {
       newProvides = [{
-        attriModels: {content_abuse: {id: 'content_decision'}},
+        attributes: {content_abuse: {id: 'content_decision'}},
         shouldCache: () => true,
         modelKey: ResourceKeys.DECISION_INSTANCE,
         options: {entityId: 'noah', entityType: 'content'}
@@ -680,7 +680,7 @@ describe('withResources', () => {
     });
 
     afterEach(() => {
-      Fetch.fetch.calls.reset();
+      Fetch.request.calls.reset();
       ModelCache.put.calls.reset();
       ModelMap[ResourceKeys.USER].providesModels = oldProvides;
     });
@@ -751,7 +751,7 @@ describe('withResources', () => {
       }));
       ({dataChild, dataCarrier} = renderWithResources());
 
-      await waitsFor(() => Fetch.fetch.calls.count() === 3);
+      await waitsFor(() => Fetch.request.calls.count() === 3);
       expect(ModelCache.put.calls.count()).toEqual(3);
       done();
     });
@@ -835,21 +835,21 @@ describe('withResources', () => {
     });
   });
 
-  describe('for a resource with a \'depends\' option', () => {
+  describe('for a resource with a \'dependsOn\' option', () => {
     beforeEach(() => {
       resources = renderWithResources({serial: true});
       ({dataCarrier, dataChild} = resources);
     });
 
     it('will not fetch until the dependent prop is available', async(done) => {
-      expect(fetchSpy.calls.count()).toEqual(4);
-      expect(fetchSpy.calls.all().map((call) => call.args[0])
+      expect(requestSpy.calls.count()).toEqual(4);
+      expect(requestSpy.calls.all().map((call) => call.args[0])
           .includes(ResourceKeys.ACTIONS)).toBe(true);
-      expect(fetchSpy.calls.mostRecent().args[0]).not.toMatch(ResourceKeys.DECISION_LOGS);
+      expect(requestSpy.calls.mostRecent().args[0]).not.toMatch(ResourceKeys.DECISION_LOGS);
 
       await waitsFor(() => dataCarrier.props.serialProp);
-      expect(fetchSpy.calls.count()).toEqual(5);
-      expect(fetchSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+      expect(requestSpy.calls.count()).toEqual(5);
+      expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
       done();
     });
 
@@ -858,7 +858,7 @@ describe('withResources', () => {
 
       await waitsFor(() => dataCarrier.props.serialProp);
       expect(_isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
-      expect(fetchSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+      expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
 
       await waitsFor(() => _hasLoaded(dataCarrier.state.decisionLogsLoadingState));
       resources.setState({serialProp: null});
@@ -924,10 +924,10 @@ describe('withResources', () => {
       it('and does not send them down as props', async(done) => {
         ({dataChild} = renderWithResources({prefetch: true}));
 
-        expect(fetchSpy.calls.count()).toEqual(5);
+        expect(requestSpy.calls.count()).toEqual(5);
         // should have two search query calls, but the props on searchQueryModel
         // should have from = 0
-        expect(fetchSpy.calls.all()
+        expect(requestSpy.calls.all()
             .map((call) => call.args[0])
             .filter((key) => /^searchQuery/.test(key)).length).toEqual(2);
 
@@ -943,9 +943,9 @@ describe('withResources', () => {
             haveCalledPrefetch,
             haveCalledSearchQuery;
 
-        fetchSpy.and.callFake((key, Model, options={}) => new Promise((res, rej) => {
+        requestSpy.and.callFake((key, Model, options={}) => new Promise((res, rej) => {
           window.requestAnimationFrame(() => {
-            var model = new Backbone.Model({key, ...(options.fetchData || {})});
+            var model = new Backbone.Model({key, ...(options.data || {})});
 
             if (options.prefetch) {
               haveCalledPrefetch = true;
@@ -1088,8 +1088,8 @@ describe('withResources', () => {
   it('accepts custom resource names for local model, loading state, and status names',
     async(done) => {
       dataChild = renderWithResources({customName: true}).dataChild;
-      expect(fetchSpy.calls.count()).toEqual(4);
-      expect(fetchSpy.calls.all().map((call) => call.args[0])).toEqual([
+      expect(requestSpy.calls.count()).toEqual(4);
+      expect(requestSpy.calls.all().map((call) => call.args[0])).toEqual([
         'decisions',
         'userfraudLevel=high_userId=noah',
         'decisions',

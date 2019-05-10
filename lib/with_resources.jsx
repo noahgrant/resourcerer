@@ -1,5 +1,4 @@
 import {_hasErrored, _hasLoaded, _isLoading} from './utils';
-import {fetch, get} from './fetch';
 import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from './config';
 
 import _ from 'underscore';
@@ -9,6 +8,7 @@ import ErrorBoundary from './error_boundary.jsx';
 import {LoadingStates} from './constants';
 import ModelCache from './model_cache';
 import React from 'react';
+import {request} from './fetch';
 
 const SPREAD_PROVIDES_CHAR = '_';
 
@@ -91,7 +91,7 @@ const resourceState = (Component) =>
  *   * data {object} - data for the fetch call passed to GlobalState.fetch
  *   * options {object} - options object for model instantiation passed to
  *        GlobalState.fetch
- *   * depends {string[]} - prop fields required to be present before the
+ *   * dependsOn {string[]} - prop fields required to be present before the
  *        resource will fetch
  *   * provides {object<string: function>[]} - list of props that a resource
  *        provides, for example, for dependent resources (serial requests). Each
@@ -224,9 +224,9 @@ const withResources = (getResources) =>
               window.performance.mark(name);
             }
 
-            return fetch(cacheKey, ModelMap[modelKey || name], {
+            return request(cacheKey, ModelMap[modelKey || name], {
               fetch: !UnfetchedResources.has(modelKey),
-              fetchData: data,
+              data,
               component: this,
               ...rest
             }).then((model) => {
@@ -252,18 +252,18 @@ const withResources = (getResources) =>
                 if (ModelMap[modelKey].providesModels) {
                   ModelMap[modelKey].providesModels(model, ResourceKeys).forEach((uConfig) => {
                     var uCacheKey = getCacheKey(uConfig),
-                        existingModel = get(uCacheKey);
+                        existingModel = ModelCache.get(uCacheKey);
 
                     if (typeof uConfig.shouldCache !== 'function' ||
                         uConfig.shouldCache(existingModel, uConfig)) {
                       // components may be listening to existing models, so only create
                       // new model if one does not currently exist
                       existingModel ?
-                        existingModel.set(uConfig.attriModels) :
+                        existingModel.set(uConfig.models || uConfig.attributes) :
                         ModelCache.put(
                           uCacheKey,
                           new ModelMap[uConfig.modelKey](
-                            uConfig.attriModels,
+                            uConfig.models || uConfig.attributes,
                             uConfig.options || {}
                           ),
                           this
@@ -523,7 +523,7 @@ function getEmptyModel(modelKey) {
  *   `cacheIgnore` property.
  * * V2, when the model's constructor has a static `cacheFields` array: values
  *   are taken directly from the config object as opposed to props, in the
- *   following order: `options` object, `attriModels` object, `data` object.
+ *   following order: `options` object, `attributes` object, `data` object.
  *   Field keys are included in this method, which is why it is preferred.
  *   `cacheFields` entries can be functions, too, which take the `data` object
  *   as a parameter and return a key/value object that gets flattened to a piece
@@ -533,7 +533,7 @@ function getEmptyModel(modelKey) {
  * @param {object} props - component props
  * @return {string} cache key
  */
-export function getCacheKey({modelKey, fields=[], data={}, options={}, attriModels={}}, props={}) {
+export function getCacheKey({modelKey, fields=[], data={}, options={}, attributes={}}, props={}) {
   if (!(ModelMap[modelKey] || {}).cacheFields) {
     // this is the default cache key generation, which will be used if no static `cacheFields`
     // property exists on the model. it does not use add field keys to the cache key
@@ -550,7 +550,7 @@ export function getCacheKey({modelKey, fields=[], data={}, options={}, attriMode
     fields = ModelMap[modelKey].cacheFields.map(
       (key) => typeof key === 'function' ?
         Object.entries(key(data)).map(toKeyValString).join('_') :
-        toKeyValString([key, options[key] || attriModels[key] || data[key]])
+        toKeyValString([key, options[key] || attributes[key] || data[key]])
     ).filter((x) => x);
   }
 
@@ -581,11 +581,11 @@ function buildResourcesLoadingState(resources, props) {
  * Determines whether a resource's required props for fetching are all present.
  *
  * @param {object} props - current component props
- * @param {{depends: string|object}} resource config entry
+ * @param {{dependsOn: string|object}} resource config entry
  * @return {boolean} whether or not all required props are present
  */
-function hasAllDependencies(props, [, {depends}]) {
-  return !depends || !depends.filter((dep) => !props[dep]).length;
+function hasAllDependencies(props, [, {dependsOn}]) {
+  return !dependsOn || !dependsOn.filter((dep) => !props[dep]).length;
 }
 
 /**
