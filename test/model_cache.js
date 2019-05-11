@@ -15,6 +15,9 @@ describe('ModelCache', () => {
 
   afterEach(() => {
     jasmine.clock().uninstall();
+    ModelCache.remove('foo');
+    ModelCache.remove('bar');
+    ModelCache.remove('baz');
     delete require.cache[require.resolve('../lib/model_cache')];
   });
 

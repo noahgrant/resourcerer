@@ -1,14 +1,14 @@
-import {existsInCache, getFromCache, request} from '../lib/fetch';
+import request, {existsInCache, getFromCache} from '../lib/request';
 
 import Backbone from 'backbone';
 import ModelCache from '../lib/model_cache';
 import {waitsFor} from './test_utils';
 
-const component = {},
-      CACHE_WAIT = 150000;
+const component = {};
+const CACHE_WAIT = 150000;
 
 /* eslint-disable max-nested-callbacks */
-describe('Fetch', () => {
+describe('Request', () => {
   var waitSuccess,
       reject;
 
@@ -46,7 +46,7 @@ describe('Fetch', () => {
     expect(existsInCache('foo')).toBe(true);
   });
 
-  describe('when using request', () => {
+  describe('when using the default exported function', () => {
     it('returns a promise if the model does not exist', async(done) => {
       var model,
           promise = request('foo', Backbone.Model, {component}).then((_model) => {
@@ -285,6 +285,10 @@ describe('Fetch', () => {
 
         finalModel = await request('bar', Backbone.Model, {component, forceFetch: true});
         done();
+      });
+
+      afterEach(() => {
+        ModelCache.remove('bar');
       });
 
       it('fetches the model anyway', () => {
