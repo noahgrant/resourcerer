@@ -8,7 +8,7 @@ import ErrorBoundary from './error_boundary.jsx';
 import {LoadingStates} from './constants';
 import ModelCache from './model_cache';
 import React from 'react';
-import {request} from './fetch';
+import request from './request';
 
 const SPREAD_PROVIDES_CHAR = '_';
 

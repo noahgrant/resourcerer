@@ -1,4 +1,4 @@
-import * as Fetch from '../lib/fetch';
+import * as Request from '../lib/request';
 
 import {_hasErrored, _hasLoaded, _isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
@@ -111,7 +111,7 @@ describe('withResources', () => {
     UserModel.cacheFields = ['userId', 'fraudLevel'];
     document.body.appendChild(jasmineNode);
 
-    requestSpy = spyOn(Fetch, 'request').and.callFake((key, Model, options) => {
+    requestSpy = spyOn(Request, 'default').and.callFake((key, Model, options) => {
       // mock fetch model cache behavior, where we put it in the cache immediately,
       // then request the model, and only if it errors do we remove it from cache
       var model = new Backbone.Model({key, ...(options.data || {})});
@@ -680,7 +680,7 @@ describe('withResources', () => {
     });
 
     afterEach(() => {
-      Fetch.request.calls.reset();
+      Request.default.calls.reset();
       ModelCache.put.calls.reset();
       ModelMap[ResourceKeys.USER].providesModels = oldProvides;
     });
@@ -751,7 +751,7 @@ describe('withResources', () => {
       }));
       ({dataChild, dataCarrier} = renderWithResources());
 
-      await waitsFor(() => Fetch.request.calls.count() === 3);
+      await waitsFor(() => Request.default.calls.count() === 3);
       expect(ModelCache.put.calls.count()).toEqual(3);
       done();
     });
