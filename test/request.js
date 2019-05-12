@@ -1,8 +1,8 @@
 import request, {existsInCache, getFromCache} from '../lib/request';
 
-import Backbone from 'backbone';
-import ModelCache from '../lib/model_cache';
-import {waitsFor} from './test_utils';
+import ModelCache from '../lib/model-cache';
+import Schmackbone from 'schmackbone';
+import {waitsFor} from './test-utils';
 
 const component = {};
 const CACHE_WAIT = 150000;
@@ -13,7 +13,7 @@ describe('Request', () => {
       reject;
 
   beforeEach(() => {
-    spyOn(Backbone.Model.prototype, 'fetch').and.callFake(function(options) {
+    spyOn(Schmackbone.Model.prototype, 'fetch').and.callFake(function(options) {
       if (waitSuccess) {
         // use this to ensure that a model gets removed from the loadingCache
         // before other synchronous actions take place
@@ -25,7 +25,7 @@ describe('Request', () => {
           }
         });
       } else if (typeof options.success === 'function') {
-        options.success(new Backbone.Model(), '', {response: {status: 200}});
+        options.success(new Schmackbone.Model(), '', {response: {status: 200}});
       }
     });
 
@@ -34,7 +34,7 @@ describe('Request', () => {
   });
 
   afterEach(() => {
-    Backbone.Model.prototype.fetch.calls.reset();
+    Schmackbone.Model.prototype.fetch.calls.reset();
     waitSuccess = null;
     reject = null;
     unregisterComponent(component);
@@ -42,22 +42,22 @@ describe('Request', () => {
 
   it('when calling \'existsInCache\' returns true if the model exists in the model cache', () => {
     expect(existsInCache('foo')).toBe(false);
-    ModelCache.put('foo', new Backbone.Model(), component);
+    ModelCache.put('foo', new Schmackbone.Model(), component);
     expect(existsInCache('foo')).toBe(true);
   });
 
   describe('when using the default exported function', () => {
     it('returns a promise if the model does not exist', async(done) => {
       var model,
-          promise = request('foo', Backbone.Model, {component}).then((_model) => {
+          promise = request('foo', Schmackbone.Model, {component}).then((_model) => {
             model = _model;
           });
 
-      await waitsFor(() => model instanceof Backbone.Model);
+      await waitsFor(() => model instanceof Schmackbone.Model);
 
       expect(promise instanceof Promise).toBe(true);
-      // in this instance we're resolving immediately, so model should be Backbone.Model
-      expect(model instanceof Backbone.Model).toBe(true);
+      // in this instance we're resolving immediately, so model should be Schmackbone.Model
+      expect(model instanceof Schmackbone.Model).toBe(true);
       done();
     });
 
@@ -66,27 +66,27 @@ describe('Request', () => {
         var model;
 
         // put it in the cache
-        request('foo', Backbone.Model, {component});
+        request('foo', Schmackbone.Model, {component});
         // now call it again
         request('foo').then((_model) => model = _model);
 
-        await waitsFor(() => model instanceof Backbone.Model);
+        await waitsFor(() => model instanceof Schmackbone.Model);
 
-        expect(model instanceof Backbone.Model).toBe(true);
+        expect(model instanceof Schmackbone.Model).toBe(true);
         done();
       });
 
       it('registers the component if passed one', async(done) => {
         waitSuccess = true;
         // put it in the cache
-        await request('newModel', Backbone.Model, {component});
+        await request('newModel', Schmackbone.Model, {component});
 
         expect(ModelCache.register).toHaveBeenCalled();
         waitSuccess = null;
         // now call it again, since we already have it in the cache
-        request('newModel', Backbone.Model, {component});
+        request('newModel', Schmackbone.Model, {component});
         // no new fetch, but a new register call
-        expect(Backbone.Model.prototype.fetch.calls.count()).toEqual(1);
+        expect(Schmackbone.Model.prototype.fetch.calls.count()).toEqual(1);
         expect(ModelCache.register.calls.count()).toEqual(2);
 
         done();
@@ -95,7 +95,7 @@ describe('Request', () => {
 
     it('puts a model in the ModelCache', async(done) => {
       waitSuccess = true;
-      await request('newModel', Backbone.Model, {component});
+      await request('newModel', Schmackbone.Model, {component});
 
       expect(existsInCache('newModel')).toBe(true);
       expect(ModelCache.get('newModel')).toBeDefined();
@@ -103,7 +103,7 @@ describe('Request', () => {
 
       unregisterComponent(component);
 
-      await request('newModel2', Backbone.Model, {prefetch: true});
+      await request('newModel2', Schmackbone.Model, {prefetch: true});
 
       expect(existsInCache('newModel2')).toBe(true);
       expect(ModelCache.get('newModel2')).toBeDefined();
@@ -111,7 +111,7 @@ describe('Request', () => {
       // haven't called register since no component was passed
       expect(ModelCache.register.calls.count()).toEqual(1);
 
-      await request('newModel2', Backbone.Model, {prefetch: true});
+      await request('newModel2', Schmackbone.Model, {prefetch: true});
       done();
     });
 
@@ -119,12 +119,12 @@ describe('Request', () => {
       it('calls the resolve immediately', async(done) => {
         var model;
 
-        request('nofetch', Backbone.Model, {component, fetch: false})
+        request('nofetch', Schmackbone.Model, {component, fetch: false})
             .then((_model) => model = _model);
 
-        await waitsFor(() => model instanceof Backbone.Model);
+        await waitsFor(() => model instanceof Schmackbone.Model);
 
-        expect(Backbone.Model.prototype.fetch).not.toHaveBeenCalled();
+        expect(Schmackbone.Model.prototype.fetch).not.toHaveBeenCalled();
         done();
       });
 
@@ -132,15 +132,15 @@ describe('Request', () => {
         var model;
 
         expect(ModelCache.get('nofetch')).not.toBeDefined();
-        request('nofetch', Backbone.Model, {component, fetch: false})
+        request('nofetch', Schmackbone.Model, {component, fetch: false})
             .then((_model) => model = _model);
 
-        await waitsFor(() => model instanceof Backbone.Model);
+        await waitsFor(() => model instanceof Schmackbone.Model);
 
         expect(ModelCache.get('nofetch')).toBeDefined();
         expect(ModelCache.put).toHaveBeenCalled();
 
-        expect(Backbone.Model.prototype.fetch).not.toHaveBeenCalled();
+        expect(Schmackbone.Model.prototype.fetch).not.toHaveBeenCalled();
         done();
       });
     });
@@ -156,9 +156,9 @@ describe('Request', () => {
         thenSpy1 = jasmine.createSpy('thenSpy1');
         thenSpy2 = jasmine.createSpy('thenSpy2');
 
-        promise = request('foo', Backbone.Model);
+        promise = request('foo', Schmackbone.Model);
         // call it again
-        promise2 = request('foo', Backbone.Model);
+        promise2 = request('foo', Schmackbone.Model);
       });
 
       afterEach(() => {
@@ -175,7 +175,7 @@ describe('Request', () => {
         promise.then((model) => m1 = model);
         promise2.then((model) => m2 = model);
 
-        await waitsFor(() => m1 instanceof Backbone.Model);
+        await waitsFor(() => m1 instanceof Schmackbone.Model);
 
         // check that they are resolved with the same value!
         expect(m1).toEqual(m2);
@@ -199,11 +199,11 @@ describe('Request', () => {
         it('registers the component of the second call with the model cache', () => {
           ModelCache.register.calls.reset();
           // prefetch call, no component
-          request('prefetch', Backbone.Model);
+          request('prefetch', Schmackbone.Model);
           expect(ModelCache.register).not.toHaveBeenCalled();
 
           // call it again with a component
-          request('prefetch', Backbone.Model, {component});
+          request('prefetch', Schmackbone.Model, {component});
           expect(ModelCache.register).toHaveBeenCalled();
         });
       });
@@ -214,11 +214,11 @@ describe('Request', () => {
 
       waitSuccess = true;
 
-      request('newModel', Backbone.Model, {component}).then((model) => {
+      request('newModel', Schmackbone.Model, {component}).then((model) => {
         resultingModel = model;
       });
 
-      await waitsFor(() => resultingModel instanceof Backbone.Model);
+      await waitsFor(() => resultingModel instanceof Schmackbone.Model);
 
       expect(resultingModel.status).toBe(200);
       done();
@@ -230,11 +230,11 @@ describe('Request', () => {
       waitSuccess = true;
       reject = true;
 
-      request('newModel', Backbone.Model, {component}).catch((model) => {
+      request('newModel', Schmackbone.Model, {component}).catch((model) => {
         resultingModel = model;
       });
 
-      await waitsFor(() => resultingModel instanceof Backbone.Model);
+      await waitsFor(() => resultingModel instanceof Schmackbone.Model);
 
       expect(resultingModel.status).toBe(404);
       done();
@@ -248,23 +248,23 @@ describe('Request', () => {
         waitSuccess = true;
         reject = true;
 
-        request(CACHE_KEY, Backbone.Model, {component}).catch((model) => {
+        request(CACHE_KEY, Schmackbone.Model, {component}).catch((model) => {
           resultingModel = model;
         });
 
         expect(ModelCache.get(CACHE_KEY)).toBeDefined();
 
-        await waitsFor(() => resultingModel instanceof Backbone.Model);
+        await waitsFor(() => resultingModel instanceof Schmackbone.Model);
         expect(ModelCache.get(CACHE_KEY)).not.toBeDefined();
 
         resultingModel = null;
 
         // now let's try legacy cache, without model cache
-        request(CACHE_KEY, Backbone.Model).catch((model) => {
+        request(CACHE_KEY, Schmackbone.Model).catch((model) => {
           resultingModel = model;
         });
 
-        await waitsFor(() => resultingModel instanceof Backbone.Model);
+        await waitsFor(() => resultingModel instanceof Schmackbone.Model);
         expect(existsInCache(CACHE_KEY)).toBe(false);
 
         waitSuccess = false;
@@ -280,10 +280,10 @@ describe('Request', () => {
       beforeEach(async(done) => {
         waitSuccess = true;
 
-        startModel = await request('bar', Backbone.Model, {component});
-        Backbone.Model.prototype.fetch.calls.reset();
+        startModel = await request('bar', Schmackbone.Model, {component});
+        Schmackbone.Model.prototype.fetch.calls.reset();
 
-        finalModel = await request('bar', Backbone.Model, {component, forceFetch: true});
+        finalModel = await request('bar', Schmackbone.Model, {component, forceFetch: true});
         done();
       });
 
@@ -292,7 +292,7 @@ describe('Request', () => {
       });
 
       it('fetches the model anyway', () => {
-        expect(Backbone.Model.prototype.fetch).toHaveBeenCalled();
+        expect(Schmackbone.Model.prototype.fetch).toHaveBeenCalled();
       });
 
       it('uses the same model instance if one already exists', () => {
@@ -305,7 +305,7 @@ describe('Request', () => {
     var model;
 
     beforeEach(() => {
-      model = new Backbone.Model();
+      model = new Schmackbone.Model();
       ModelCache.put('foo', model);
     });
 

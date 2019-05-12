@@ -1,9 +1,9 @@
 import * as Config from '../lib/config';
-import Backbone from 'backbone';
 import {noOp} from '../lib/utils';
+import Schmackbone from 'schmackbone';
 
-const TestModel = Backbone.Model.extend();
-const TestModel2 = Backbone.Model.extend();
+const TestModel = Schmackbone.Model.extend();
+const TestModel2 = Schmackbone.Model.extend();
 
 /* eslint-disable max-nested-callbacks */
 describe('Config', () => {
