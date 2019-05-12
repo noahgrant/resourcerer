@@ -8,7 +8,7 @@ describe('ModelCache', () => {
   beforeEach(() => {
     jasmine.clock().install();
     // ensure we have fresh caches for each test
-    ModelCache = require('../lib/model_cache').default;
+    ModelCache = require('../lib/model-cache').default;
 
     spyOn(ModelCache, 'register').and.callThrough();
   });
@@ -18,7 +18,7 @@ describe('ModelCache', () => {
     ModelCache.remove('foo');
     ModelCache.remove('bar');
     ModelCache.remove('baz');
-    delete require.cache[require.resolve('../lib/model_cache')];
+    delete require.cache[require.resolve('../lib/model-cache')];
   });
 
   it('gets a model from its cache via a unique key', () => {

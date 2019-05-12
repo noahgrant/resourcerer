@@ -10,16 +10,16 @@ import withResources, {
   EMPTY_COLLECTION,
   EMPTY_MODEL,
   getCacheKey
-} from '../lib/with_resources.jsx';
+} from '../lib/with-resources.jsx';
 
-import Backbone from 'backbone';
-import ErrorBoundary from '../lib/error_boundary.jsx';
+import ErrorBoundary from '../lib/error-boundary.jsx';
 import {LoadingStates} from '../lib/constants';
-import ModelCache from '../lib/model_cache';
+import ModelCache from '../lib/model-cache';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import {UserModel} from './model_mocks';
-import {waitsFor} from './test_utils';
+import Schmackbone from 'schmackbone';
+import {UserModel} from './model-mocks';
+import {waitsFor} from './test-utils';
 
 var measure,
     causeLogicError;
@@ -114,7 +114,7 @@ describe('withResources', () => {
     requestSpy = spyOn(Request, 'default').and.callFake((key, Model, options) => {
       // mock fetch model cache behavior, where we put it in the cache immediately,
       // then request the model, and only if it errors do we remove it from cache
-      var model = new Backbone.Model({key, ...(options.data || {})});
+      var model = new Schmackbone.Model({key, ...(options.data || {})});
 
       ModelCache.put(key, model, options.component);
 
@@ -366,9 +366,9 @@ describe('withResources', () => {
 
   it('does not fetch resources that are passed in via props', () => {
     dataChild = renderWithResources({
-      userModel: new Backbone.Model(),
-      analystsCollection: new Backbone.Collection(),
-      decisionsCollection: new Backbone.Collection()
+      userModel: new Schmackbone.Model(),
+      analystsCollection: new Schmackbone.Collection(),
+      decisionsCollection: new Schmackbone.Collection()
     });
 
     expect(requestSpy).not.toHaveBeenCalled();
@@ -377,8 +377,8 @@ describe('withResources', () => {
 
     // the models passed down are not fetched
     dataChild = renderWithResources({
-      userModel: new Backbone.Model(),
-      decisionsCollection: new Backbone.Collection()
+      userModel: new Schmackbone.Model(),
+      decisionsCollection: new Schmackbone.Collection()
     });
 
     expect(requestSpy.calls.count()).toEqual(1);
@@ -708,7 +708,7 @@ describe('withResources', () => {
     });
 
     it('updates previously existing models if they exist', async(done) => {
-      var testModel = new Backbone.Model({content_abuse: {id: 'another_content_decision'}}),
+      var testModel = new Schmackbone.Model({content_abuse: {id: 'another_content_decision'}}),
           testKey = 'decisionInstanceentityId=noah_entityType=content';
 
       ModelMap[ResourceKeys.USER].providesModels = () => newProvides;
@@ -882,7 +882,7 @@ describe('withResources', () => {
       expect(dataCarrier.props.serialProp).not.toBeDefined();
       expect(transformSpy).toHaveBeenCalled();
       actionsModel = transformSpy.calls.mostRecent().args[0];
-      expect(actionsModel instanceof Backbone.Model).toBe(true);
+      expect(actionsModel instanceof Schmackbone.Model).toBe(true);
       expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
 
       await waitsFor(() => dataCarrier.props.serialProp);
@@ -900,7 +900,7 @@ describe('withResources', () => {
       expect(transformSpy).toHaveBeenCalled();
 
       actionsModel = transformSpy.calls.mostRecent().args[0];
-      expect(actionsModel instanceof Backbone.Model).toBe(true);
+      expect(actionsModel instanceof Schmackbone.Model).toBe(true);
       expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
 
       await waitsFor(() => dataCarrier.props.provides1);
@@ -945,7 +945,7 @@ describe('withResources', () => {
 
         requestSpy.and.callFake((key, Model, options={}) => new Promise((res, rej) => {
           window.requestAnimationFrame(() => {
-            var model = new Backbone.Model({key, ...(options.data || {})});
+            var model = new Schmackbone.Model({key, ...(options.data || {})});
 
             if (options.prefetch) {
               haveCalledPrefetch = true;

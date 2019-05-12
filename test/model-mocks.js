@@ -1,6 +1,6 @@
-import Backbone from 'backbone';
+import Schmackbone from 'schmackbone';
 
-export const UserModel = Backbone.Model.extend({
+export const UserModel = Schmackbone.Model.extend({
   initialize(attrs, options={}) {
     this.userId = options.userId;
   },
@@ -10,19 +10,19 @@ export const UserModel = Backbone.Model.extend({
   }
 }, {cacheFields: ['userId']});
 
-export const AnalystsCollection = Backbone.Collection.extend({
+export const AnalystsCollection = Schmackbone.Collection.extend({
   url() {
     return '/root/analysts';
   }
 });
 
-export const DecisionsCollection = Backbone.Collection.extend({
+export const DecisionsCollection = Schmackbone.Collection.extend({
   url() {
     return '/root/decisions';
   }
 }, {cacheFields: ['include_deleted']});
 
-export const NotesModel = Backbone.Model.extend({
+export const NotesModel = Schmackbone.Model.extend({
   initialize(attributes, options={}) {
     this.userId = options.userId;
   },
@@ -32,7 +32,7 @@ export const NotesModel = Backbone.Model.extend({
   }
 }, {cacheFields: ['userId']});
 
-export const SearchQueryModel = Backbone.Model.extend({
+export const SearchQueryModel = Schmackbone.Model.extend({
   initialize(attributes, options={}) {
     this.userId = options.userId;
   },
@@ -45,7 +45,7 @@ export const SearchQueryModel = Backbone.Model.extend({
       type: 'POST'
     };
 
-    Backbone.Model.prototype.fetch.call(this, options);
+    Schmackbone.Model.prototype.fetch.call(this, options);
   },
 
   url() {
@@ -53,33 +53,33 @@ export const SearchQueryModel = Backbone.Model.extend({
   }
 }, {cacheFields: ['type', 'detailed', 'filter', 'sort', 'limit', 'from']});
 
-export const SignalsCollection = Backbone.Collection.extend({
+export const SignalsCollection = Schmackbone.Collection.extend({
   url() {
     return '/root/signals';
   }
 });
 
-export const ActionsCollection = Backbone.Collection.extend({
+export const ActionsCollection = Schmackbone.Collection.extend({
   url() {
     return '/root/actions';
   }
 });
 
-export const DecisionLogsCollection = Backbone.Collection.extend({
+export const DecisionLogsCollection = Schmackbone.Collection.extend({
   url() {
     return '/root/decision_logs';
   }
 });
 
 // next three are unfetched resources
-export const DecisionInstanceModel = Backbone.Model.extend(
+export const DecisionInstanceModel = Schmackbone.Model.extend(
   {},
   {cacheFields: ['entityType', 'entityId']}
 );
 
-export const LabelInstanceModel = Backbone.Model.extend({}, {cacheFields: ['userId']});
+export const LabelInstanceModel = Schmackbone.Model.extend({}, {cacheFields: ['userId']});
 
-export const AccountConfigModel = Backbone.Model.extend({
+export const AccountConfigModel = Schmackbone.Model.extend({
   initialize(attrs, options={}) {
     this.accountId = options.accountId;
   },

@@ -2,20 +2,20 @@ import {_hasErrored, _hasLoaded, _isLoading} from './utils';
 import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from './config';
 
 import _ from 'underscore';
-import Backbone from 'backbone';
-import backboneMixin from './backbone_mixin';
-import ErrorBoundary from './error_boundary.jsx';
+import ErrorBoundary from './error-boundary.jsx';
 import {LoadingStates} from './constants';
-import ModelCache from './model_cache';
+import ModelCache from './model-cache';
 import React from 'react';
 import request from './request';
+import Schmackbone from 'schmackbone';
+import schmackboneMixin from './schmackbone-mixin';
 
 const SPREAD_PROVIDES_CHAR = '_';
 
 // pending and errored resources are not cached, but instead of passing down an
 // undefined prop, we pass down empty models for greater defense in client code
-export const EMPTY_MODEL = Object.freeze(new Backbone.Model());
-export const EMPTY_COLLECTION = Object.freeze(new Backbone.Collection());
+export const EMPTY_MODEL = Object.freeze(new Schmackbone.Model());
+export const EMPTY_COLLECTION = Object.freeze(new Schmackbone.Collection());
 
 // ensure that no withResources client can modify empty models' data
 Object.freeze(EMPTY_MODEL.attributes);
@@ -64,7 +64,7 @@ const resourceState = (Component) =>
  * several different data-related things for a component automatically:
  *
  *   1. it fetches a component's resources in cWM
- *   2. it binds backboneMixin listeners to any resource with a `listen: true` option
+ *   2. it binds schmackboneMixin listeners to any resource with a `listen: true` option
  *   3. it handles whether or not the critical resources for a component have loaded
  *   4. it re-fetches a new resource in cWRP when specified props have changed
  *   5. it handles resource cache naming for the ModelCache
@@ -75,9 +75,12 @@ const resourceState = (Component) =>
  * custom name if passed a modelKey config property), and each map value is a
  * config object that may contain any of the following properties:
  *
- *   * fields {string[]|object[]} - list of property names within props that
- *        should trigger a re-fetch when changed. if a field entry is passed in
- *        as an object, it can have the following properties:
+ *   * fields {string[]|object[]} - **** DEPRECATED - only use this if you need
+ *        to respond to dynamic props that can't be added to a model's static
+ *        `cacheFields` property ****
+ *        list of property names within props that should trigger a re-fetch
+ *        when changed. if a field entry is passed in as an object, it can have
+ *        the following properties:
  *          * name {string} (required) - the name of the prop
  *          * cacheIgnore {boolean} if true, the field will still trigger a
  *            refetch, but will not be taken into account for the cache key
@@ -88,9 +91,8 @@ const resourceState = (Component) =>
  *        is false
  *   * listen {boolean} - whether the component should re-render on changes to
  *        the resource
- *   * data {object} - data for the fetch call passed to GlobalState.fetch
- *   * options {object} - options object for model instantiation passed to
- *        GlobalState.fetch
+ *   * data {object} - data for the fetch call passed to the `request`
+ *   * options {object} - options object passed to the model's `initialize`
  *   * dependsOn {string[]} - prop fields required to be present before the
  *        resource will fetch
  *   * provides {object<string: function>[]} - list of props that a resource
@@ -111,12 +113,12 @@ const resourceState = (Component) =>
  *   * modelKey {ResourceKeys} - use this when adding a custom name for the resource,
  *        so the props use the custom name, but the correct resource type is
  *        fetched and cached
- *   * ...any other GlobalState.fetch option
+ *   * ...any other option that can be passed directly to the `request` function
  */
 const withResources = (getResources) =>
   (Component) => {
     @resourceState
-    @backboneMixin
+    @schmackboneMixin
     class DataCarrier extends React.Component {
       constructor(props) {
         super();
@@ -211,8 +213,6 @@ const withResources = (getResources) =>
         Promise.all(
           // nice visual for this promise chain: http://tinyurl.com/y6wt47b6
           resources.map(([name, config]) => {
-            // when this bug is fixed we can just destructure this:
-            // https://github.com/babel/babel/issues/7099
             var {data, modelKey, provides={}, ...rest} = config,
                 // unless this is a prefetched resource, resourceProps will just be props
                 resourceProps = {...props, ...(rest.prefetch || {})},
@@ -305,14 +305,16 @@ const withResources = (getResources) =>
        * property containing a list of additional `props` configurations used
        * to prefetch that resource; those are given a `prefetch` property set to
        * those changed props. Finally, each resource is given a `modelKey`
-       * property equal to its GSKey name if not passed in directly. `modelKey`
-       * is then used for all things fetch- and cache-related, while `name` is
-       * used for model, loading state, and status props. If no `modelKey`
-       * property is passed in, then it is identical to the resource's `name`.
+       * property equal to its ResourceKey name if not passed in directly.
+       * `modelKey` is then used for all things fetch- and cache-related, while
+       * `name` is used for model, loading state, and status props. If no
+       * `modelKey` property is passed in, then it is identical to the
+       * resource's `name`.
        *
        * @param {object} props - current component props
-       * @return {[string, object][]} flattened [name, config] list of resources to
-       *    be consumed by the withResources HOC with prefetch properties assigned.
+       * @return {[string, object][]} flattened [name, config] list of resources
+       *   to be consumed by the withResources HOC with prefetch properties
+       *   assigned.
        */
       _generateResources(props=this.props) {
         return Object.entries(getResources(props, ResourceKeys) || {})
@@ -437,8 +439,8 @@ const withResources = (getResources) =>
             <Component
               ref={(dataChild) => {
                 this.props.attachDataChildRef(dataChild);
-                // allows for backbone mixin to call forceUpdate in this context
-                this.backboneContext = dataChild;
+                // allows for schmackboneMixin to call forceUpdate in this context
+                this.schmackboneContext = dataChild;
               }}
               // here we pass down our models
               {...resources.reduce((models, [name, config]) => ({
@@ -484,17 +486,17 @@ function getResourceStatus(name) {
 
 /**
  * Formulates the name of the resource prop passed to the child component, ie
- * this.props.decisionsCollection this.props.userModel.
+ * this.props.todosCollection and this.props.todoItemModel.
  *
  * @param {string} baseName - string name of the resource
- * @param {string} modelKey - global state resource type key. if the resource is
- *    not given a custom name, this is the same as `baseName`
+ * @param {ResourceKeys} modelKey - if the resource is not given a custom name,
+ *   this is the same as `baseName`
  * @return {string} name of the resource prop passed to the child component
  */
 function getResourcePropertyName(baseName, modelKey) {
   var Constructor = ModelMap[modelKey];
 
-  return Constructor.prototype instanceof Backbone.Collection ? `${baseName}Collection` :
+  return Constructor.prototype instanceof Schmackbone.Collection ? `${baseName}Collection` :
     `${baseName}Model`;
 }
 
@@ -504,19 +506,22 @@ function getResourcePropertyName(baseName, modelKey) {
  * without needing to be defensive. This method determines whether the Backbone
  * Model or the Backbone Collection should be passed down for a given resource.
  *
+ * TODO: should we go further and pass down empty instance of the specific
+ *   constructor instead of a generic model/collection?
+ *
  * @param {string} modelKey - resource type key
- * @return {Backbone.Model|Backbone.Collection} frozen empty model or collection instance
+ * @return {Schmackbone.Model|Schmackbone.Collection} frozen empty model or collection instance
  */
 function getEmptyModel(modelKey) {
   var Constructor = ModelMap[modelKey];
 
-  return Constructor.prototype instanceof Backbone.Collection ? EMPTY_COLLECTION : EMPTY_MODEL;
+  return Constructor.prototype instanceof Schmackbone.Collection ? EMPTY_COLLECTION : EMPTY_MODEL;
 }
 
 /**
- * Calculates a global state cache key for the resource depending on the base
- * resource type key and the truthy parameter values. Parameter values are
- * calculated in one of two ways:
+ * Calculates a cache key for the resource depending on the base resource type
+ * key and the truthy parameter values. Parameter values are calculated in one
+ * of two ways:
  *
  * * Default: Values are taken from props properties listed in the `fields`
  *   array. Fields passed in as objects are ignored from the key if they have a
@@ -597,7 +602,7 @@ function hasAllDependencies(props, [, {dependsOn}]) {
  * @param {string[]|object[]} fields - list of property names whose values determine
  *    which flavor of resource is requested
  * @param {object} props - current component props
- * @return {Backbone.Model|Backbone.Collection?} model from the cache
+ * @return {Schmackbone.Model|Schmackbone.Collection?} model from the cache
  */
 function getModelFromCache(...args) {
   return ModelCache.get(getCacheKey(...args));
@@ -637,8 +642,7 @@ function shouldBypassFetch(props, [name, {modelKey}]) {
 }
 
 /**
- * Negates the return value of an input function, like _.reject, but we can
- * use this within native filter methods.
+ * Negates the return value of an input function
  *
  * @param {function} fn - input function to negate
  * @return {function} a function that negates the return value of the input function

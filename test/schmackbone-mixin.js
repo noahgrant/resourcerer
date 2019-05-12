@@ -1,16 +1,16 @@
-import Backbone from 'backbone';
-import backboneMixin from '../lib/backbone_mixin';
 import React from 'react';
+import Schmackbone from 'schmackbone';
+import schmackboneMixin from '../lib/schmackbone-mixin';
 
-describe('BackboneMixin', () => {
+describe('SchmackboneMixin', () => {
   var dummyComponent,
-      model1 = new Backbone.Model(),
-      model2 = new Backbone.Collection(),
-      model3 = new Backbone.Model(),
+      model1 = new Schmackbone.Model(),
+      model2 = new Schmackbone.Collection(),
+      model3 = new Schmackbone.Model(),
       forceUpdateSpy;
 
   beforeEach(() => {
-    dummyComponent = new (backboneMixin(class Component extends React.Component {
+    dummyComponent = new (schmackboneMixin(class Component extends React.Component {
       constructor() {
         super();
 

@@ -15,7 +15,7 @@ import {
   SearchQueryModel,
   SignalsCollection,
   UserModel
-} from './model_mocks';
+} from './model-mocks';
 import {addModels, addResourceKeys, addUnfetchedResources} from '../lib/config';
 
 addResourceKeys({
