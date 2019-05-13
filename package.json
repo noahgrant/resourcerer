@@ -1,6 +1,6 @@
 {
-  "name": "web",
-  "version": "0.0.0",
+  "name": "with-resources",
+  "version": "0.1.0",
   "repository": "github.com/SiftScience/with-resources",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
@@ -32,14 +32,11 @@
     "karma-jasmine": "^1.1.0",
     "karma-jasmine-html-reporter": "^0.2.2",
     "karma-webpack": "^3.0.5",
+    "react-dom": "^16.8.6",
     "webpack": "^4.29.6"
   },
   "dependencies": {
-    "classnames": "^2.0.0",
-    "prop-types": "^15.5.10",
-    "qs": "^6.5.2",
     "react": "^16.8.6",
-    "react-dom": "^16.8.6",
     "schmackbone": "^1.4.0",
     "underscore": "^1.8.3"
   }
