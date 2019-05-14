@@ -96,7 +96,7 @@ module: {
 ```
   
   
-# Usage
+# Tutorial
 
 Okay, back to the initial example. Let's take a look at our `withResources` usage in the component:
 
@@ -267,7 +267,7 @@ Assuming we have a `props.id` equal to `'noahgrant'`, this setup will put `MyCom
   
 ### *...and here's the best part:*
   
-Let's say that `props.id` changes to a different user. `MyComponentWithAUser` will get put _back_ into a loading state while the new endpoint is fetched, _without us having to do anything!_ This works because our model has dictated that its models should be cached by a `userId` field, which is passed to it in the `options` property.
+Let's say that `props.id` changes to a different user. `MyComponentWithAUser` will get put _back_ into a loading state while the new endpoint is fetched, _without us having to do anything!_ This works because our model has dictated that its models should be cached by a `userId` field, which is passed to it in the [`options` property](#options).
 
 ## Changing Props
 In general, there are two ways to change `props.id` as in the previous example:
@@ -303,9 +303,125 @@ In this simplified example, only `props.itemId` is initially present at the url 
 
 So, in this case, `getUserIdFromItem` is the transform function, which takes the `queueItemModel` as an argument and returns the userId that will be assigned to `props.userId` (or, more accurately, will be set as state for the HOC wrapper’s state wrapper as described in the previous section). When the QueueItemModel resource returns, the transform function is invoked; at that point, `props.userId` exists, and the UserModel will be fetched. And we have serially requested our resources!
 
-One thing to note here is that while the `QUEUE_ITEM` resource is being fetched, the user resource is in a `PENDING` state, which is a special state that does not contribute to overall component `isLoading`/`hasErrored` states (though it will keep the component from being `hasLoaded`). At this point, the `QueueItemPage` in the example above is in a `LOADING` state (`isLoading === true`) because `QUEUE_ITEM` is loading. When it returns with the user id, the `USER` resource is put into a `LOADING` state, and the component then remains `isLoading === true` until it returns, after which the component has successfully loaded. If the `QUEUE_ITEM` resource happened to error, for some reason, the `USER` resource would never get out of its `PENDING` state, and the component would then take on the `ERROR` state (`hasErrored === true`) of `QUEUE_ITEM`. For more on `PENDING`, see [Thoughts on the PENDING Resource](#thoughts-on-the-pending-state) further in this document.
+One thing to note here is that while the `QUEUE_ITEM` resource is being fetched, the user resource is in a `PENDING` state, which is a special state that does not contribute to overall component `isLoading`/`hasErrored` states (though it will keep the component from being `hasLoaded`). At this point, the `QueueItemPage` in the example above is in a `LOADING` state (`isLoading === true`) because `QUEUE_ITEM` is loading. When it returns with the user id, the `USER` resource is put into a `LOADING` state, and the component then remains `isLoading === true` until it returns, after which the component has successfully loaded. If the `QUEUE_ITEM` resource happened to error, for some reason, the `USER` resource would never get out of its `PENDING` state, and the component would then take on the `ERROR` state (`hasErrored === true`) of `QUEUE_ITEM`. For more on `PENDING`, see [Thoughts on the PENDING State](#thoughts-on-the-pending-state) further in this document.
 
 ## Other Common Resource Config Options
+
+### Data
+
+The `data` option is passed directly to the Schmackbone model’s data property and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
+
+```js
+  @withResources((props, ResourceKeys) => {
+    const now = Date.now();
+      
+    return {
+      [ResourceKeys.USER_TODOS]: {
+        data: {
+          end_time: now,
+          start_time: now - props.timeRange,
+          sort_field: props.sortField
+        }
+      }
+    };
+  })
+  class UserTodos extends React.Component {}
+```
+
+Now, as the prop fields change, the data sent with the request changes as well (provided we set our `cacheFields` property accordingly):
+
+`https://example.com/users/noahgrant/todos?end_time=1494611831024&start_time=1492019831024&sort_field=importance`
+
+
+  
+  
+### Noncritical
+
+As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-states) section, not all resources used by the component are needed for rendering. By adding a `noncritical: true` option, we:
+
+- De-prioritize fetching the resource until after all critical resources have been fetched
+- Remove the resource from consideration within the component-wide loading states (`props.hasLoaded`, `props.isLoading`, `props.hasErrored`), giving us the ability to render without waiting on those resources
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `_hasLoaded`, `_hasErrored`, and `_isLoading` from `with-resources/utils`.
+  
+  
+### Listen
+
+Our models are fetched via Schmackbone, and the results are kept in `Schmackbone.Model`/`Schmackbone.Collection` representations as opposed to React state. When we want to update the component after a `sync`, `change`, or `destroy` Schmackbone event, we can simply pass the `listen: true` option, which will `forceUpdate` the component, effectively making our data-state UI-state while keeping one single source-of-truth for our model abstractions.
+
+```js
+  @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true}}))
+  class MyComponentWithTodos extends React.Component {}
+```
+
+Note that listening is often unnecessary—if a loading state is changed during request and removed when the request completes (as is the case with `withResources`), then the React component will update in the natural React cycle and can read from the latest resource without needing to trigger the `forceUpdate`.
+
+
+### Measure
+
+Passing a `measure: true` config option will record the time it takes for a particular resource to return and pass the data to the [track]() [configuration](#configuring-withresources) method that you can set up, sending it to your own app data aggregator. This allows you to see the effects of your endpoints from a user’s perspective.
+
+```js
+  @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true, measure: true}}))
+  class MyComponentWithTodos extends React.Component {}
+```
+
+### Status
+
+Passing a `status: true` config option will pass props down to the component reflecting the resource’s status code. For example, if you pass the option to a `TODOS` resource that 404s, the wrapped component will have a prop called `todosStatus` that will be equal to `404`.
+
+```js
+  @withResources((props, ResourceKeys) => ({
+    [ResourceKeys.TODOS]: {listen: true, measure: true, status: true}
+  }))
+  class MyComponentWithTodos extends React.Component {}
+```
+
+### forceFetch
+
+Sometimes you want the latest of a resource, bypassing whatever model has already been cached in your application. To accomplish this, simply pass a `forceFetch: true` in a resource's config. The force-fetched response will replace any prior model in the cache, but may itself get replaced by a subsequent `forceFetch: true` request for the resource.
+
+```js
+  @withResources((props, ResourceKeys) => ({[ResourceKeys.LATEST_STATS]: {forceFetch: true}}))
+  class MyComponentWithLatestStats extends React.Component {}
+```
+
+### Custom Resource Names
+
+Passing a `modelKey: <ResourceKeys>` option allows you to pass a custom name as the `withResources` key, which will become the base name for component-related props passed down to the component. For example, this configuration:
+
+```js
+  @withResources((props, ResourceKeys) => ({myRadTodos: {modelKey: ResourceKeys.TODOS}))
+  class MyComponentWithTodos extends React.Component {}
+```
+
+would still fetch the todos resource, but the props passed to the `MyComponentWithTodos` instance will be `myRadTodosCollection`, `myRadTodosLoadingState`, and `myRadTodosStatus`, etc. This also allows us to fetch the same resource type multiple times for a single component.
+
+
+### Options 
+
+[As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `initialize` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
+
+```js
+  @withResources((props, ResourceKeys) => {
+    const now = Date.now();
+      
+    return {
+      [ResourceKeys.USER_TODOS]: {
+        data: {
+          end_time: now,
+          start_time: now - props.timeRange,
+          sort_field: props.sortField
+        },
+        options: {userId: props.userId}
+      }
+    };
+  })
+  class UserTodos extends React.Component {}
+```
+
+Here, the UserTodos collection will be instantiated with an options hash including the `userId` property, which it uses to construct its url. We'll also want to add the `'userId'` string to the collection's static `cacheFields` array, because each cached collection should be specific to the user.
+
+
 
 ## Declarative Cache Keys
 
@@ -326,6 +442,6 @@ One thing to note here is that while the `QUEUE_ITEM` resource is being fetched,
 
 * Does it support concurrent React?
 
-* What about other data sources, like websockets?
+* What about other data sources like websockets?
 
 * How big is the `with-resources` package?
