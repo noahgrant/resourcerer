@@ -307,7 +307,7 @@ One thing to note here is that while the `QUEUE_ITEM` resource is being fetched,
 
 ## Other Common Resource Config Options
 
-### Data
+### data
 
 The `data` option is passed directly to the Schmackbone model’s data property and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
 
@@ -318,6 +318,7 @@ The `data` option is passed directly to the Schmackbone model’s data property 
     return {
       [ResourceKeys.USER_TODOS]: {
         data: {
+          limit: 20,
           end_time: now,
           start_time: now - props.timeRange,
           sort_field: props.sortField
@@ -330,12 +331,10 @@ The `data` option is passed directly to the Schmackbone model’s data property 
 
 Now, as the prop fields change, the data sent with the request changes as well (provided we set our `cacheFields` property accordingly):
 
-`https://example.com/users/noahgrant/todos?end_time=1494611831024&start_time=1492019831024&sort_field=importance`
-
+`https://example.com/users/noahgrant/todos?limit=20&end_time=1494611831024&start_time=1492019831024&sort_field=importance`
 
   
-  
-### Noncritical
+### noncritical
 
 As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-states) section, not all resources used by the component are needed for rendering. By adding a `noncritical: true` option, we:
 
@@ -344,7 +343,7 @@ As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-stat
 - Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `_hasLoaded`, `_hasErrored`, and `_isLoading` from `with-resources/utils`.
   
   
-### Listen
+### listen
 
 Our models are fetched via Schmackbone, and the results are kept in `Schmackbone.Model`/`Schmackbone.Collection` representations as opposed to React state. When we want to update the component after a `sync`, `change`, or `destroy` Schmackbone event, we can simply pass the `listen: true` option, which will `forceUpdate` the component, effectively making our data-state UI-state while keeping one single source-of-truth for our model abstractions.
 
@@ -360,7 +359,7 @@ Our models are fetched via Schmackbone, and the results are kept in `Schmackbone
 1. Listening on a collection will also trigger updates when one of the collection's models changes. That's an implentation detail of Backbone. So if we listen on the todos collection above, but make an update in our component with `this.props.todosCollection.at(0).save({name: 'Renamed Todo'})`, our component will still auto-update!
 
 
-### Measure
+### measure
 
 Passing a `measure: true` config option will record the time it takes for a particular resource to return and pass the data to the [track]() [configuration](#configuring-withresources) method that you can set up, sending it to your own app data aggregator. This allows you to see the effects of your endpoints from a user’s perspective.
 
@@ -369,7 +368,7 @@ Passing a `measure: true` config option will record the time it takes for a part
   class MyComponentWithTodos extends React.Component {}
 ```
 
-### Status
+### status
 
 Passing a `status: true` config option will pass props down to the component reflecting the resource’s status code. For example, if you pass the option to a `TODOS` resource that 404s, the wrapped component will have a prop called `todosStatus` that will be equal to `404`.
 
@@ -401,7 +400,7 @@ Passing a `modelKey: <ResourceKeys>` option allows you to pass a custom name as 
 would still fetch the todos resource, but the props passed to the `MyComponentWithTodos` instance will be `myRadTodosCollection`, `myRadTodosLoadingState`, and `myRadTodosStatus`, etc. This also allows us to fetch the same resource type multiple times for a single component.
 
 
-### Options 
+### options 
 
 [As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `initialize` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
 
@@ -412,6 +411,7 @@ would still fetch the todos resource, but the props passed to the `MyComponentWi
     return {
       [ResourceKeys.USER_TODOS]: {
         data: {
+          limit: 20,
           end_time: now,
           start_time: now - props.timeRange,
           sort_field: props.sortField
@@ -425,11 +425,79 @@ would still fetch the todos resource, but the props passed to the `MyComponentWi
 
 Here, the UserTodos collection will be instantiated with an options hash including the `userId` property, which it uses to construct its url. We'll also want to add the `'userId'` string to the collection's static `cacheFields` array, because each cached collection should be specific to the user.
 
+### attributes
 
+Pass in an attributes hash to initialize a Schmackbone.Model instance with a body before initially fetching. This is passed directly to the model's [`initialize` method](https://backbonejs.org/#Model-constructor) along with the `options` property.
+
+## Caching Resources with ModelCache
+
+`withResources` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
+
+The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Backbone.Model|Backbone.Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `withResources` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default, to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go through the network.
+
+Again, it’s unlikely that you’ll use `ModelCache` directly while using `withResources`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
 
 ## Declarative Cache Keys
 
-## Caching Resources with ModelCache
+As alluded to previously, `withResources` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `cacheFields` array, where each entry can be either:
+
+1. A string, where each string is the name of a property that the model receives whose value should take part in the cache key. The model can receive this property either from the [options](#options) hash, the [attributes](#attributes) hash, or the [data](#data) hash, in that order.
+
+2. A function, whose return value is an object of keys and values that should both contribute to the cache key.
+
+Let's take a look at the USER_TODOS resource from above, where we want to request some top number of todos for a user sorted by some value over some time range. The resource declaration might look like this:
+
+```js
+  @withResources((props, ResourceKeys) => {
+    const now = Date.now();
+      
+    return {
+      [ResourceKeys.USER_TODOS]: {
+        data: {
+          limit: props.limit,
+          end_time: now,
+          start_time: now - props.timeRange,
+          sort_field: props.sortField
+        },
+        options: {userId: props.userId}
+      }
+    };
+  })
+  class UserTodos extends React.Component {}
+```
+
+And our corresponding model definition might look like this:
+
+```js
+export const UserTodosCollection = Schmackbone.Collection.extend({
+  initialize(models, options={}) {
+    this.userId = options.userId;
+  },
+  
+  url() {
+    return `/users/${this.userId}/todos`;
+  }
+  // ...
+}, {
+  cacheFields: [
+    'limit',
+    'userId',
+    'sort_field',
+     ({end_millis, start_millis}) => ({range: end_millis - start_millis})
+  ]
+});
+```
+
+We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `withResources` will see its value within the `options` hash that is passed and use it for the cache key.  
+
+The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash; it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `cacheFields`, which takes the `data` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
+
+The generated cache key would be something like `userTodos_limit=50_$range=86400000_sort_field=importance_userId=noah`. Again, note that:
+
+- the `userId` value is taken from the `options` hash
+- the `limit` and `sort_field` values are taken from the `data` hash
+- the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `data` hash into account.
+
 
 ## Testing Components that Use `withResources`
 
