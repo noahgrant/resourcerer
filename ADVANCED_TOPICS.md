@@ -44,39 +44,39 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 
     As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`.
        
-1. **Implicit dependent resources.** Another way to effectively have a dependent resource is to use a conditional in your `getResources` method:
+## Implicit dependent resources
+
+Another way to effectively have a dependent resource is to use a conditional in your `getResources` method:
     
-    ```js
-      @withResources((props, ResourceKeys) => ({
-        [ResourceKeys.TODOS]: {},
-        ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {attributes: {id: props.todoId}} : {})
-      }))
-    ```
+```js
+@withResources((props, ResourceKeys) => ({
+  [ResourceKeys.TODOS]: {},
+  ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {attributes: {id: props.todoId}} : {})
+}))
+```
 
-    In general, using `dependsOn` is much more preferable, both in terms of semantics and functionality. The key difference here is that the dependent resource does not get put into a `PENDING` state, and `hasLoaded` depends on an unpredictable number of resources&mdash;for example, in the above scenario, what happens if `props.todoId` never arrives? Using `dependsOn`, `hasLoaded` would not be true, but using the conditional, it would be. This means that with the conditional, you can’t freely make assumptions behind the `this.props.hasLoaded`  flag:
+In general, using `dependsOn` is much more preferable, both in terms of semantics and functionality. The key difference here is that the dependent resource does not get put into a `PENDING` state, and `hasLoaded` depends on an unpredictable number of resources&mdash;for example, in the above scenario, what happens if `props.todoId` never arrives? Using `dependsOn`, `hasLoaded` would not be true, but using the conditional, it would be. This means that with the conditional, you can’t freely make assumptions behind the `this.props.hasLoaded`  flag:
 
-    ```jsx
-      {this.props.hasLoaded ? (
-        // with the conditional, you don't know which resources are available. with
-        // `dependsOn`, you do
-      ) : null}
-    ```
+```jsx
+{this.props.hasLoaded ? (
+  // with the conditional, you don't know which resources are available. with
+  // `dependsOn`, you do
+) : null}
+```
 
-    That doesn’t mean that the conditional can’t be useful&mdash;it’s just that its use should be relegated to components that have two discrete forms&mdash;one in which the dependent prop is always present, and one in which the dependent prop is never present. If you’re unsure whether a prop might exist, notably because it comes from a providing resource, you should use `dependsOn`. A good example of when to use a conditional is in this fake component that sometimes fetches a user model and sometimes fetches an order model depending on the presence of an `orderId` prop (user resource config not shown):
+That doesn’t mean that the conditional can’t be useful&mdash;it’s just that its use should be relegated to components that have two discrete forms&mdash;one in which the dependent prop is always present, and one in which the dependent prop is never present. If you’re unsure whether a prop might exist, notably because it comes from a providing resource, you should use `dependsOn`. A good example of when to use a conditional is in this fake component that sometimes fetches a user model and sometimes fetches an order model depending on the presence of an `orderId` prop (user resource config not shown):
 
-    ```js
-      @withResources(({userId, orderId}, ResourceKeys) => ({
-        ...!userId && orderId ? {
-          [ResourceKeys.ORDER]: {
-            noncritical: true,
-            attributes: {id: orderId}
-          }
-        } : {}
-      }))
-    ```
+```js
+@withResources(({userId, orderId}, ResourceKeys) => ({
+  ...!userId && orderId ? {
+    [ResourceKeys.ORDER]: {
+      noncritical: true,
+      attributes: {id: orderId}
+    }
+  } : {}
+}))
+```
 
+In this case, when the component is used as an order component (denoted by the presence of the `orderId` prop), we fetch the `order` resource. Otherwise, we don’t.
 
-    In this case, when the component is used as an order component (denoted by the presence of the `orderId` prop), we fetch the `order` resource. Otherwise, we don’t.
-
-
-    For all other uses of dependent resources, we should use `dependsOn`.
+For all other uses of dependent resources, we should use `dependsOn`.
