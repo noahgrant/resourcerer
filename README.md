@@ -499,8 +499,6 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 - the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `data` hash into account.
 
 
-## Testing Components that Use `withResources`
-
 # Configuring `withResources`
 
 
@@ -512,5 +510,8 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 * Does it support concurrent React?
 
 * What about other data sources like websockets?
+
+* How can we test components that use `with-resources`?  
+    See the [doc on testing components](/TESTING_COMPONENTS.md) for more on that.
 
 * How big is the `with-resources` package?
