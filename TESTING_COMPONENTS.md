@@ -40,11 +40,11 @@ There are a few testing situations that are admittedly pretty clunky with `withR
 
 #### Testing Loading/Error States
 
-    This problem arises when we’ve stubbed out `withResources` with the resources it expects but have no way of easily controlling how the HOC passes down critical loading states (`hasLoaded`/`isLoading`/`hasErrored`). We can pass down individual loading states, ie `renderUserTodosSection({usersLoadingState: LoadingStates.ERROR})`, and that will help for noncritical loading UIs in the console, but it won’t have any effect on the critical loading props. (Side note: this is because `withResources` looks at its own state for those properties, and those don’t get overridden by props passed in.) Yet we often want to ensure that we get the correct error state is displayed when a component’s loading has errored, or that we show a loader when the component is loading.
+This problem arises when we’ve stubbed out `withResources` with the resources it expects but have no way of easily controlling how the HOC passes down critical loading states (`hasLoaded`/`isLoading`/`hasErrored`). We can pass down individual loading states, ie `renderUserTodosSection({usersLoadingState: LoadingStates.ERROR})`, and that will help for noncritical loading UIs in the console, but it won’t have any effect on the critical loading props. (Side note: this is because `withResources` looks at its own state for those properties, and those don’t get overridden by props passed in.) Yet we often want to ensure that we get the correct error state is displayed when a component’s loading has errored, or that we show a loader when the component is loading.
     
-    In order to test these, we need to change the state itself, and we can do that by adding a reference to our wrapping component, ie in a `beforeEach` hook or similar:
+In order to test these, we need to change the state itself, and we can do that by adding a reference to our wrapping component, ie in a `beforeEach` hook or similar:
 
-    ```js
+```js
     beforeEach(() => {
       resources = renderLoginsSection();
       // wrapping resources component that holds loading states
@@ -71,4 +71,4 @@ There are a few testing situations that are admittedly pretty clunky with `withR
       expect(scryRenderedComponentsWithType(resources, Loader).length).toEqual(0);
       expect(userTodosList.props.hasLoaded).toBe(true);
     });
-    ```
+```
