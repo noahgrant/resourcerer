@@ -501,17 +501,81 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 
 # Configuring `withResources`
 
+The same config file used to `addResourceKeys` and `addModels` also allows you to set custom configuration properties for your own application:
+
+```js
+import {setConfig} from 'with-resources/config';
+
+setConfig(configObj);
+```
+
+`setConfig` accepts an object with any of the following properties:
+
+* `cacheGracePeriod` (number in ms): the length of time a resource will be kept in the cache after being scheduled for removal (see the [caching section](#caching-resources-with-modelcache) for more). Default 120000 (2 minutes).
+
+* `errorBoundaryChild` (JSX/React.Element): the element or component that should be rendered in the ErrorBoundary included in every `withResources` wrapping. By default, a caught error renders this child:
+
+```jsx
+<div className='caught-error'>
+ <p>An error occurred.</p>
+</div>
+```
+
+* `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
+
+* `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, for ease of use in your executor function. Default `'urlParams'`.
+
+* `track` (function): method invoked when [`measure: true`](#measure) is passed in a resource's config. Use this hook to send the measured data to your application analytics tracker. Default noop. The method is invoked with two arguments:
+
+    * the event string, `'API Fetch'`
+    * event data object with the following properties:
+        * Resource (string): the name of the resource (taken from the entry in `ResourceKeys`)
+        * data (object): data object supplied via the resource's config
+        * options (object): options object supplied via the resource's config
+        * duration (number): time in milliseconds between request and response
+
 
 
 # FAQs
 
-* Does `with-resources` support SSR?
+* Does `with-resources` support SSR?  
+  
+    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that passes instantiated models directly through the app.
 
-* Does it support concurrent React?
+* Does it support concurrent React?  
+  
+    For the initial release, `with-resources` still employs one instance of `componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this here instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `with-resources`, for now, from using concurrent React. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
+    
+    Rendering loading states do tend to be cheap, though, so we may move `componentWillReceiveProps` logic to `componentDidUpdate` in the future. For the first release, `with-resources` will stay incompatible with concurrent React.
 
-* What about other data sources like websockets?
+* Can `with-resources` do anything other than `GET` requests?
+
+    `with-resources` only handles resource _fetching_ (i.e. calling [Schmackbone.Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
+    
+    For write operations, use Schmackbone Models' [`save`](https://backbonejs.org/#Model-savehttps://backbonejs.org/#Model-save) and [`destroy`](https://backbonejs.org/#Model-destroy) methods directly:
+    
+    ```js
+    onClickSaveButton() {
+      this.setState({isSaving: true});
+  
+      // any other mounted component in the application listening to this model or its collection
+      // will get re-rendered with the updated name as soon as this is called
+      this.props.userTodoModel.save({name: 'Giving This Todo A New Name}, {
+        success: () => notify('Todo save succeeded!'),
+        error: () => notify('Todo save failed :/'),
+        complete: () => this.setState({isSaving: false})
+      });
+    }
+    ```
+
+* What about other data sources like websockets?  
+
+    `with-resources` supports request/response-style semantics only. A similar package for declaratively linking message-pushing to React updates would be awesome&mdash;but it is not part of this package.
 
 * How can we test components that use `with-resources`?  
+  
     See the [doc on testing components](/TESTING_COMPONENTS.md) for more on that.
 
-* How big is the `with-resources` package?
+* How big is the `with-resources` package?  
+
+    12kB minified, 4kB gzipped.
