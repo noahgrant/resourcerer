@@ -43,8 +43,7 @@ module.exports = (config) => {
           test: /schmackbone.js$/,
           use: 'imports-loader?define=>false'
         }]
-      },
-      plugins: [new webpack.NormalModuleReplacementPlugin(/^backbone$/, 'schmackbone')]
+      }
     }
   });
 };
