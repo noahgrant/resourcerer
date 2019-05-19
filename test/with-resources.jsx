@@ -10,7 +10,7 @@ import withResources, {
   EMPTY_COLLECTION,
   EMPTY_MODEL,
   getCacheKey
-} from '../lib/with-resources.jsx';
+} from '../lib/index.jsx';
 
 import ErrorBoundary from '../lib/error-boundary.jsx';
 import {LoadingStates} from '../lib/constants';
@@ -210,16 +210,17 @@ describe('withResources', () => {
     done();
   });
 
-  it('global state keys get turned into props of the same name, with \'Model\' or ' +
+  it('resource keys get turned into props of the same name, with \'Model\' or ' +
       '\'Collection\' appended as appropriate', async(done) => {
     dataChild = renderWithResources().dataChild;
+
+    await waitsFor(() => dataChild.props.hasLoaded);
 
     // keys in this case represent the returned models (since we're stubbing fetch)
     expect(dataChild.props.decisionsCollection.get('key')).toEqual(ResourceKeys.DECISIONS);
     expect(dataChild.props.userModel.get('key')).toBe('userfraudLevel=high_userId=noah');
     expect(dataChild.props.analystsCollection.get('key')).toBe(ResourceKeys.ANALYSTS);
 
-    await waitsFor(() => dataChild.props.hasLoaded);
     done();
   });
 
@@ -609,6 +610,7 @@ describe('withResources', () => {
     it('for pending or errored resources (because their keys are not in cache)', async(done) => {
       dataChild = renderWithResources().dataChild;
 
+      await waitsFor(() => dataChild.props.hasLoaded);
       // these are our two critical resources, whose models have been placed in
       // the cache before fetching
       expect(dataChild.props.decisionsCollection).not.toEqual(EMPTY_COLLECTION);
@@ -617,7 +619,6 @@ describe('withResources', () => {
       // however, this is a pending resource, so it should not be in the cache
       expect(dataChild.props.notesModel).toEqual(EMPTY_MODEL);
 
-      await waitsFor(() => dataChild.props.hasLoaded);
       unmountAndClearModelCache();
 
       // the models are removed from the cache after erroring
@@ -915,7 +916,7 @@ describe('withResources', () => {
       ({dataChild} = renderWithResources({prefetch: true}));
 
       // first entry has data: {from: 0}
-      await waitsFor(() => dataChild.props.searchQueryModel);
+      await waitsFor(() => dataChild.props.hasLoaded);
       expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
       done();
     });
@@ -931,7 +932,7 @@ describe('withResources', () => {
             .map((call) => call.args[0])
             .filter((key) => /^searchQuery/.test(key)).length).toEqual(2);
 
-        await waitsFor(() => dataChild.props.searchQueryModel);
+        await waitsFor(() => dataChild.props.hasLoaded);
         expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
         done();
       });
@@ -1097,15 +1098,14 @@ describe('withResources', () => {
       ]);
 
       expect(dataChild.props.decisionsLoadingState).toEqual('loading');
-      expect(dataChild.props.decisionsCollection.get('key')).toEqual('decisions');
       expect(dataChild.props.customDecisionsLoadingState).toEqual('loading');
-      // key should be the same as for decisions, signaling that while fetch is
-      // called ones for each resource, only one fetch would be made
-      expect(dataChild.props.customDecisionsCollection.get('key')).toEqual('decisions');
       expect(dataChild.props.sift).not.toBeDefined();
 
       await waitsFor(() => dataChild.props.hasLoaded);
-
+      expect(dataChild.props.decisionsCollection.get('key')).toEqual('decisions');
+      // key should be the same as for decisions, signaling that while fetch is
+      // called ones for each resource, only one fetch would be made
+      expect(dataChild.props.customDecisionsCollection.get('key')).toEqual('decisions');
       expect(dataChild.props.decisionsLoadingState).toEqual('loaded');
       expect(dataChild.props.customDecisionsLoadingState).toEqual('loaded');
       expect(dataChild.props.customDecisionsStatus).toEqual(200);

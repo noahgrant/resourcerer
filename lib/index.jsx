@@ -136,7 +136,7 @@ const withResources = (getResources) =>
         };
       }
 
-      componentWillMount() {
+      componentDidMount() {
         var resources = this._generateResources()
             .filter(hasAllDependencies.bind(null, this.props))
             .filter(not(shouldBypassFetch.bind(null, this.props)));
@@ -152,7 +152,7 @@ const withResources = (getResources) =>
               .map(([, config]) => getModelFromCache(config, this.props));
       }
 
-      componentWillReceiveProps(nextProps) {
+      UNSAFE_componentWillReceiveProps(nextProps) {
         // update models based on new props or new resources
         var nextResources = this._generateResources(nextProps),
             pendingResources = nextResources.filter(not(hasAllDependencies.bind(null, nextProps))),
@@ -162,9 +162,13 @@ const withResources = (getResources) =>
                   this._hasResourceConfigChanged(name, config, nextProps) ||
                   !hasAllDependencies(this.props, [, config]));
 
-        // resources may have lost their dependencies, in which case, they
-        // should go back to a pending state
-        this.setState(buildResourcesLoadingState(pendingResources, nextProps));
+        // first set our updated resources' loading states to LOADING. also, any
+        // resources that have lost their dependencies should go back to a
+        // pending state
+        this.setState(buildResourcesLoadingState(
+          pendingResources.concat(resourcesToUpdate.filter(withoutPrefetch)),
+          nextProps
+        ));
 
         // unregister component from previous models that are getting updated
         if (resourcesToUpdate.length) {
@@ -206,9 +210,6 @@ const withResources = (getResources) =>
         // ensure critical requests go out first
         resources = _.sortBy(resources, ([, config]) =>
           config.prefetch ? 2 : (config.noncritical ? 1 : -1));
-
-        // first set our loading states to LOADING
-        this.setState(buildResourcesLoadingState(resources.filter(withoutPrefetch), props));
 
         Promise.all(
           // nice visual for this promise chain: http://tinyurl.com/y6wt47b6
