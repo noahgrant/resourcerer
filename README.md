@@ -544,9 +544,7 @@ setConfig(configObj);
 
 * Does it support concurrent React?  
   
-    For the initial release, `with-resources` still employs one instance of `componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this here instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `with-resources`, for now, from using concurrent React. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
-    
-    Rendering loading states do tend to be cheap, though, so we may move `componentWillReceiveProps` logic to `componentDidUpdate` in the future. For the first release, `with-resources` will stay incompatible with concurrent React.
+    For the initial release, `with-resources` still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this here instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `with-resources`, for now, from safely using concurrent React. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
 
 * Can `with-resources` do anything other than `GET` requests?
 
