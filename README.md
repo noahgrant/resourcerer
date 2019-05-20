@@ -542,9 +542,17 @@ setConfig(configObj);
   
     There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that passes instantiated models directly through the app.
 
-* Does it support concurrent React?  
+* Does it support async rendering?  
   
-    For the initial release, `with-resources` still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this here instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `with-resources`, for now, from safely using concurrent React. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
+    For the initial release, `with-resources` still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this there instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `with-resources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
+    
+    * ...can this be turned into a React Hook?
+    
+        I bet it can. React Hooks are exciting! However, they're also brand new, and the React team is still not recommending using them on production sites. As we are more concerned with stability and production-readiness in this package, `with-resources` is a good-ol' higher-order component that wraps an 'old-school' React class component (it uses refs and thus wrapping function components will not work). But! The good news is that this library has been used at [Sift](https://sift.com) to power its [console](https://console.sift.com) for two years now, and so for us, it is tried and true (we'll see if it is tried and true for others!).
+        
+* Can `with-resources` be used with both function components and class components?
+
+    No (see previous answer above). Because it uses refs, it must wrap a React class component.
 
 * Can `with-resources` do anything other than `GET` requests?
 
@@ -568,7 +576,7 @@ setConfig(configObj);
 
 * What about other data sources like websockets?  
 
-    `with-resources` supports request/response-style semantics only. A similar package for declaratively linking message-pushing to React updates would be awesome&mdash;but it is not part of this package.
+    `with-resources` supports request/response-style semantics only. A similar package for declaratively linking message-pushing to React updates would be awesome&mdash;but it is not, at this point, part of this package.
 
 * How can we test components that use `with-resources`?  
   
