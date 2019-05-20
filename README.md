@@ -540,7 +540,10 @@ ResourcesConfig.set(configObj);
 
 * Does `with-resources` support SSR?  
   
-    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that passes instantiated models directly through the app.
+    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that:  
+    
+    1. passes instantiated models directly through the app before calling `renderToString`  
+    2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
 
 * Does it support async rendering?  
   
