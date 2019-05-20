@@ -17,7 +17,7 @@ describe('Config', () => {
       expect(Config.ResourceKeys.TEST_MODEL).not.toBeDefined();
       expect(Config.ResourceKeys.TEST_MODEL2).not.toBeDefined();
 
-      Config.addResourceKeys({TEST_MODEL: 'testModel', TEST_MODEL2: 'testModel2'});
+      Config.ResourceKeys.add({TEST_MODEL: 'testModel', TEST_MODEL2: 'testModel2'});
 
       expect(Config.ResourceKeys.TEST_MODEL).toEqual('testModel');
       expect(Config.ResourceKeys.TEST_MODEL2).toEqual('testModel2');
@@ -36,32 +36,21 @@ describe('Config', () => {
     });
 
     it('adds models passed as an object to the model map', () => {
-      Config.addModels({testModel: TestModel, testModel2: TestModel2});
-
-      expect(Config.ModelMap.testModel).toEqual(TestModel);
-      expect(Config.ModelMap.testModel2).toEqual(TestModel2);
-    });
-
-    it('adds models returned from a function to the model map', () => {
-      Config.addResourceKeys({TEST_MODEL: 'testModel', TEST_MODEL2: 'testModel2'});
-
-      Config.addModels((ResourceKeys) => ({
-        [ResourceKeys.TEST_MODEL]: TestModel,
-        [ResourceKeys.TEST_MODEL2]: TestModel2
-      }));
+      Config.ModelMap.add({testModel: TestModel, testModel2: TestModel2});
 
       expect(Config.ModelMap.testModel).toEqual(TestModel);
       expect(Config.ModelMap.testModel2).toEqual(TestModel2);
     });
   });
 
-  describe('#addUnfetchedResources', () => {
+  describe('adding UnfetchedResources', () => {
     it('adds a resource to the unfetched list', () => {
-      Config.addResourceKeys({TEST_MODEL: 'testModel', TEST_MODEL2: 'testModel2'});
+      Config.ResourceKeys.add({TEST_MODEL: 'testModel', TEST_MODEL2: 'testModel2'});
       expect(Config.UnfetchedResources.has(Config.ResourceKeys.TEST_MODEL)).toBe(false);
       expect(Config.UnfetchedResources.has(Config.ResourceKeys.TEST_MODEL2)).toBe(false);
 
-      Config.addUnfetchedResources(({TEST_MODEL, TEST_MODEL2}) => [TEST_MODEL, TEST_MODEL2]);
+      Config.UnfetchedResources.add(Config.ResourceKeys.TEST_MODEL);
+      Config.UnfetchedResources.add(Config.ResourceKeys.TEST_MODEL2);
 
       expect(Config.UnfetchedResources.has(Config.ResourceKeys.TEST_MODEL)).toBe(true);
       expect(Config.UnfetchedResources.has(Config.ResourceKeys.TEST_MODEL2)).toBe(true);
@@ -81,7 +70,7 @@ describe('Config', () => {
       expect(Config.ResourcesConfig.track).toEqual(noOp);
       expect(Config.ResourcesConfig.queryParamsPropName).toEqual('urlParams');
 
-      Config.setConfig({
+      Config.ResourcesConfig.set({
         cacheGracePeriod: 300000,
         log: logSpy,
         track: trackSpy,
@@ -93,7 +82,7 @@ describe('Config', () => {
       expect(Config.ResourcesConfig.track).toEqual(trackSpy);
       expect(Config.ResourcesConfig.queryParamsPropName).toEqual('queryPs');
 
-      Config.setConfig({
+      Config.ResourcesConfig.set({
         cacheGracePeriod: 120000,
         log: noOp,
         track: noOp,

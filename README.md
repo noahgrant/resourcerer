@@ -31,11 +31,11 @@ export default Schmackbone.Collection.extend({url: () => '/todos'});
 
 ```js
 // js/core/with-resources-config.js
-import {addModels, addResourceKeys} from 'with-resources/config';
+import {ModelMap, ResourceKeys} from 'with-resources/config';
 import TodosCollection from 'js/models/todos-collection';
 
-addResourceKeys({TODOS: 'todos'});
-addModels((ResourceKeys) => ({[ResourceKeys.TODOS]: TodosCollection});
+ResourceKeys.add({TODOS: 'todos'});
+ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
 ```
 
 3. Use `withResources` to request your models in any component:
@@ -111,7 +111,7 @@ from? From the config file we added to earlier!
 
 ```js
 // js/core/with-resources-config.js
-import {addModels, addResourceKeys} from 'with-resources/config';
+import {ModelMap, ResourceKeys} from 'with-resources/config';
 import TodosCollection from 'js/models/todos-collection';
 
 // after adding this key, `ResourceKeys.TODOS` will be used in our executor functions to reference
@@ -119,12 +119,12 @@ import TodosCollection from 'js/models/todos-collection';
 // props passed from the HOC to the wrapped component. That's why we have `this.props.todosCollection`!
 // if the key we added was instead, {TODOS: 'foo'}, the collection would get passed down as 
 // `this.props.fooCollection`.
-addResourceKeys({TODOS: 'todos'});
+ResourceKeys.add({TODOS: 'todos'});
 
 // use the previously-added keys to reference the model constructor. this is how withResources knows
-// what model type to map the key to. since this takes a function with ResourceKeys as an argument, make
-// sure to use addResourceKeys first!
-addModels((ResourceKeys) => ({[ResourceKeys.TODOS]: TodosCollection});
+// what model type to map the key to. since this requires ResourceKeys, make sure to use
+// `ResourceKeys.add` first!
+ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
 ```
 
 Back to the executor function. In the example above, you see it returns an object of `{[ResourceKeys.TODOS]: {}}`. In general, the object it should return is of type `{string<ResourceKey>: object<Options>}`, where `Options` is a generic map of config options, and can contain as many keys as resources you would like the component to request. In our initial example, the options object was empty. Further down, we'll go over the plethora of options and how to use them. For now let's take a look at some of the resource-related props this simple configuration provides our component.
@@ -222,12 +222,12 @@ Let's say we wanted to request not the entire users collection, but just a speci
 
 ```js
 // js/core/with-resources-config.js
-import {addModels, addResourceKeys} from 'with-resources/config';
+import {ModelMap, ResourceKeys} from 'with-resources/config';
 import TodosCollection from 'js/models/todos-collection';
 import UserModel from 'js/models/user-model';
 
-addResourceKeys({TODOS: 'todos', USER: 'user'});
-addModels((ResourceKeys) => ({
+ResourceKeys.add({TODOS: 'todos', USER: 'user'});
+ModelMap.add({
   [ResourceKeys.TODOS]: TodosCollection,
   [ResourceKeys.USER]: UserModel
 });
@@ -501,15 +501,15 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 
 # Configuring `withResources`
 
-The same config file used to `addResourceKeys` and `addModels` also allows you to set custom configuration properties for your own application:
+The same config file used to add to `ResourceKeys` and `ModelMap` also allows you to set custom configuration properties for your own application:
 
 ```js
-import {setConfig} from 'with-resources/config';
+import {ResourcesConfig} from 'with-resources/config';
 
-setConfig(configObj);
+ResourcesConfig.set(configObj);
 ```
 
-`setConfig` accepts an object with any of the following properties:
+`ResourcesConfig.set` accepts an object with any of the following properties:
 
 * `cacheGracePeriod` (number in ms): the length of time a resource will be kept in the cache after being scheduled for removal (see the [caching section](#caching-resources-with-modelcache) for more). Default 120000 (2 minutes).
 
@@ -540,7 +540,10 @@ setConfig(configObj);
 
 * Does `with-resources` support SSR?  
   
-    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that passes instantiated models directly through the app.
+    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that:  
+    
+    1. passes instantiated models directly through the app before calling `renderToString`  
+    2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
 
 * Does it support async rendering?  
   
