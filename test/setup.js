@@ -16,9 +16,9 @@ import {
   SignalsCollection,
   UserModel
 } from './model-mocks';
-import {addModels, addResourceKeys, addUnfetchedResources} from '../lib/config';
+import {ModelMap, ResourceKeys, UnfetchedResources} from '../lib/config';
 
-addResourceKeys({
+ResourceKeys.add({
   ACCOUNT_CONFIG: 'accountConfig',
   ACTIONS: 'actions',
   ANALYSTS: 'analysts',
@@ -32,7 +32,7 @@ addResourceKeys({
   USER: 'user'
 });
 
-addModels((ResourceKeys) => ({
+ModelMap.add({
   [ResourceKeys.ACCOUNT_CONFIG]: AccountConfigModel,
   [ResourceKeys.ACTIONS]: ActionsCollection,
   [ResourceKeys.ANALYSTS]: AnalystsCollection,
@@ -44,13 +44,12 @@ addModels((ResourceKeys) => ({
   [ResourceKeys.SEARCH_QUERY]: SearchQueryModel,
   [ResourceKeys.SIGNALS]: SignalsCollection,
   [ResourceKeys.USER]: UserModel
-}));
+});
 
-addUnfetchedResources(({ACCOUNT_CONFIG, DECISION_INSTANCE, LABEL_INSTANCE}) => [
-  ACCOUNT_CONFIG,
-  DECISION_INSTANCE,
-  LABEL_INSTANCE
-]);
+UnfetchedResources
+    .add(ResourceKeys.ACCOUNT_CONFIG)
+    .add(ResourceKeys.DECISION_INSTANCE)
+    .add(ResourceKeys.LABEL_INSTANCE);
 
 let context = require.context('./', true, /.jsx?$/);
 
