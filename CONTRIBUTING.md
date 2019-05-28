@@ -1,4 +1,4 @@
-## Contributing to `with-resources`:
+# Contributing to `with-resources`
 
 Please use the following guidelines when contributing to this repository:
 
@@ -9,11 +9,11 @@ Please use the following guidelines when contributing to this repository:
 * Use the same coding style as the rest of the codebase; besides passing tests, all changes must also pass style checks.
 
 
-### Conduct
+## Conduct
 See our [Code of Conduct](https://github.com/SiftScience/with-resources/CODE_OF_CONDUCT.md) page.  
 
 
-### Clone the repo
+## Clone the repo
 To get started in development, clone the repository and install dependencies:
   
 ```sh
@@ -23,7 +23,7 @@ $ npm i
 ```
 
 
-### Tests
+## Tests
 There is a webpack and babel build for testing purposes via karma, and can be triggered with:
 
 `$ npm test`
