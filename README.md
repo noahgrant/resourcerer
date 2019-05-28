@@ -587,4 +587,8 @@ ResourcesConfig.set(configObj);
 
 * How big is the `with-resources` package?  
 
-    12kB minified, 4kB gzipped.
+    4kB gzipped.
+
+* Semver?  
+
+    Yes. Releases will adhere to [semver](https://semver.org/#semantic-versioning-200) rules.
