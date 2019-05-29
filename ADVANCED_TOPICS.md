@@ -38,7 +38,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
       // this assumes that the parent is handling the `hasErrored` state. if it is not, then
       // you may need to instead use:
       shouldComponentUpdate(nextProps) {
-        return !(nextProps.isLoading || _isPending(nextProps.myDependentLoadingState));
+        return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
       }
     ```
 

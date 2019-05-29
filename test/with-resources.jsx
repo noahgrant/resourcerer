@@ -1,6 +1,6 @@
 import * as Request from '../lib/request';
 
-import {_hasErrored, _hasLoaded, _isLoading, noOp} from '../lib/utils';
+import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 import {
   scryRenderedComponentsWithType,
@@ -73,7 +73,7 @@ class TestComponent extends React.Component {
   render() {
     var idontexist;
 
-    if (causeLogicError && _hasLoaded(this.props.decisionsLoadingState)) {
+    if (causeLogicError && hasLoaded(this.props.decisionsLoadingState)) {
       idontexist.neitherDoI;
     }
 
@@ -858,10 +858,10 @@ describe('withResources', () => {
       expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
 
       await waitsFor(() => dataCarrier.props.serialProp);
-      expect(_isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
+      expect(isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
       expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
 
-      await waitsFor(() => _hasLoaded(dataCarrier.state.decisionLogsLoadingState));
+      await waitsFor(() => hasLoaded(dataCarrier.state.decisionLogsLoadingState));
       resources.setState({serialProp: null});
 
       await waitsFor(() => !dataCarrier.props.serialProp);
@@ -1056,10 +1056,10 @@ describe('withResources', () => {
     spyOn(ResourcesConfig, 'log');
     shouldResourcesError = true;
     dataChild = renderWithResources().dataChild;
-    expect(_isLoading(dataChild.props.decisionsLoadingState)).toBe(true);
+    expect(isLoading(dataChild.props.decisionsLoadingState)).toBe(true);
 
     await waitsFor(() => dataChild.props.hasErrored);
-    expect(_hasErrored(dataChild.props.decisionsLoadingState)).toBe(true);
+    expect(hasErrored(dataChild.props.decisionsLoadingState)).toBe(true);
     expect(ResourcesConfig.log).not.toHaveBeenCalled();
     done();
   });
@@ -1074,8 +1074,8 @@ describe('withResources', () => {
       causeLogicError = true;
 
       dataCarrier = renderWithResources().dataCarrier;
-      expect(_isLoading(dataCarrier.state.decisionsLoadingState)).toBe(true);
-      expect(_isLoading(dataCarrier.state.decisionsLoadingState)).toBe(true);
+      expect(isLoading(dataCarrier.state.decisionsLoadingState)).toBe(true);
+      expect(isLoading(dataCarrier.state.decisionsLoadingState)).toBe(true);
       boundary = scryRenderedComponentsWithType(dataCarrier, ErrorBoundary)[0];
 
       await waitsFor(() => boundary.state.caughtError);
