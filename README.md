@@ -77,24 +77,11 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 `with-resources` depends on React >= 16 and Schmackbone (which itself depends on [Underscore](https://github.com/jashkenas/underscore) and [qs](https://github.com/ljharb/qs)).
 
-The `with-resources` package is written in ESNext and will rely on users' build systems to transpile into appropriate JavaScript.
-**This package does employ [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md),
-and you may need to update your [babel config](https://babeljs.io/docs/en/babel-plugin-proposal-decorators#legacy) appropriately in order to successfully transpile it.**
+The `with-resources` package is compiled into ESNext, with only its [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md),
+object spread, and ES2015 module syntax transpiled. If you need to target older browsers, you can incorporate this package into your own build system to transpile further.
 
-Similarly, you may also need to add this to your webpack config to get Schmackbone to play nicely with `import` statements:
-
-```js
-// webpack.config.js
-module: {
-  rules: [{
-    // ...
-  }, {
-    test: /schmackbone.js$/,
-    use: 'imports-loader?define=>false'
-  }]
-}
-```
-  
+Also worth noting is that this package does not do any bundling into a single file, instead letting the user use whatever bundler they like.
+Modules have, however, been transpiled into CommonJS `require` syntax.
   
 # Tutorial
 
@@ -164,7 +151,7 @@ Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 
 ```jsx
 // pure functions that accept loading states as arguments
-import {_hasLoaded} from 'with-resources/utils';
+import {hasLoaded} from 'with-resources/utils';
 
 // ...
     render() {
@@ -188,7 +175,7 @@ import {_hasLoaded} from 'with-resources/utils';
             <ul>
               {this.props.todosCollection.map((todoModel) => (
                 <li key={todoModel.id}>
-                  {_hasLoaded(this.props.usersLoadingState) ?
+                  {hasLoaded(this.props.usersLoadingState) ?
                     getUserName(todoModel.get('userId')) :
                     // if you're anti-loader, you could opt to render nothing and have the
                     // user name simply appear in place after loading
@@ -340,7 +327,7 @@ As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-stat
 
 - De-prioritize fetching the resource until after all critical resources have been fetched
 - Remove the resource from consideration within the component-wide loading states (`props.hasLoaded`, `props.isLoading`, `props.hasErrored`), giving us the ability to render without waiting on those resources
-- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `_hasLoaded`, `_hasErrored`, and `_isLoading` from `with-resources/utils`.
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `with-resources/utils`.
   
   
 ### listen
