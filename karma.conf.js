@@ -1,5 +1,3 @@
-var webpack = require('webpack');
-
 module.exports = (config) => {
   config.set({
     browsers: ['ChromeCustom'],
@@ -31,14 +29,7 @@ module.exports = (config) => {
         rules: [{
           test: /\.jsx?$/,
           exclude: /node_modules/,
-          use: {
-            loader: 'babel-loader?cacheDirectory=true',
-            options: {
-              presets: [['@babel/env', {targets: {chrome: '67'}, modules: 'cjs'}], '@babel/react'],
-              plugins: [['@babel/proposal-decorators', {legacy: true}]],
-              ignore: ['node_modules/**']
-            }
-          }
+          use: {loader: 'babel-loader?cacheDirectory=true'}
         }, {
           test: /schmackbone.js$/,
           use: 'imports-loader?define=>false'

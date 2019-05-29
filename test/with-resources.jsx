@@ -10,9 +10,9 @@ import withResources, {
   EMPTY_COLLECTION,
   EMPTY_MODEL,
   getCacheKey
-} from '../lib/index.jsx';
+} from '../lib/index';
 
-import ErrorBoundary from '../lib/error-boundary.jsx';
+import ErrorBoundary from '../lib/error-boundary';
 import {LoadingStates} from '../lib/constants';
 import ModelCache from '../lib/model-cache';
 import React from 'react';

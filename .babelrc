@@ -1,0 +1,20 @@
+{
+  "presets": [
+    ["@babel/env", {
+      "targets": {
+        "chrome": "67",
+        "firefox": "63",
+        "edge": "18",
+        "opera": "57",
+        "safari": "12"
+      },
+      "modules": "cjs"
+    }],
+    "@babel/react"
+  ],
+  "plugins": [
+    "@babel/plugin-transform-runtime",
+    ["@babel/proposal-decorators", {"legacy": true}]
+  ],
+  "ignore": ["**/node_modules/**"]
+}
