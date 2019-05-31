@@ -30,9 +30,6 @@ module.exports = (config) => {
           test: /\.jsx?$/,
           exclude: /node_modules/,
           use: {loader: 'babel-loader?cacheDirectory=true'}
-        }, {
-          test: /schmackbone.js$/,
-          use: 'imports-loader?define=>false'
         }]
       }
     }

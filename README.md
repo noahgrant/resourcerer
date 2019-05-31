@@ -36,6 +36,9 @@ import TodosCollection from 'js/models/todos-collection';
 
 ResourceKeys.add({TODOS: 'todos'});
 ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
+
+// in your top level js file
+import 'js/core/with-resources-config;
 ```
 
 3. Use `withResources` to request your models in any component:
