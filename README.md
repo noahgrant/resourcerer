@@ -73,6 +73,30 @@ class MyComponent extends React.Component {
 
 There's a lot there, so let's unpack that a bit. There's also a lot more that we can do there, so let's also get into that. But first, some logistics:
 
+# Contents  
+
+1. [Installation](#installation)
+1. [Tutorial](#tutorial)
+    1. [Intro](#tutorial)
+    1. [Other Props Passed from the HOC (Loading States)](#other-props-passed-from-the-hoc-loading-states)
+    1. [Requesting Prop-driven Data](#requesting-prop-driven-data)
+    1. [Changing Props](#changing-props)
+    1. [Serial Requests](#serial-requests)
+    1. [Other Common Resource Config Options](#other-common-resource-config-options)
+        1. [data](#data)
+        1. [noncritical](#noncritical)
+        1. [listen](#listen)
+        1. [measure](#measure)
+        1. [status](#status)
+        1. [forceFetch](#forcefetch)
+        1. [Custom Resource Names](#custom-resource-names)
+        1. [options](#options)
+        1. [attributes](#attributes)
+    1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
+    1. [Declarative Cache Keys](#declarative-cache-keys)
+1. [Configuring with-resources](#configuring-with-resources)
+1. [FAQs](#faqs)
+
 
 # Installation
 
@@ -293,7 +317,30 @@ In this simplified example, only `props.itemId` is initially present at the url 
 
 So, in this case, `getUserIdFromItem` is the transform function, which takes the `queueItemModel` as an argument and returns the userId that will be assigned to `props.userId` (or, more accurately, will be set as state for the HOC wrapper’s state wrapper as described in the previous section). When the QueueItemModel resource returns, the transform function is invoked; at that point, `props.userId` exists, and the UserModel will be fetched. And we have serially requested our resources!
 
-One thing to note here is that while the `QUEUE_ITEM` resource is being fetched, the user resource is in a `PENDING` state, which is a special state that does not contribute to overall component `isLoading`/`hasErrored` states (though it will keep the component from being `hasLoaded`). At this point, the `QueueItemPage` in the example above is in a `LOADING` state (`isLoading === true`) because `QUEUE_ITEM` is loading. When it returns with the user id, the `USER` resource is put into a `LOADING` state, and the component then remains `isLoading === true` until it returns, after which the component has successfully loaded. If the `QUEUE_ITEM` resource happened to error, for some reason, the `USER` resource would never get out of its `PENDING` state, and the component would then take on the `ERROR` state (`hasErrored === true`) of `QUEUE_ITEM`. For more on `PENDING`, see [Thoughts on the PENDING State](/ADVANCED_TOPICS.md#thoughts-on-the-pending-resource) in the [Advanced Topics document](/ADVANCED_TOPICS.md).
+One thing to note here is that while the `QUEUE_ITEM` resource is being fetched, the user resource is in a `PENDING` state, which is a special state that does not contribute to overall component `isLoading`/`hasErrored` states (though it will keep the component from being `hasLoaded`). At this point, the `QueueItemPage` in the example above is in a `LOADING` state (`isLoading === true`) because `QUEUE_ITEM` is loading. When it returns with the user id, the `USER` resource is put into a `LOADING` state, and the component then remains `isLoading === true` until it returns, after which the component has successfully loaded. If the `QUEUE_ITEM` resource happened to error, for some reason, the `USER` resource would never get out of its `PENDING` state, and the component would then take on the `ERROR` state (`hasErrored === true`) of `QUEUE_ITEM`. For more on `PENDING`, see [Thoughts on the PENDING State](/ADVANCED_TOPICS.md#thoughts-on-the-pending-resource) in the [Advanced Topics document](/ADVANCED_TOPICS.md).  
+
+Finally, if a model is to provide more than a single prop, use an underscore instead of the prop name in the `provides` object. Instead of the transform function returning the prop value, it should then return an object of prop keys and values, which will get spread to the component:
+
+```js
+  @withResources((props, {QUEUE_ITEM, USER}) => ({
+    [USER]: {
+      options: {state: props.activeState, userId: props.userId},
+      // userModel depends on multiple props from queueItemModel
+      dependsOn: ['activeState', 'userId']
+    },
+    [QUEUE_ITEM]: {
+      attributes: {id: props.itemId}
+      // use an underscore here to tell with-resources to spread the resulting object
+      provides: {_: getUserDataFromItem}
+    }
+  }))
+  export default class QueueItemPage extends React.Component {}
+    
+  function getUserDataFromItem(queueItemModel) {
+    // transform function now returns an object of prop names/values instead of a simple prop value
+    return {userId: queueItemModel.get('userId'), activeState: queueItemModel.get('state')};
+  }
+```
 
 ## Other Common Resource Config Options
 
@@ -489,7 +536,7 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 - the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `data` hash into account.
 
 
-# Configuring `withResources`
+# Configuring `with-resources`
 
 The same config file used to add to `ResourceKeys` and `ModelMap` also allows you to set custom configuration properties for your own application:
 
