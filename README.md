@@ -87,6 +87,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [noncritical](#noncritical)
         1. [listen](#listen)
         1. [measure](#measure)
+        1. [status](#status)
         1. [forceFetch](#forcefetch)
         1. [Custom Resource Names](#custom-resource-names)
         1. [options](#options)
