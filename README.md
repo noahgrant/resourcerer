@@ -575,6 +575,12 @@ ResourcesConfig.set(configObj);
 
 # FAQs
 
+* Why?
+
+    Yeah...isn't [GraphQL](https://graphql.org/) the thing to use now? Why bother with a library for REST APIs&mdash;especially one that is based on a _Backbone_ fork. It feels so...._2012_.
+    
+    GraphQL is awesome, but there are many reasons why you might not want to use it. Maybe you don't have the resources to ensure that all of your data can be accessed performantly; in that case, your single `/graphql` endpoint will only ever be as fast as your slowest data source. Maybe your existing REST API is working well and your eng org isn't going to prioritize any time to move away from it. Etc, etc, etc. `with-resources` offers a way for your front-end team to quickly get up and running with declarative data fetching, request flows, and model caching.
+
 * Does `with-resources` support SSR?  
   
     There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that:  
