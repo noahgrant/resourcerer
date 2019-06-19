@@ -1,16 +1,17 @@
 import * as Request from '../lib/request';
 
+import {
+  EMPTY_COLLECTION,
+  EMPTY_MODEL,
+  getCacheKey,
+  withResources
+} from '../lib/index';
 import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 import {
   scryRenderedComponentsWithType,
   scryRenderedDOMComponentsWithClass
 } from 'react-dom/test-utils';
-import withResources, {
-  EMPTY_COLLECTION,
-  EMPTY_MODEL,
-  getCacheKey
-} from '../lib/index';
 
 import ErrorBoundary from '../lib/error-boundary';
 import {LoadingStates} from '../lib/constants';

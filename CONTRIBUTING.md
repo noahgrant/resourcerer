@@ -1,4 +1,4 @@
-# Contributing to `with-resources`
+# Contributing to `resourcerer`
 
 Please use the following guidelines when contributing to this repository:
 
@@ -10,15 +10,15 @@ Please use the following guidelines when contributing to this repository:
 
 
 ## Conduct
-See our [Code of Conduct](https://github.com/SiftScience/with-resources/CODE_OF_CONDUCT.md) page.  
+See our [Code of Conduct](https://github.com/SiftScience/resourcerer/CODE_OF_CONDUCT.md) page.  
 
 
 ## Clone the repo
 To get started in development, clone the repository and install dependencies:
   
 ```sh
-$ git clone git@github.com:SiftScience/with-resources.git
-$ cd with-resources
+$ git clone git@github.com:SiftScience/resourcerer.git
+$ cd resourcerer
 $ npm i
 ```
 
