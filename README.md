@@ -1,8 +1,8 @@
-# with-resources
+# resourcerer
 
-![CircleCI](https://circleci.com/gh/SiftScience/with-resources/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
+![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
 
-`with-resources` is a very powerful higher-order React component (HOC) for declaratively fetching and caching your application's data. It allows you to easily construct a component's data flow, including:
+`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful higher-order React component (HOC) `withResources` allows you to easily construct a component's data flow, including:
 
 * serial requests
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
@@ -30,22 +30,22 @@ export default Schmackbone.Collection.extend({url: () => '/todos'});
 2. Create a config file in your application, add a key for your model, and link it to your model constructor:
 
 ```js
-// js/core/with-resources-config.js
-import {ModelMap, ResourceKeys} from 'with-resources/config';
+// js/core/resourcerer-config.js
+import {ModelMap, ResourceKeys} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 
 ResourceKeys.add({TODOS: 'todos'});
 ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
 
 // in your top level js file
-import 'js/core/with-resources-config;
+import 'js/core/resourcerer-config;
 ```
 
 3. Use `withResources` to request your models in any component:
 
 ```jsx
 import React from 'react';
-import withResources from 'with-resources';
+import {withResources} from 'resourcerer';
 
 @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {}}))
 class MyComponent extends React.Component {
@@ -94,17 +94,17 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [attributes](#attributes)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
-1. [Configuring with-resources](#configuring-with-resources)
+1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 
 
 # Installation
 
-`$ npm i with-resources`
+`$ npm i resourcerer`
 
-`with-resources` depends on React >= 16 and Schmackbone (which itself depends on [Underscore](https://github.com/jashkenas/underscore) and [qs](https://github.com/ljharb/qs)).
+`resourcerer` depends on React >= 16 and Schmackbone (which itself depends on [Underscore](https://github.com/jashkenas/underscore) and [qs](https://github.com/ljharb/qs)).
 
-The `with-resources` package is compiled into ESNext, with only its [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md),
+The `resourcerer` package is compiled into ESNext, with only its [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md),
 object spread, and ES2015 module syntax transpiled. If you need to target older browsers, you can incorporate this package into your own build system to transpile further.
 
 Also worth noting is that this package does not do any bundling into a single file, instead letting the user use whatever bundler they like.
@@ -124,8 +124,8 @@ takes two arguments: the current props, and an object of `ResourceKeys`. Where d
 from? From the config file we added to earlier!
 
 ```js
-// js/core/with-resources-config.js
-import {ModelMap, ResourceKeys} from 'with-resources/config';
+// js/core/resourcerer-config.js
+import {ModelMap, ResourceKeys} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 
 // after adding this key, `ResourceKeys.TODOS` will be used in our executor functions to reference
@@ -135,7 +135,7 @@ import TodosCollection from 'js/models/todos-collection';
 // `this.props.fooCollection`.
 ResourceKeys.add({TODOS: 'todos'});
 
-// use the previously-added keys to reference the model constructor. this is how withResources knows
+// use the previously-added keys to reference the model constructor. this is how resourcerer knows
 // what model type to map the key to. since this requires ResourceKeys, make sure to use
 // `ResourceKeys.add` first!
 ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
@@ -146,10 +146,10 @@ Back to the executor function. In the example above, you see it returns an objec
 
 ## Other Props Passed from the HOC (Loading States)
 
-Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from API3.  Some of the most **critical** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, `withResources` gives you several loading state helper props. From our last example:
+Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from API3.  Some of the most **critical** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `withResources` HOC gives you several loading state helper props. From our last example:
 
 
-- `this.props.todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/with-resources/blob/master/lib/constants.js), and there will be one for each resource)
+- `this.props.todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
 - `this.props.hasLoaded` {boolean} - all critical resources have successfully completed and are ready to be used by the component
 - `this.props.isLoading` {boolean} - any of the critical resources are still in the process of being fetched
 - `this.props.hasErrored` {boolean} - any of the critical resource requests did not complete successfully
@@ -178,7 +178,7 @@ Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 
 ```jsx
 // pure functions that accept loading states as arguments
-import {hasLoaded} from 'with-resources/utils';
+import {hasLoaded} from 'resourcerer/utils';
 
 // ...
     render() {
@@ -235,8 +235,8 @@ There’s one other loading prop passed down from `withResources`: `this.props.h
 Let's say we wanted to request not the entire users collection, but just a specific user. Here's our config:
 
 ```js
-// js/core/with-resources-config.js
-import {ModelMap, ResourceKeys} from 'with-resources/config';
+// js/core/resourcerer-config.js
+import {ModelMap, ResourceKeys} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 import UserModel from 'js/models/user-model';
 
@@ -262,7 +262,7 @@ export default Schmackbone.Model.extend({
 }, {cacheFields: ['userId']});
 ```
 
-The `cacheFields` static property is important here, as we'll see in a second; it is a list of model properties that `withResources` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
+The `cacheFields` static property is important here, as we'll see in a second; it is a list of model properties that `resourcerer` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
 
 1. the `options` object it is initialized with
 1. the `attributes` object it is initialized with
@@ -330,7 +330,7 @@ Finally, if a model is to provide more than a single prop, use an underscore ins
     },
     [QUEUE_ITEM]: {
       attributes: {id: props.itemId}
-      // use an underscore here to tell with-resources to spread the resulting object
+      // use an underscore here to tell resourcerer to spread the resulting object
       provides: {_: getUserDataFromItem}
     }
   }))
@@ -377,7 +377,7 @@ As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-stat
 
 - De-prioritize fetching the resource until after all critical resources have been fetched
 - Remove the resource from consideration within the component-wide loading states (`props.hasLoaded`, `props.isLoading`, `props.hasErrored`), giving us the ability to render without waiting on those resources
-- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `with-resources/utils`.
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer/utils`.
   
   
 ### listen
@@ -468,15 +468,15 @@ Pass in an attributes hash to initialize a Schmackbone.Model instance with a bod
 
 ## Caching Resources with ModelCache
 
-`withResources` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
+`resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
 
-The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Backbone.Model|Backbone.Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `withResources` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default, to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go through the network.
+The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Backbone.Model|Backbone.Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `resourcerer` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default, to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go through the network.
 
-Again, it’s unlikely that you’ll use `ModelCache` directly while using `withResources`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
+Again, it’s unlikely that you’ll use `ModelCache` directly while using `resourcerer`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
 
 ## Declarative Cache Keys
 
-As alluded to previously, `withResources` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `cacheFields` array, where each entry can be either:
+As alluded to previously, `resourcerer` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `cacheFields` array, where each entry can be either:
 
 1. A string, where each string is the name of a property that the model receives whose value should take part in the cache key. The model can receive this property either from the [options](#options) hash, the [attributes](#attributes) hash, or the [data](#data) hash, in that order.
 
@@ -525,7 +525,7 @@ export const UserTodosCollection = Schmackbone.Collection.extend({
 });
 ```
 
-We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `withResources` will see its value within the `options` hash that is passed and use it for the cache key.  
+We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
 
 The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash; it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `cacheFields`, which takes the `data` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
 
@@ -536,12 +536,12 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 - the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `data` hash into account.
 
 
-# Configuring `with-resources`
+# Configuring `resourcerer`
 
 The same config file used to add to `ResourceKeys` and `ModelMap` also allows you to set custom configuration properties for your own application:
 
 ```js
-import {ResourcesConfig} from 'with-resources/config';
+import {ResourcesConfig} from 'resourcerer/config';
 
 ResourcesConfig.set(configObj);
 ```
@@ -579,30 +579,30 @@ ResourcesConfig.set(configObj);
 
     Yeah...isn't [GraphQL](https://graphql.org/) the thing to use now? Why bother with a library for REST APIs&mdash;especially one that is based on a _Backbone_ fork. It feels so...._2012_.
     
-    GraphQL is awesome, but there are many reasons why you might not want to use it. Maybe you don't have the resources to ensure that all of your data can be accessed performantly; in that case, your single `/graphql` endpoint will only ever be as fast as your slowest data source. Maybe your existing REST API is working well and your eng org isn't going to prioritize any time to move away from it. Etc, etc, etc. `with-resources` offers a way for your front-end team to quickly get up and running with declarative data fetching, request flows, and model caching.
+    GraphQL is awesome, but there are many reasons why you might not want to use it. Maybe you don't have the resources to ensure that all of your data can be accessed performantly; in that case, your single `/graphql` endpoint will only ever be as fast as your slowest data source. Maybe your existing REST API is working well and your eng org isn't going to prioritize any time to move away from it. Etc, etc, etc. `resourcerer` offers a way for your front-end team to quickly get up and running with declarative data fetching, request flows, and model caching.
 
-* Does `with-resources` support SSR?  
+* Does `resourcerer` support SSR?  
   
-    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `with-resources` can work nicely with an SSR setup that:  
+    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `resourcerer` can work nicely with an SSR setup that:  
     
     1. passes instantiated models directly through the app before calling `renderToString`  
     2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
 
 * Does it support async rendering?  
   
-    For the initial release, `with-resources` still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this there instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `with-resources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
+    For the initial release, the `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this there instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `withResources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
     
     * ...can this be turned into a React Hook?
     
-        I bet it can. React Hooks are exciting! However, they're also brand new, and the React team is still not recommending using them on production sites. As we are more concerned with stability and production-readiness in this package, `with-resources` is a good-ol' higher-order component that wraps an 'old-school' React class component (it uses refs and thus wrapping function components will not work). But! The good news is that this library has been used at [Sift](https://sift.com) to power its [console](https://console.sift.com) for two years now, and so for us, it is tried and true (we'll see if it is tried and true for others!).
+        I bet it can. React Hooks are exciting! However, they're also brand new, and the React team is still not recommending using them on production sites. As we are more concerned with stability and production-readiness in this package, `withResources` is a good-ol' higher-order component that wraps an 'old-school' React class component (it uses refs and thus wrapping function components will not work). But! The good news is that this library has been used at [Sift](https://sift.com) to power its [console](https://console.sift.com) for two years now, and so for us, it is tried and true (we'll see if it is tried and true for others!).
         
-* Can `with-resources` be used with both function components and class components?
+* Can the `withResources` HOC be used with both function components and class components?
 
     No (see previous answer above). Because it uses refs, it must wrap a React class component.
 
-* Can `with-resources` do anything other than `GET` requests?
+* Can `resourcerer` do anything other than `GET` requests?
 
-    `with-resources` only handles resource _fetching_ (i.e. calling [Schmackbone.Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
+    `resourcerer` only handles resource _fetching_ (i.e. calling [Schmackbone.Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
     
     For write operations, use Schmackbone Models' [`save`](https://backbonejs.org/#Model-savehttps://backbonejs.org/#Model-save) and [`destroy`](https://backbonejs.org/#Model-destroy) methods directly:
     
@@ -622,13 +622,13 @@ ResourcesConfig.set(configObj);
 
 * What about other data sources like websockets?  
 
-    `with-resources` supports request/response-style semantics only. A similar package for declaratively linking message-pushing to React updates would be awesome&mdash;but it is not, at this point, part of this package.
+    `resourcerer` supports request/response-style semantics only. A similar package for declaratively linking message-pushing to React updates would be awesome&mdash;but it is not, at this point, part of this package.
 
-* How can we test components that use `with-resources`?  
+* How can we test components that use `resourcerer`?  
   
     See the [doc on testing components](/TESTING_COMPONENTS.md) for more on that.
 
-* How big is the `with-resources` package?  
+* How big is the `resourcerer` package?  
 
     4kB gzipped.
 

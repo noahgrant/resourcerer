@@ -1,6 +1,6 @@
 ## Thoughts on the PENDING Resource
 
-Using `dependsOn` in simple cases like the one highlighted in the [README](https://github.com/SiftScience/with-resources/blob/master/README.md) is pretty straightforward and very powerful. But `PENDING` resources bring additional complexities to your resource logic, some of which are enumerated here:
+Using `dependsOn` in simple cases like the one highlighted in the [README](https://github.com/SiftScience/resourcerer/blob/master/README.md) is pretty straightforward and very powerful. But `PENDING` resources bring additional complexities to your resource logic, some of which are enumerated here:
 
 
 1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `this.props.hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
@@ -84,11 +84,11 @@ For all other uses of dependent resources, we should use `dependsOn`.
 
 ## Unfetched Resources
 
-You may find, at some point in your application, that you have a `PUT` endpoint for a resource but no `GET`; the 'read portion' of the resource is received as part of some parent resource. For example, imagine you have an accounts resource at `/accounts/{account_id}`, whose response has a `config` property with some account configuration settings. To update the configuration, you make a `PUT` to `/accounts/{account_id}/config`. But reading comes from the parent resource. `with-resources` supports this via a `providesModels` static property on the model:
+You may find, at some point in your application, that you have a `PUT` endpoint for a resource but no `GET`; the 'read portion' of the resource is received as part of some parent resource. For example, imagine you have an accounts resource at `/accounts/{account_id}`, whose response has a `config` property with some account configuration settings. To update the configuration, you make a `PUT` to `/accounts/{account_id}/config`. But reading comes from the parent resource. `resourcerer` supports this via a `providesModels` static property on the model:
 
 ```js
 // resources_conifg.js
-import {ResourceKeys, UnfetchedResources} from 'with-resources/config';
+import {ResourceKeys, UnfetchedResources} from 'resourcerer/config';
 
 ResourceKeys.add({
   ACCOUNT: 'account',
@@ -118,7 +118,7 @@ export default Backbone.Model.extend({
 })
 ```
 
-The `providesModels` property is a function that takes the parent model and the `ResourceKeys` as arguments and returns an array of resource configs. The resource configs have the same schema as the those used in our general `withResources` executor functions. What this tells `with-resources` to do is, after the parent model returns, instantiate the child model(s) and place them into the `ModelCache`. In other components, you can then access the model you know to exist in a `withResources` declaration:
+The `providesModels` property is a function that takes the parent model and the `ResourceKeys` as arguments and returns an array of resource configs. The resource configs have the same schema as the those used in our general `withResources` executor functions. What this tells `resourcerer` to do is, after the parent model returns, instantiate the child model(s) and place them into the `ModelCache`. In other components, you can then access the model you know to exist in a `withResources` declaration:
 
 ```js
 // child_component.jsx, rendered only after the account model is known to return
@@ -134,7 +134,7 @@ class ChildComponent extends React.Component {
 }
 ```
 
-In general, this should be used in cases where you can ascertain that the parent model has returned before trying to access the child model. However, if by chance it has not, and the child is not found in the cache, `with-resources` will still not attempt to fetch it, because it is listed within the `UnfetchedResources` set. In that case, the model will get instantiated with no seed attributes and passed as a prop.
+In general, this should be used in cases where you can ascertain that the parent model has returned before trying to access the child model. However, if by chance it has not, and the child is not found in the cache, `resourcerer` will still not attempt to fetch it, because it is listed within the `UnfetchedResources` set. In that case, the model will get instantiated with no seed attributes and passed as a prop.
 
 Also, note that the `modelKey` property is required here instead of optionally being inferred from the resource config's object property, as is the case in our general `withResources` declarations. This is because here, in contrast, the models are simply placed in the cache and not actually used as props for any component, so they don't need to be named. Accordingly, resource configs are also returned as a list here instead of an object.
 

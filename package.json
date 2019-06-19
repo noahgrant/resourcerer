@@ -1,7 +1,7 @@
 {
-  "name": "with-resources",
+  "name": "resourcerer",
   "version": "0.1.0",
-  "repository": "github.com/SiftScience/with-resources",
+  "repository": "github.com/SiftScience/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
     "declarative data-fetching framework",
