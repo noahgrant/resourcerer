@@ -2,7 +2,7 @@
 
 ![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
 
-`resourcerer` is a very powerful higher-order React component (HOC) for declaratively fetching and caching your application's data. It allows you to easily construct a component's data flow, including:
+`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful higher-order React component (HOC) `withResources` allows you to easily construct a component's data flow, including:
 
 * serial requests
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
@@ -135,7 +135,7 @@ import TodosCollection from 'js/models/todos-collection';
 // `this.props.fooCollection`.
 ResourceKeys.add({TODOS: 'todos'});
 
-// use the previously-added keys to reference the model constructor. this is how withResources knows
+// use the previously-added keys to reference the model constructor. this is how resourcerer knows
 // what model type to map the key to. since this requires ResourceKeys, make sure to use
 // `ResourceKeys.add` first!
 ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
@@ -146,7 +146,7 @@ Back to the executor function. In the example above, you see it returns an objec
 
 ## Other Props Passed from the HOC (Loading States)
 
-Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from API3.  Some of the most **critical** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, `withResources` gives you several loading state helper props. From our last example:
+Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from API3.  Some of the most **critical** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `withResources` HOC gives you several loading state helper props. From our last example:
 
 
 - `this.props.todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
@@ -262,7 +262,7 @@ export default Schmackbone.Model.extend({
 }, {cacheFields: ['userId']});
 ```
 
-The `cacheFields` static property is important here, as we'll see in a second; it is a list of model properties that `withResources` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
+The `cacheFields` static property is important here, as we'll see in a second; it is a list of model properties that `resourcerer` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
 
 1. the `options` object it is initialized with
 1. the `attributes` object it is initialized with
@@ -468,15 +468,15 @@ Pass in an attributes hash to initialize a Schmackbone.Model instance with a bod
 
 ## Caching Resources with ModelCache
 
-`withResources` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
+`resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
 
-The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Backbone.Model|Backbone.Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `withResources` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default, to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go through the network.
+The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Backbone.Model|Backbone.Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `resourcerer` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default, to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go through the network.
 
-Again, it’s unlikely that you’ll use `ModelCache` directly while using `withResources`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
+Again, it’s unlikely that you’ll use `ModelCache` directly while using `resourcerer`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
 
 ## Declarative Cache Keys
 
-As alluded to previously, `withResources` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `cacheFields` array, where each entry can be either:
+As alluded to previously, `resourcerer` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `cacheFields` array, where each entry can be either:
 
 1. A string, where each string is the name of a property that the model receives whose value should take part in the cache key. The model can receive this property either from the [options](#options) hash, the [attributes](#attributes) hash, or the [data](#data) hash, in that order.
 
@@ -525,7 +525,7 @@ export const UserTodosCollection = Schmackbone.Collection.extend({
 });
 ```
 
-We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `withResources` will see its value within the `options` hash that is passed and use it for the cache key.  
+We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
 
 The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash; it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `cacheFields`, which takes the `data` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
 
@@ -600,9 +600,9 @@ ResourcesConfig.set(configObj);
 
     No (see previous answer above). Because it uses refs, it must wrap a React class component.
 
-* Can `withResources` do anything other than `GET` requests?
+* Can `resourcerer` do anything other than `GET` requests?
 
-    `withResources` only handles resource _fetching_ (i.e. calling [Schmackbone.Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
+    `resourcerer` only handles resource _fetching_ (i.e. calling [Schmackbone.Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
     
     For write operations, use Schmackbone Models' [`save`](https://backbonejs.org/#Model-savehttps://backbonejs.org/#Model-save) and [`destroy`](https://backbonejs.org/#Model-destroy) methods directly:
     
