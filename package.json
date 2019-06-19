@@ -8,6 +8,7 @@
     "backbone",
     "react"
   ],
+  "files": ["*.js", "*.md"],
   "main": "index.js",
   "scripts": {
     "checks": "npm test && npm run lint",
