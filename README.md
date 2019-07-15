@@ -7,6 +7,7 @@
 * serial requests
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
 * delayed requests
+* prefetching
 * ...and more
 
 Additional features include:
@@ -92,6 +93,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [Custom Resource Names](#custom-resource-names)
         1. [options](#options)
         1. [attributes](#attributes)
+        1. [prefetches](#prefetches)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
 1. [Configuring resourcerer](#configuring-resourcerer)
@@ -465,6 +467,43 @@ Here, the UserTodos collection will be instantiated with an options hash includi
 ### attributes
 
 Pass in an attributes hash to initialize a Schmackbone.Model instance with a body before initially fetching. This is passed directly to the model's [`initialize` method](https://backbonejs.org/#Model-constructor) along with the `options` property.
+
+### prefetches
+
+This option is an array of props objects that represent what is _different_ from the props in the original resource. For each array entry, a new resource config will be calculated by passing in a combination of the current props with the new props, and the resulting request is made. In contrast to the original resource, however, no props representing the prefetched requests are passed down to any children (ie, there are no loading state props, no model props, etc). They are simply returned and kept in memory so that whenever they are requested, they are already available.
+
+A great example of this is for pagination. Let's take our previous example and add a `from` property to go with our `limit` that is based on the value of a `page` prop ([tracked either by url parameter or by `setResourceState`](#changing-props)). We want to request the first page but also prefetch the following page because we think the user is likely to click on it:
+
+```js
+  @withResources((props, ResourceKeys) => {
+    const now = Date.now();
+    const REQUESTS_PER_PAGE = 20;
+      
+    return {
+      [ResourceKeys.USER_TODOS]: {
+        data: {
+          from: props.page * REQUESTS_PER_PAGE,
+          limit: REQUESTS_PER_PAGE,
+          end_time: now,
+          start_time: now - props.timeRange,
+          sort_field: props.sortField
+        },
+        options: {userId: props.userId},
+        // this entry is how we expect the props to change. in this case, we want props.page to be
+        // incremented. the resulting prefetched request will have a `from` value of 20, whereas the
+        // original request will have a `from` value of 0.
+        prefetches: [{page: props.page + 1}]
+      }
+    };
+  })
+  class UserTodos extends React.Component {}
+```
+
+When the user clicks on a 'next' arrow that updates page state, the collection will already be in the cache, and it will get passed as the new `this.props.userTodosCollection`. Accordingly, the third page will then get prefetched (`props.page` equal to 2 and `from` equal to 40). Two important things to note here:
+
+1. Don't forget to add `from` to the [`cacheFields`](#declarative-cache-keys) list!
+1. The prefetched model does not get components registered to it; therefore, it is immediately scheduled for removal after the specified [cacheGracePeriod](#configuring). If the user clicks the next arrow, it then becomes the 'active' model and the `UserTodos` component will get registered to it, clearing the removal timer (see the next section).
+
 
 ## Caching Resources with ModelCache
 
