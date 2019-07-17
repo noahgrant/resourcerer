@@ -1,3 +1,5 @@
+<img src="https://user-images.githubusercontent.com/1355779/61337603-f9fffd80-a7ea-11e9-9cb3-fa82e044c86e.png" alt="Resourcerer Icon" height="200" width="200" />
+
 # resourcerer
 
 ![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
