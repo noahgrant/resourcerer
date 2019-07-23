@@ -8,12 +8,15 @@
     "backbone",
     "react"
   ],
-  "files": ["*.js", "*.md"],
+  "files": [
+    "*.js",
+    "*.md"
+  ],
   "main": "index.js",
   "scripts": {
     "checks": "npm test && npm run lint",
     "lint": "eslint lib/*.js* test/*.js*",
-    "prepublishOnly": "babel lib -d ./",
+    "prepublishOnly": "babel lib -d ./ && babel test/test-utils.js -o ./test-utils.js",
     "test": "NODE_ENV=test && karma start"
   },
   "author": "",
