@@ -633,11 +633,49 @@ ResourcesConfig.set(configObj);
     
     * ...can this be turned into a React Hook?
     
-        I bet it can. React Hooks are exciting! However, they're also brand new, and the React team is still not recommending using them on production sites. As we are more concerned with stability and production-readiness in this package, `withResources` is a good-ol' higher-order component that wraps an 'old-school' React class component (it uses refs and thus wrapping function components will not work). But! The good news is that this library has been used at [Sift](https://sift.com) to power its [console](https://console.sift.com) for two years now, and so for us, it is tried and true (we'll see if it is tried and true for others!).
+        I bet it can. React Hooks are exciting! However, they're also brand new, and the React team is still not recommending using them on production sites. As we are more concerned with stability and production-readiness in this package, `withResources` is a good-ol' 'old-school' higher-order component that wraps a React class or functional component. But! The good news is that this library has been used at [Sift](https://sift.com) to power its [console](https://console.sift.com) for two years now, and so for us, it is tried and true (we'll see if it is tried and true for others!).
         
 * Can the `withResources` HOC be used with both function components and class components?
 
-    No (see previous answer above). Because it uses refs, it must wrap a React class component.
+    Yes! The docs don't show it, but this is totally valid:
+    
+    ```jsx
+    const UserTodos = (props) => (
+      <div className='MyClassWithTodosAndUsers'>
+        {props.isLoading ? <Loader /> : null}
+          
+        {props.hasLoaded ? (
+          <ul>
+            {props.userTodosCollection.map((todoModel) => (
+              <li key={todoModel.id}>
+                {todoModel.get('name')}
+              </li>
+            )}
+          </ul>
+        ) : null}
+          
+        {props.hasErrored ? <ErrorMessage /> : null}
+      </div>
+    );
+    
+    export withResources((props, ResourceKeys) => {
+      const now = Date.now();
+      
+      return {
+        [ResourceKeys.USER_TODOS]: {
+          data: {
+            limit: 20,
+            end_time: now,
+            start_time: now - props.timeRange,
+            sort_field: props.sortField
+          },
+          options: {userId: props.userId}
+        }
+      };
+    })(UserTodos)
+    ```
+    
+    There is one caveat, though&mdash;function components should not be wrapped in `React.memo` if you intend to listen on a resource via the `listen: true` option.
 
 * Can `resourcerer` do anything other than `GET` requests?
 
