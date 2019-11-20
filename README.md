@@ -98,6 +98,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [prefetches](#prefetches)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
+    1. [withLoadingOverlay](#with-loading-overlay)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 
@@ -576,6 +577,35 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 - the `limit` and `sort_field` values are taken from the `data` hash
 - the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `data` hash into account.
 
+## withLoadingOverlay
+
+`resourcerer` also comes with a helper HOC to apply an overlay with a loader over current content while new data is fetched. It looks like this (shown over one of Sift's Insights Charts):
+
+![loading_overlay](https://user-images.githubusercontent.com/1355779/69263885-10440e80-0b7b-11ea-811d-29aa404b91d2.gif)
+
+Use it like:
+
+```jsx
+  import {withLoadingOverlay} from 'resourcerer/utils';
+  import {withResources} from 'resourcerer';
+
+  @withResources((props, ResourceKeys) => ({})
+  @withLoadingOverlay() // can also pass in {noLoader: true} to have an overlay without a spinner
+  class UserTodos extends React.Component {}
+```
+
+Now anytime `<UserTodos />` enters a loading state, its previous content will stay in place with a nice overlay on top until the next data returns and the component rerenders!
+
+Note that there is no default spinner, and you must provide it in the [configuration](#configuring-resourcerer) as:
+
+```js
+ResourcesConfig.set({Loader: YourLoaderComponent});
+```
+
+The Loader instance will get an `overlay: true` prop if it is rendered by `withLoadingOverlay`, which you can use to make any custom styling changes.
+
+
+
 
 # Configuring `resourcerer`
 
@@ -598,6 +628,8 @@ ResourcesConfig.set(configObj);
  <p>An error occurred.</p>
 </div>
 ```
+
+* `Loader` (React.Component): the spinner component that should be rendered when using [withLoadingOverlay](#with-loading-overlay). Default `null`.
 
 * `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
 
