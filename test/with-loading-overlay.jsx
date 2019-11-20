@@ -32,19 +32,13 @@ describe('WithLoadingOverlay', () => {
   });
 
   it('shows a loading overlay when \'isLoading\' is true', () => {
-    jasmine.clock().install();
-
     loady = renderLoady();
     expect(scryRenderedComponentsWithType(loady, Loader).length).toEqual(0);
     loady = renderLoady({isLoading: true});
 
     loaders = scryRenderedComponentsWithType(loady, Loader);
     expect(loaders.length).toEqual(1);
-    expect(loaders[0].props.flavor).toEqual('overlay-loader');
-
-    jasmine.clock().tick(100);
-    expect(ReactDOM.findDOMNode(loaders[0]).children.length).toEqual(1);
-    jasmine.clock().uninstall();
+    expect(loaders[0].props.overlay).toBe(true);
   });
 
   it('renders the wrapped component only after \'hasLoaded\' has been true once', (done) => {
@@ -58,12 +52,10 @@ describe('WithLoadingOverlay', () => {
     });
   });
 
-  it('does not show the spinner if passed an \'overlayOnly\' options', () => {
-    loady = renderLoady({isLoading: true}, withLoadingOverlay({overlayOnly: true})(TestClass));
+  it('does not show the spinner if passed a \'noLoader\' option', () => {
+    loady = renderLoady({isLoading: true}, withLoadingOverlay({noLoader: true})(TestClass));
     loaders = scryRenderedComponentsWithType(loady, Loader);
 
-    expect(loaders.length).toEqual(1);
-    expect(loaders[0].props.flavor).toEqual('overlay-only');
-    expect(ReactDOM.findDOMNode(loaders[0]).children.length).toEqual(0);
+    expect(loaders.length).toEqual(0);
   });
 });
