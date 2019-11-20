@@ -98,7 +98,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [prefetches](#prefetches)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
-    1. [withLoadingOverlay](#with-loading-overlay)
+    1. [withLoadingOverlay](#withloadingoverlay)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 
@@ -629,7 +629,7 @@ ResourcesConfig.set(configObj);
 </div>
 ```
 
-* `Loader` (React.Component): the spinner component that should be rendered when using [withLoadingOverlay](#with-loading-overlay). Default `null`.
+* `Loader` (React.Component): the spinner component that should be rendered when using [withLoadingOverlay](#withloadingoverlay). Default `null`.
 
 * `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
 
