@@ -16,7 +16,8 @@ import {
   SignalsCollection,
   UserModel
 } from './model-mocks';
-import {ModelMap, ResourceKeys, UnfetchedResources} from '../lib/config';
+import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from '../lib/config';
+import React from 'react';
 
 ResourceKeys.add({
   ACCOUNT_CONFIG: 'accountConfig',
@@ -50,6 +51,14 @@ UnfetchedResources
     .add(ResourceKeys.ACCOUNT_CONFIG)
     .add(ResourceKeys.DECISION_INSTANCE)
     .add(ResourceKeys.LABEL_INSTANCE);
+
+class Loader extends React.Component {
+  render() {
+    return <div />;
+  }
+}
+
+ResourcesConfig.set({Loader});
 
 let context = require.context('./', true, /.jsx?$/);
 
