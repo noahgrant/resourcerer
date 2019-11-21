@@ -605,10 +605,13 @@ const getTodos = (props, ResourceKeys) => {
   };
 };
 
-// in your component, call the prefetch method with the executor and current props and
-// attach to an `onMouseEnter` prop
-<a href='/todos' onMouseEnter={prefetch(getTodos, this.props)}>TODOS</a>
+// in your component, call the prefetch method with the executor and an object that matches
+// what you expect the props to look like when the resources are requested without prefetch.
+// attach the result to an `onMouseEnter` prop
+<a href='/todos' onMouseEnter={prefetch(getTodos, expectedProps)}>TODOS</a>
 ```
+
+Note, as mentioned in the comment above, that `expectedProps` should take the form of props expected when the resource is actually needed. For example, maybe we're viewing a list of users, and so there is no `props.userId` in the component that uses `prefetch`. But for the user in the list with id `'noahgrant'`, we would pass it an `expectedProps` that includes `{userId: 'noahgrant'}` because we know that when we click on the link and navigate to that url, `props.userId` should be equal to `'noahgrant'`.
 
 ## withLoadingOverlay
 
