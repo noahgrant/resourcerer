@@ -13,7 +13,7 @@ const getResources = (props, {DECISIONS, USER}) => ({
   },
   [DECISIONS]: {}
 });
-const props = {userId: 'noah', home: 'sf', source: 'hbase'};
+const expectedProps = {userId: 'noah', home: 'sf', source: 'hbase'};
 const dummyEvt = {target: jasmineNode};
 
 describe('prefetch', () => {
@@ -35,7 +35,7 @@ describe('prefetch', () => {
 
     UserModel.cacheFields = ['userId', 'source'];
 
-    prefetch(getResources, props)(dummyEvt);
+    prefetch(getResources, expectedProps)(dummyEvt);
     jasmine.clock().tick(100);
 
     expect(Request.default.calls.argsFor(0)[0]).toEqual('usersource=hbase_userId=noah');
@@ -60,7 +60,7 @@ describe('prefetch', () => {
   it('will fire if the user hovers over the element for longer than the timeout', () => {
     var leaveEvt = new Event('mouseleave');
 
-    prefetch(getResources, props)(dummyEvt);
+    prefetch(getResources, expectedProps)(dummyEvt);
     jasmine.clock().tick(50);
     jasmineNode.dispatchEvent(leaveEvt);
     expect(Request.default).toHaveBeenCalled();
@@ -69,7 +69,7 @@ describe('prefetch', () => {
   it('will not fetch if the user leaves the element before the timeout', () => {
     var leaveEvt = new Event('mouseleave');
 
-    prefetch(getResources, props)(dummyEvt);
+    prefetch(getResources, expectedProps)(dummyEvt);
     jasmine.clock().tick(25);
     jasmineNode.dispatchEvent(leaveEvt);
     jasmine.clock().tick(25);
