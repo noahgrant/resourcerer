@@ -98,6 +98,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [prefetches](#prefetches)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
+    1. [Prefetch on Hover](#prefetch-on-hover)
     1. [withLoadingOverlay](#withloadingoverlay)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
@@ -507,6 +508,8 @@ When the user clicks on a 'next' arrow that updates page state, the collection w
 1. Don't forget to add `from` to the [`cacheFields`](#declarative-cache-keys) list!
 1. The prefetched model does not get components registered to it; therefore, it is immediately scheduled for removal after the specified [cacheGracePeriod](#configuring). If the user clicks the next arrow, it then becomes the 'active' model and the `UserTodos` component will get registered to it, clearing the removal timer (see the next section).
 
+If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
+
 
 ## Caching Resources with ModelCache
 
@@ -576,6 +579,39 @@ The generated cache key would be something like `userTodos_limit=50_$range=86400
 - the `userId` value is taken from the `options` hash
 - the `limit` and `sort_field` values are taken from the `data` hash
 - the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `data` hash into account.
+
+
+## Prefetch on Hover
+
+You can use `resourcerer`'s executor function to optimistically prefetch resources when a user hovers over an element. For example, if a user hovers over a link to their TODOS page, you may want to get a head start on fetching their TODOS resource so that perceived loading time goes down or gets eliminated entirely. We can do this with the top-level `prefetch` function:
+
+```jsx
+import {prefetch} from 'resourcerer';
+
+// here's our executor function just as we pass to withResources
+const getTodos = (props, ResourceKeys) => {
+  const now = Date.now();
+      
+  return {
+    [ResourceKeys.USER_TODOS]: {
+      data: {
+        limit: props.limit,
+        end_time: now,
+        start_time: now - props.timeRange,
+        sort_field: props.sortField
+      },
+      options: {userId: props.userId}
+    }
+  };
+};
+
+// in your component, call the prefetch method with the executor and an object that matches
+// what you expect the props to look like when the resources are requested without prefetch.
+// attach the result to an `onMouseEnter` prop
+<a href='/todos' onMouseEnter={prefetch(getTodos, expectedProps)}>TODOS</a>
+```
+
+Note, as mentioned in the comment above, that `expectedProps` should take the form of props expected when the resource is actually needed. For example, maybe we're viewing a list of users, and so there is no `props.userId` in the component that uses `prefetch`. But for the user in the list with id `'noahgrant'`, we would pass it an `expectedProps` that includes `{userId: 'noahgrant'}` because we know that when we click on the link and navigate to that url, `props.userId` should be equal to `'noahgrant'`.
 
 ## withLoadingOverlay
 
