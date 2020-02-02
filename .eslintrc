@@ -51,7 +51,6 @@
     "linebreak-style": 2,
     "lines-between-class-members": 2,
     "max-len": [2, 100],
-    "max-nested-callbacks": [2, 3],
     "max-statements-per-line": 2,
     "new-cap": 2,
     "no-bitwise": 2,

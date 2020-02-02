@@ -8,7 +8,7 @@ export const UserModel = Schmackbone.Model.extend({
   url() {
     return `/root/users/${this.userId}`;
   }
-}, {cacheFields: ['userId']});
+}, {cacheFields: ['fraudLevel', 'userId']});
 
 export const AnalystsCollection = Schmackbone.Collection.extend({
   url() {
@@ -69,7 +69,7 @@ export const DecisionLogsCollection = Schmackbone.Collection.extend({
   url() {
     return '/root/decision_logs';
   }
-});
+}, {cacheFields: ['logs']});
 
 // next three are unfetched resources
 export const DecisionInstanceModel = Schmackbone.Model.extend(

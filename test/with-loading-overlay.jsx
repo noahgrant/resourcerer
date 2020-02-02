@@ -1,4 +1,4 @@
-import withLoadingOverlay, {NoUpdateIfLoading} from '../lib/with-loading-overlay.js';
+import {NoUpdateIfLoading, withLoadingOverlay} from '../lib/loading-overlay.js';
 
 import React from 'react';
 import ReactDOM from 'react-dom';
