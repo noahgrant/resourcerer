@@ -19,6 +19,8 @@ import {
 import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from '../lib/config';
 import React from 'react';
 
+window.React = React;
+
 ResourceKeys.add({
   ACCOUNT_CONFIG: 'accountConfig',
   ACTIONS: 'actions',
@@ -54,7 +56,7 @@ UnfetchedResources
 
 class Loader extends React.Component {
   render() {
-    return <div />;
+    return <div className='Loader' />;
   }
 }
 

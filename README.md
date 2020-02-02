@@ -4,7 +4,7 @@
 
 ![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
 
-`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful higher-order React component (HOC) `withResources` allows you to easily construct a component's data flow, including:
+`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful higher-order React component (HOC) `withResources` (or its [`useResources` hook](#useresources-beta)) allows you to easily construct a component's data flow, including:
 
 * serial requests
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
@@ -96,10 +96,12 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [options](#options)
         1. [attributes](#attributes)
         1. [prefetches](#prefetches)
+    1. [useResources (beta)](#useresources-beta)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
     1. [Prefetch on Hover](#prefetch-on-hover)
     1. [withLoadingOverlay](#withloadingoverlay)
+        1. [usage with useResources](#usage-with-the-useresources-hook)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 
@@ -507,6 +509,55 @@ When the user clicks on a 'next' arrow that updates page state, the collection w
 
 If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
 
+## `useResources` (beta)
+
+So far, all `resourcerer` concepts have been discussed in the context of its `withResources` HOC. But they can also be used with its `useResources` hook inside functional components. All props that you'd expect to be passed down as props from the HOC are returned from the hook:
+
+```jsx
+import {useResources} from 'resourcerer';
+
+const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+
+export default function MyComponent(props) {
+  var {
+    isLoading,
+    hasLoaded,
+    todosCollection,
+    todosLoadingState,
+    setResourceState
+    // etc...
+  } = useResources(getResources, props);
+
+  return (
+    <div className='MyComponent'>
+      {isLoading ? <Loader /> : null}
+          
+      {hasLoaded ? (
+        <ul>
+          {todosCollection.map((todoModel) => (
+            <li key={todoModel.id}>{todoModel.get('name')}</li>
+          )}
+        </ul>
+       ) : null}
+    </div>
+  );
+}
+```
+
+Note a couple critical differences:
+
+1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes). One is instead placed within the [`<LoadingOverlay />`](#usage-with-the-useresources-hook) component, which is helpful but not a complete replacement.
+
+1. The `setResourceState` prop utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does not auto-merge updates like `setState` does. Be sure to manually merge all resource state!
+
+    ```jsx
+    props.setResourceState((existingState) => ({
+      ...existingState,
+      timeRange: newTimeRange
+    }));
+    ```
+
+1. The hook does not accept a [`{listen: true}`](#listen) option like the HOC does because it listens to changes on all resources by default. A similar update will be made in the future to `withResources`.
 
 ## Caching Resources with ModelCache
 
@@ -637,8 +688,32 @@ ResourcesConfig.set({Loader: YourLoaderComponent});
 
 The Loader instance will get an `overlay: true` prop if it is rendered by `withLoadingOverlay`, which you can use to make any custom styling changes.
 
+### Usage with the `useResources` hook
 
+When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; use the `LoadingOverlay` component directly instead:
 
+```jsx
+import {LoadingOverlay} from 'resourcerer/utils';
+import {useResources} from 'resourcerer';
+
+const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+
+export default function UserTodos(props) {
+  var {isLoading, hasLoaded, todosCollection} = useResources(getResources, props);
+    
+  return (
+    <div className='MyComponent'>
+      <LoadingOverlay {...{isLoading, hasLoaded}}>
+        <ul>
+          {todosCollection.map((todoModel) => (
+            <li key={todoModel.id}>{todoModel.get('name')}</li>
+          ))}
+        </ul>
+      </LoadingOverlay>
+    </div>
+  );
+}
+```
 
 # Configuring `resourcerer`
 
@@ -658,7 +733,7 @@ ResourcesConfig.set(configObj);
 
 ```jsx
 <div className='caught-error'>
- <p>An error occurred.</p>
+  <p>An error occurred.</p>
 </div>
 ```
 
@@ -693,14 +768,21 @@ ResourcesConfig.set(configObj);
     
     1. passes instantiated models directly through the app before calling `renderToString`  
     2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
+        
+* ...can this be used as a React Hook?
+    
+    Yes! See the [useResources](#useresources-beta) section for how to use it and for critical differences between the HOC. Note that `useResources` is currently in beta.
 
 * Does it support async rendering?  
   
-    For the initial release, the `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit of doing this there instead of `componentDidUpdate` is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `withResources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
-    
-    * ...can this be turned into a React Hook?
-    
-        I bet it can. React Hooks are exciting! However, they're also brand new, and the React team is still not recommending using them on production sites. As we are more concerned with stability and production-readiness in this package, `withResources` is a good-ol' 'old-school' higher-order component that wraps a React class or functional component. But! The good news is that this library has been used at [Sift](https://sift.com) to power its [console](https://console.sift.com) for two years now, and so for us, it is tried and true (we'll see if it is tried and true for others!).
+    The `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. There are a couple of benefits to doing it this way instead of in `componentDidUpdate`:  
+    1. It avoids an extra render caused by setting state after an update has happened.
+    2. It allows us to read our models directly from the ModelCache and not set them as any sort of de-normalized state.
+
+    The downside is that it prevents `withResources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
+
+    The `useResources` React hook, on the other hand, will support async rendering. It also, however requires that extra render that the HOC avoids, and that its models are set as state.
+
         
 * Can the `withResources` HOC be used with both function components and class components?
 
