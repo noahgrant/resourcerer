@@ -1,4 +1,4 @@
-import {hasErrored, hasLoaded, isLoading, isPending} from '../lib/utils';
+import {camelize, hasErrored, hasLoaded, isLoading, isPending} from '../lib/utils';
 import {LoadingStates} from '../lib/constants';
 
 describe('modelLoadingStatus', () => {
@@ -64,6 +64,34 @@ describe('modelLoadingStatus', () => {
 
     it('returns false if an undefined loading state is passed', () => {
       expect(isPending(undefined)).toBe(false);
+    });
+  });
+
+  describe('camelize', () => {
+    it('passes words that are already camelCase', () => {
+      expect(camelize('camelCase')).toEqual('camelCase');
+      // also leaves alone PascalCase
+      expect(camelize('PascalCase')).toEqual('PascalCase');
+    });
+
+    it('passes words that are single word lowercase', () => {
+      expect(camelize('lowercase')).toEqual('lowercase');
+    });
+
+    it('lowercases words that are all uppercase', () => {
+      expect(camelize('UPPERCASE')).toEqual('uppercase');
+    });
+
+    it('turns snake_case words into camelcase', () => {
+      expect(camelize('snake_case_words')).toEqual('snakeCaseWords');
+    });
+
+    it('turns spine-case words into camelcase', () => {
+      expect(camelize('spine-case-words')).toEqual('spineCaseWords');
+    });
+
+    it('turns space-separated words into camelcase', () => {
+      expect(camelize('space separated words')).toEqual('spaceSeparatedWords');
     });
   });
 });
