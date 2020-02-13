@@ -41,6 +41,24 @@ describe('Config', () => {
       expect(Config.ModelMap.testModel).toEqual(TestModel);
       expect(Config.ModelMap.testModel2).toEqual(TestModel2);
     });
+
+    it('adds camelized resource keys if they do not already exist', () => {
+      Config.ModelMap.add({TEST_MODEL: TestModel, TEST_MODEL2: TestModel2});
+
+      expect(Config.ModelMap.testModel).toEqual(TestModel);
+      expect(Config.ModelMap.testModel2).toEqual(TestModel2);
+      expect(Config.ResourceKeys.TEST_MODEL).toEqual('testModel');
+      expect(Config.ResourceKeys.TEST_MODEL2).toEqual('testModel2');
+    });
+
+    it('does not overwrite any manually-added resource keys', () => {
+      Config.ResourceKeys.add({TEST_MODEL2: 'customName', TEST_MODEL3: 'testModel3'});
+      Config.ModelMap.add({TEST_MODEL: TestModel, TEST_MODEL2: TestModel2});
+
+      expect(Config.ResourceKeys.TEST_MODEL).toEqual('testModel');
+      expect(Config.ResourceKeys.TEST_MODEL2).toEqual('customName');
+      expect(Config.ResourceKeys.TEST_MODEL3).toEqual('testModel3');
+    });
   });
 
   describe('adding UnfetchedResources', () => {

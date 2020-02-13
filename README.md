@@ -30,15 +30,15 @@ import Schmackbone from 'schmackbone';
 export default Schmackbone.Collection.extend({url: () => '/todos'});
 ```
 
-2. Create a config file in your application, add a key for your model, and link it to your model constructor:
+2. Create a config file in your application and add your constructor to the ModelMap with a key:
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap, ResourceKeys} from 'resourcerer/config';
+import {ModelMap} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 
-ResourceKeys.add({TODOS: 'todos'});
-ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
+// choose any string as its key
+ModelMap.add({TODOS: TodosCollection});
 
 // in your top level js file
 import 'js/core/resourcerer-config;
@@ -50,7 +50,7 @@ import 'js/core/resourcerer-config;
 import React from 'react';
 import {withResources} from 'resourcerer';
 
-@withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {}}))
+@withResources((props, {TODOS}) => ({[TODOS]: {}}))
 class MyComponent extends React.Component {
   render() {
     // when MyComponent is mounted, the todosCollection is fetched and available
@@ -121,31 +121,29 @@ Modules have, however, been transpiled into CommonJS `require` syntax.
 Okay, back to the initial example. Let's take a look at our `withResources` usage in the component:
 
 ```js
+// Note: in these docs, you will see a combination of `ResourceKeys` in the executor function as well as
+// its more common destructured version, ie `@withResources((props, {TODOS}) => ({[TODOS]: {}}))`
 @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {}}))
 class MyComponent extends React.Component {}
 ```
 
 You see that `withResources` takes an executor function that returns an object. The executor function
 takes two arguments: the current props, and an object of `ResourceKeys`. Where does `ResourceKeys` come
-from? From the config file we added to earlier!
+from? From the ModelMap in the config file we added to earlier!
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap, ResourceKeys} from 'resourcerer/config';
+import {ModelMap} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 
-// after adding this key, `ResourceKeys.TODOS` will be used in our executor functions to reference
-// the Todos resource. The 'todos' string value will be the default prefix added to all todos-related
+// after adding this key, resourcerer will add an identical key to the `ResourceKeys` object with a
+// camelCased version as its value. `ResourceKeys.TODOS` can then be used in our executor functions to reference
+// the Todos resource. The camelCased 'todos' string value will be the default prefix added to all todos-related
 // props passed from the HOC to the wrapped component. That's why we have `this.props.todosCollection`!
-// if the key we added was instead, {TODOS: 'foo'}, the collection would get passed down as 
-// `this.props.fooCollection`.
-ResourceKeys.add({TODOS: 'todos'});
-
-// use the previously-added keys to reference the model constructor. this is how resourcerer knows
-// what model type to map the key to. since this requires ResourceKeys, make sure to use
-// `ResourceKeys.add` first!
-ModelMap.add({[ResourceKeys.TODOS]: TodosCollection});
+ModelMap.add({TODOS: TodosCollection});
 ```
+
+(We can also pass custom prefixes for our prop names in a component, but [we'll get to that later](#custom-resource-names).)  
 
 Back to the executor function. In the example above, you see it returns an object of `{[ResourceKeys.TODOS]: {}}`. In general, the object it should return is of type `{string<ResourceKey>: object<Options>}`, where `Options` is a generic map of config options, and can contain as many keys as resources you would like the component to request. In our initial example, the options object was empty. Further down, we'll go over the plethora of options and how to use them. For now let's take a look at some of the resource-related props this simple configuration provides our component.
 
@@ -242,14 +240,13 @@ Let's say we wanted to request not the entire users collection, but just a speci
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap, ResourceKeys} from 'resourcerer/config';
+import {ModelMap} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 import UserModel from 'js/models/user-model';
 
-ResourceKeys.add({TODOS: 'todos', USER: 'user'});
 ModelMap.add({
-  [ResourceKeys.TODOS]: TodosCollection,
-  [ResourceKeys.USER]: UserModel
+  TODOS: TodosCollection,
+  USER: UserModel
 });
 ```
 
