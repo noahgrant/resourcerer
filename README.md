@@ -563,6 +563,8 @@ Note a couple critical differences:
 
 1. The hook does not accept a [`{listen: true}`](#listen) option like the HOC does because it listens to changes on all resources by default. A similar update will be made in the future to `withResources`.
 
+1. Likewise, the hook does not accept a [`{status: true}`](#status) option like the HOC does because it returns all statuses by default.
+
 ## Caching Resources with ModelCache
 
 `resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
@@ -860,7 +862,7 @@ ResourcesConfig.set(configObj);
 
 * How big is the `resourcerer` package?  
 
-    4kB gzipped.
+    5kB gzipped (excluding its Schmackbone, Underscore, and qs dependencies, which are an additional 17kB gzipped).
 
 * Semver?  
 

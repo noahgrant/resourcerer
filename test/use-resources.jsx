@@ -28,8 +28,7 @@ const getResources = (props) => ({
   [ResourceKeys.DECISIONS]: {
     ...(props.includeDeleted ? {data: {include_deleted: true}} : {}),
     listen: true,
-    measure,
-    status: props.status
+    measure
   },
   [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
@@ -61,7 +60,6 @@ const getResources = (props) => ({
   ...props.customName ? {
     customDecisions: {
       modelKey: ResourceKeys.DECISIONS,
-      status: true,
       provides: {sift: () => 'science'}
     }
   } : {},
@@ -942,47 +940,45 @@ describe('useResources', () => {
     });
   });
 
-  describe('for a response with \'status\'', () => {
-    it('sets the status when resource loads', async(done) => {
-      dataChild = findDataChild(renderUseResources({status: true}));
-      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADING);
-      expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
-      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
-      expect(dataChild.props.decisionsStatus).toEqual(undefined);
-      expect(dataChild.props.userStatus).toEqual(undefined);
-      expect(dataChild.props.analystsStatus).toEqual(undefined);
+  it('sets the status when resource loads', async(done) => {
+    dataChild = findDataChild(renderUseResources());
+    expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.decisionsStatus).toEqual(undefined);
+    expect(dataChild.props.userStatus).toEqual(undefined);
+    expect(dataChild.props.analystsStatus).toEqual(undefined);
 
-      await waitsFor(() => dataChild.props.hasLoaded);
+    await waitsFor(() => dataChild.props.hasLoaded);
 
-      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADED);
-      expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADED);
-      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADED);
-      expect(dataChild.props.decisionsStatus).toBe(200);
-      expect(dataChild.props.userStatus).toEqual(undefined);
-      expect(dataChild.props.analystsStatus).toEqual(undefined);
-      done();
-    });
+    expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADED);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADED);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADED);
+    expect(dataChild.props.decisionsStatus).toBe(200);
+    expect(dataChild.props.userStatus).toEqual(200);
+    expect(dataChild.props.analystsStatus).toEqual(200);
+    done();
+  });
 
-    it('sets the status when resource errors', async(done) => {
-      shouldResourcesError = true;
-      dataChild = findDataChild(renderUseResources({status: true}));
-      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADING);
-      expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
-      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
-      expect(dataChild.props.decisionsStatus).toEqual(undefined);
-      expect(dataChild.props.userStatus).toEqual(undefined);
-      expect(dataChild.props.analystsStatus).toEqual(undefined);
+  it('sets the status when resource errors', async(done) => {
+    shouldResourcesError = true;
+    dataChild = findDataChild(renderUseResources());
+    expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.decisionsStatus).toEqual(undefined);
+    expect(dataChild.props.userStatus).toEqual(undefined);
+    expect(dataChild.props.analystsStatus).toEqual(undefined);
 
-      await waitsFor(() => dataChild.props.hasErrored && !dataChild.props.isLoading);
+    await waitsFor(() => dataChild.props.hasErrored && !dataChild.props.isLoading);
 
-      expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.ERROR);
-      expect(dataChild.props.userLoadingState).toBe(LoadingStates.ERROR);
-      expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.ERROR);
-      expect(dataChild.props.decisionsStatus).toBe(404);
-      expect(dataChild.props.userStatus).toEqual(undefined);
-      expect(dataChild.props.analystsStatus).toEqual(undefined);
-      done();
-    });
+    expect(dataChild.props.decisionsLoadingState).toBe(LoadingStates.ERROR);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.ERROR);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.ERROR);
+    expect(dataChild.props.decisionsStatus).toBe(404);
+    expect(dataChild.props.userStatus).toEqual(404);
+    expect(dataChild.props.analystsStatus).toEqual(404);
+    done();
   });
 
   it('sets an error state when a resource errors, but does not log', async(done) => {
