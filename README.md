@@ -565,6 +565,36 @@ Note a couple critical differences:
 
 1. Likewise, the hook does not accept a [`{status: true}`](#status) option like the HOC does because it returns all statuses by default.
 
+1. With the executor function now inlined in your component, be extra careful to avoid this anti-pattern:
+
+    ```
+    function MyComponent({start_time, ...props}) {
+      var {todosCollection} = useResources((_props, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
+      
+      // ...
+    ```
+    
+    The subtle problem with the above is that the `start_time` executor function parameter is relying on a value in the function component closure instead of the generic props object; `props` passed to the executor function can be current or previous but are not the same as what is in the closure, which will always be current. This will lead to confusing bugs, so instead either read directly from the props parameter passed to the executor function:
+    
+    ```
+    function MyComponent(props) {
+      var {todosCollection} = useResources(({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
+      
+      // ...
+    ```
+    
+     or define your executor function outside of the component scope:
+     
+     
+     ```
+     const getResources = ({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}});
+     
+     function MyComponent(props) {
+       var {todosCollection} = useResources(getResources, props);
+       
+       // ...
+     ```
+
 ## Caching Resources with ModelCache
 
 `resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
