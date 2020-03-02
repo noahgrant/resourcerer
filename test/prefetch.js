@@ -42,17 +42,13 @@ describe('prefetch', () => {
     expect(Request.default.calls.argsFor(0)[1]).toEqual(UserModel);
     expect(Request.default.calls.argsFor(0)[2]).toEqual({
       options: {userId: 'noah'},
-      fetchData: {home: 'sf', source: 'hbase'},
+      data: {home: 'sf', source: 'hbase'},
       prefetch: true
     });
 
     expect(Request.default.calls.argsFor(1)[0]).toEqual('decisions');
     expect(Request.default.calls.argsFor(1)[1]).toEqual(DecisionsCollection);
-    expect(Request.default.calls.argsFor(1)[2]).toEqual({
-      fetchData: undefined,
-      options: undefined,
-      prefetch: true
-    });
+    expect(Request.default.calls.argsFor(1)[2]).toEqual({prefetch: true});
 
     UserModel.cacheFields = oldFields;
   });
