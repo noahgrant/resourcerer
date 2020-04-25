@@ -198,6 +198,23 @@ describe('useResources', () => {
     done();
   });
 
+  it('\'hasInitiallyLoaded\' is initially true if all critical models are passed', () => {
+    dataChild = findDataChild(renderUseResources({
+      decisionsCollection: new Schmackbone.Collection(),
+      userModel: new Schmackbone.Model()
+    }));
+
+    expect(dataChild.props.hasInitiallyLoaded).toBe(true);
+    unmountAndClearModelCache();
+
+    dataChild = findDataChild(renderUseResources({
+      // analystsCollection is noncritical
+      analystsCollection: new Schmackbone.Collection(),
+      userModel: new Schmackbone.Model()
+    }));
+    expect(dataChild.props.hasInitiallyLoaded).toBe(false);
+  });
+
   it('resource keys get turned into props of the same name, with \'Model\' or ' +
       '\'Collection\' appended as appropriate', async(done) => {
     dataChild = findDataChild(renderUseResources());
