@@ -726,7 +726,7 @@ The Loader instance will get an `overlay: true` prop if it is rendered by `withL
 
 ### Usage with the `useResources` hook
 
-When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; however, since models are held as state with the hook, a loading overlay helper component to keep older models rendered while new ones are requested is unnecessary. We can simply use `hasInitiallyLoaded`:
+When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; however, since models are held as state, a loading overlay helper component is unnecessary to keep older models rendered while requesting new ones. We can simply use `hasInitiallyLoaded`:
 
 ```jsx
 import {useResources} from 'resourcerer';
