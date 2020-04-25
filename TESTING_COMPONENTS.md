@@ -94,3 +94,37 @@ import {scryRenderedComponentsWithType} from 'react-dom/test-utils';
       expect(userTodosList.props.hasLoaded).toBe(true);
     });
 ```
+
+## Testing Components that Use `useResources`
+
+When using the `useResources` hook, we are necessarily using React function components that have no backing instances (and thus whose return from `render` is `null`). Therefore, we can't assert any prop values on components and we can't navigate a DOM tree the way we can when using classes. However, we can simply mock out `useResources` itself to test functionality. Here's an example (using [jest](https://jestjs.io/)) for testing how a component that uses `useResources` looks under a loading state:
+
+```jsx
+import * as resourcerer from 'resourcerer';
+
+// ...
+it('shows a loader when in a loading state', () => {
+   jest.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
+     ...props,
+     hasLoaded: false,
+     isLoading: true
+   ));
+
+   const {container} = render(<MyComponent />);
+   
+   expect(container.querySelector('.Loader')).toBeInTheDocument();
+});
+```
+
+This should solve most of your use cases; you can return any mocked info you want, such as a noncritical loading state. You can also mock out `setResourceState`:
+
+```jsx
+ var setResourceMock = jest.fn();
+ 
+ jest.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
+   ...props,
+   setResourceState: setResourceMock
+ ));
+```
+
+Keep in mind that in this case the calls to `setResourceState` won't actually go through, and so state won't persist. 
