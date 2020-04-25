@@ -550,7 +550,7 @@ export default function MyComponent(props) {
 
 Note a couple critical differences:
 
-1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes). One is instead placed within the [`<LoadingOverlay />`](#usage-with-the-useresources-hook) component, which is helpful but not a complete replacement.
+1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes).
 
 1. The `setResourceState` prop utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does not auto-merge updates like `setState` does. Be sure to manually merge all resource state!
 
@@ -726,26 +726,30 @@ The Loader instance will get an `overlay: true` prop if it is rendered by `withL
 
 ### Usage with the `useResources` hook
 
-When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; use the `LoadingOverlay` component directly instead:
+When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; however, since models are held as state with the hook, a loading overlay helper component to keep older models rendered while new ones are requested is unnecessary. We can simply use `hasInitiallyLoaded`:
 
 ```jsx
-import {LoadingOverlay} from 'resourcerer/utils';
 import {useResources} from 'resourcerer';
 
 const getResources = (props, {TODOS}) => ({[TODOS]: {}});
 
 export default function UserTodos(props) {
-  var {isLoading, hasLoaded, todosCollection} = useResources(getResources, props);
+  var {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
     
   return (
     <div className='MyComponent'>
-      <LoadingOverlay {...{isLoading, hasLoaded}}>
+      // it's up to you to make this an OverlayLoader or InlineLoader, if you so choose.
+      {isLoading ? <Loader /> : null}
+      // this will render once first loaded and remain rendered with a previous
+      // model even while in a loading state. when a new resource request returns,
+      // this will render with the updated model and the loader will be removed.
+      {hasInitiallyLoaded ? (
         <ul>
           {todosCollection.map((todoModel) => (
             <li key={todoModel.id}>{todoModel.get('name')}</li>
           ))}
         </ul>
-      </LoadingOverlay>
+      ) : null}
     </div>
   );
 }
