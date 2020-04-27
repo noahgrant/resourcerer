@@ -21,13 +21,13 @@ Additional features include:
 
 It employs a View-less, jQuery-less fork of Backbone called [Schmackbone](https://github.com/noahgrant/schmackbone) for Model/Collection semantics (as well as its [Events module](https://backbonejs.org/#Events)). Getting started is easy:
 
-1. Define a Schmackbone model in your application:
+1. Define a model in your application:
 
 ```js
 // js/models/todos-collection.js
-import Schmackbone from 'schmackbone';
+import {Collection} from 'resourcerer';
 
-export default class TodosCollection extends Schmackbone.Collection {
+export default class TodosCollection extends Collection {
   url() {
     return '/todos';
   }
@@ -260,15 +260,17 @@ And here's what our model might look like:
 
 ```js
 // js/models/user-model.js
-export default Schmackbone.Model.extend({
-  initialize(attributes, options={}) {
+export default class UserModel extends Model {
+  constructor(attributes, options={}) {
     this.userId = options.userId;
-  },
+  }
   
   url() {
     return `/users/${this.userId}`;
   }
-}, {cacheFields: ['userId']});
+  
+  static cacheFields = ['userId']
+}
 ```
 
 The `cacheFields` static property is important here, as we'll see in a second; it is a list of model properties that `resourcerer` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
@@ -448,7 +450,7 @@ would still fetch the todos resource, but the props passed to the `MyComponentWi
 
 ### options 
 
-[As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `initialize` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
+[As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `constructor` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
 
 ```js
   @withResources((props, ResourceKeys) => {
@@ -473,7 +475,7 @@ Here, the UserTodos collection will be instantiated with an options hash includi
 
 ### attributes
 
-Pass in an attributes hash to initialize a Schmackbone.Model instance with a body before initially fetching. This is passed directly to the model's [`initialize` method](https://backbonejs.org/#Model-constructor) along with the `options` property.
+Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the model's [`constructor` method](https://backbonejs.org/#Model-constructor) along with the `options` property.
 
 ### prefetches
 
@@ -635,23 +637,23 @@ Let's take a look at the USER_TODOS resource from above, where we want to reques
 And our corresponding model definition might look like this:
 
 ```js
-export const UserTodosCollection = Schmackbone.Collection.extend({
-  initialize(models, options={}) {
+export class UserTodosCollection extends Collection {
+  constructor(models, options={}) {
     this.userId = options.userId;
-  },
+  }
   
   url() {
     return `/users/${this.userId}/todos`;
   }
   // ...
-}, {
-  cacheFields: [
+  
+  static cacheFields = [
     'limit',
     'userId',
     'sort_field',
      ({end_millis, start_millis}) => ({range: end_millis - start_millis})
   ]
-});
+};
 ```
 
 We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
@@ -878,11 +880,11 @@ ResourcesConfig.set(configObj);
   
       // any other mounted component in the application listening to this model or its collection
       // will get re-rendered with the updated name as soon as this is called
-      this.props.userTodoModel.save({name: 'Giving This Todo A New Name}, {
-        success: () => notify('Todo save succeeded!'),
-        error: () => notify('Todo save failed :/'),
-        complete: () => this.setState({isSaving: false})
-      });
+      this.props.userTodoModel.save({name: 'Giving This Todo A New Name})
+          .then(
+            () => notify('Todo save succeeded!'),
+            () => notify('Todo save failed :/')
+          ).then(() => this.setState({isSaving: false})
     }
     ```
 
