@@ -1,12 +1,15 @@
 import * as Request from '../lib/request';
 
-import {DecisionLogsCollection, UserModel} from './model-mocks';
 import {
+  prefetch as _prefetch,
+  Collection,
   EMPTY_COLLECTION,
   EMPTY_MODEL,
   getCacheKey,
+  Model,
   withResources
 } from '../lib/index';
+import {DecisionLogsCollection, UserModel} from './model-mocks';
 import {
   findDataCarrier,
   findDataChild,
@@ -24,6 +27,7 @@ import {
 import ErrorBoundary from '../lib/error-boundary';
 import {LoadingStates} from '../lib/constants';
 import ModelCache from '../lib/model-cache';
+import prefetch from '../lib/prefetch';
 import React from 'react';
 import ReactDOM from 'react-dom';
 import Schmackbone from 'schmackbone';
@@ -121,7 +125,7 @@ describe('withResources', () => {
 
     document.body.appendChild(jasmineNode);
 
-    requestSpy = spyOn(Request, 'default').and.callFake((key, Model, options) => {
+    requestSpy = spyOn(Request, 'default').and.callFake((key, Const, options) => {
       // mock fetch model cache behavior, where we put it in the cache immediately,
       // then request the model, and only if it errors do we remove it from cache
       var model = new Schmackbone.Model({key, ...(options.data || {})});
@@ -980,7 +984,7 @@ describe('withResources', () => {
             haveCalledPrefetch,
             haveCalledSearchQuery;
 
-        requestSpy.and.callFake((key, Model, options={}) => new Promise((res, rej) => {
+        requestSpy.and.callFake((key, Const, options={}) => new Promise((res, rej) => {
           window.requestAnimationFrame(() => {
             var model = new Schmackbone.Model({key, ...(options.data || {})});
 
@@ -1288,6 +1292,12 @@ describe('withResources', () => {
         done();
       });
     });
+  });
+
+  it('exports Model and Collection constructors directly', () => {
+    expect(_prefetch).toEqual(prefetch);
+    expect(Model).toEqual(Schmackbone.Model);
+    expect(Collection).toEqual(Schmackbone.Collection);
   });
 });
 /* eslint-enable max-nested-callbacks */

@@ -81,31 +81,40 @@ describe('Config', () => {
   describe('#setConfig', () => {
     it('adds a setting to the configs, overriding defaults', () => {
       var logSpy = jasmine.createSpy('log'),
-          trackSpy = jasmine.createSpy('track');
+          trackSpy = jasmine.createSpy('track'),
+          prefilterSpy = jasmine.createSpy('prefilter');
 
       expect(Config.ResourcesConfig.cacheGracePeriod).toEqual(120000);
       expect(Config.ResourcesConfig.log).toEqual(noOp);
+      expect(Config.ResourcesConfig.prefilter).toEqual(noOp);
       expect(Config.ResourcesConfig.track).toEqual(noOp);
       expect(Config.ResourcesConfig.queryParamsPropName).toEqual('urlParams');
+      // default is the identity fn
+      expect(Schmackbone.ajaxPrefilter('foo')).toEqual('foo');
 
       Config.ResourcesConfig.set({
         cacheGracePeriod: 300000,
         log: logSpy,
+        prefilter: prefilterSpy,
         track: trackSpy,
         queryParamsPropName: 'queryPs'
       });
 
       expect(Config.ResourcesConfig.cacheGracePeriod).toEqual(300000);
       expect(Config.ResourcesConfig.log).toEqual(logSpy);
+      expect(Config.ResourcesConfig.prefilter).toEqual(prefilterSpy);
       expect(Config.ResourcesConfig.track).toEqual(trackSpy);
       expect(Config.ResourcesConfig.queryParamsPropName).toEqual('queryPs');
+      expect(Schmackbone.ajaxPrefilter).toEqual(prefilterSpy);
 
       Config.ResourcesConfig.set({
         cacheGracePeriod: 120000,
         log: noOp,
+        prefilter: noOp,
         track: noOp,
         queryParamsPropName: 'queryParamsPropName'
       });
+      Schmackbone.ajaxPrefilter = (x) => x;
     });
   });
 });
