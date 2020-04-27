@@ -783,6 +783,7 @@ ResourcesConfig.set(configObj);
 
 * `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
 
+* `prefilter` (function): proxy for Schmackbone's [ajaxPrefilter](https://github.com/noahgrant/schmackbone#backboneajaxprefilter) method, which is a great place to add custom request headers (like auth headers) or do custom error response handling. See Schmackbone's documentation for more. Default noop.
 * `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, for ease of use in your executor function. Default `'urlParams'`.
 
 * `track` (function): method invoked when [`measure: true`](#measure) is passed in a resource's config. Use this hook to send the measured data to your application analytics tracker. Default noop. The method is invoked with two arguments:
