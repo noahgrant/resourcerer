@@ -35,7 +35,7 @@ jobs:
 
       - run:
           name: Nodejs deps
-          command: npm i
+          command: npm i && npm i react react-dom schmackbone underscore
 
       - run:
           name: Stylechecks
