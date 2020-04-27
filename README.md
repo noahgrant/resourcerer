@@ -880,11 +880,11 @@ ResourcesConfig.set(configObj);
   
       // any other mounted component in the application listening to this model or its collection
       // will get re-rendered with the updated name as soon as this is called
-      this.props.userTodoModel.save({name: 'Giving This Todo A New Name})
-          .then(
-            () => notify('Todo save succeeded!'),
-            () => notify('Todo save failed :/')
-          ).then(() => this.setState({isSaving: false})
+      this.props.userTodoModel.save({name: 'Giving This Todo A New Name}, {
+        success: () => notify('Todo save succeeded!'),
+        error: () => notify('Todo save failed :/'),
+        complete: () => this.setState({isSaving: false})
+      });
     }
     ```
 

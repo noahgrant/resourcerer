@@ -39,12 +39,12 @@
     "karma-jasmine": "^1.1.0",
     "karma-jasmine-html-reporter": "^0.2.2",
     "karma-webpack": "^3.0.5",
-    "react-dom": "^16.8.6",
+    "react-dom": "^16.13.1",
     "webpack": "^4.29.6"
   },
   "dependencies": {
     "@babel/runtime": "^7.4.5",
-    "react": "^16.8.6",
+    "react": "^16.13.1",
     "schmackbone": "^1.4.0",
     "underscore": "^1.8.3"
   }
