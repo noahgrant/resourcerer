@@ -137,13 +137,13 @@ describe('withResources', () => {
           return window.setTimeout(() => {
             delayedResourceComplete = true;
             ModelCache.remove(key);
-            rej(model);
+            rej([model]);
           }, options.options.delay);
         }
 
         if (cached) {
           // treat model as though it were cached by resolving promise immediately
-          return res(model);
+          return res([model]);
         }
 
         // put requests in a RAF to 'mimic' the procession of non-cached
@@ -151,19 +151,11 @@ describe('withResources', () => {
         // resolve the promise)
         window.requestAnimationFrame(() => {
           if (shouldResourcesError) {
-            if (model !== EMPTY_COLLECTION && model !== EMPTY_MODEL) {
-              model.status = 404;
-            }
-
             ModelCache.remove(key);
 
-            rej(model);
+            rej([model, model !== EMPTY_COLLECTION && model !== EMPTY_MODEL ? 404 : null]);
           } else {
-            if (model !== EMPTY_COLLECTION && model !== EMPTY_MODEL) {
-              model.status = 200;
-            }
-
-            res(model);
+            res([model, model !== EMPTY_COLLECTION && model !== EMPTY_MODEL ? 200 : null]);
           }
         });
       });
@@ -995,11 +987,11 @@ describe('withResources', () => {
               if (prefetchLoading) {
                 return false;
               } else if (prefetchError) {
-                return rej(model);
+                return rej([model]);
               }
 
               ModelCache.put(key, model, options.component);
-              res(model);
+              res([model]);
             } else {
               if (/searchQuery/.test(key) && searchQueryLoading) {
                 haveCalledSearchQuery = true;
@@ -1008,7 +1000,7 @@ describe('withResources', () => {
               }
 
               ModelCache.put(key, model, options.component);
-              res(model);
+              res([model]);
             }
           });
         }));

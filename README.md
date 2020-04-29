@@ -19,7 +19,7 @@ Additional features include:
 * updating a component when a resource updates
 * ...and more
 
-It employs a View-less, jQuery-less fork of Backbone called [Schmackbone](https://github.com/noahgrant/schmackbone) for Model/Collection semantics (as well as its [Events module](https://backbonejs.org/#Events)). Getting started is easy:
+It employs a View-less, jQuery-less, Promise-interfaced fork of Backbone called [Schmackbone](https://github.com/noahgrant/schmackbone) for Model/Collection semantics (as well as its [Events module](https://backbonejs.org/#Events)). Getting started is easy:
 
 1. Define a model in your application:
 
@@ -881,11 +881,10 @@ ResourcesConfig.set(configObj);
   
       // any other mounted component in the application listening to this model or its collection
       // will get re-rendered with the updated name as soon as this is called
-      this.props.userTodoModel.save({name: 'Giving This Todo A New Name}, {
-        success: () => notify('Todo save succeeded!'),
-        error: () => notify('Todo save failed :/'),
-        complete: () => this.setState({isSaving: false})
-      });
+      this.props.userTodoModel.save({name: 'Giving This Todo A New Name})
+          .then(() => notify('Todo save succeeded!'))
+          .catch(() => notify('Todo save failed :/'))
+          .then(() => this.setState({isSaving: false}));
     }
     ```
 

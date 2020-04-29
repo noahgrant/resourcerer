@@ -17,16 +17,18 @@ describe('Request', () => {
       if (waitSuccess) {
         // use this to ensure that a model gets removed from the loadingCache
         // before other synchronous actions take place
-        window.requestAnimationFrame(() => {
-          if (reject) {
-            options.error(this, {status: 404});
-          } else {
-            options.success(this, {}, {response: {status: 200}});
-          }
+        return new Promise((res, rej) => {
+          window.requestAnimationFrame(() => {
+            if (reject) {
+              rej([this, {status: 404}]);
+            } else {
+              res([this, {}, {response: {status: 200}}]);
+            }
+          });
         });
-      } else if (typeof options.success === 'function') {
-        options.success(new Schmackbone.Model(), '', {response: {status: 200}});
       }
+
+      return Promise.resolve([new Schmackbone.Model(), '', {response: {status: 200}}]);
     });
 
     spyOn(ModelCache, 'put').and.callThrough();
@@ -49,7 +51,7 @@ describe('Request', () => {
   describe('when using the default exported function', () => {
     it('returns a promise if the model does not exist', async(done) => {
       var model,
-          promise = request('foo', Schmackbone.Model, {component}).then((_model) => {
+          promise = request('foo', Schmackbone.Model, {component}).then(([_model]) => {
             model = _model;
           });
 
@@ -68,7 +70,7 @@ describe('Request', () => {
         // put it in the cache
         request('foo', Schmackbone.Model, {component});
         // now call it again
-        request('foo').then((_model) => model = _model);
+        request('foo').then(([_model]) => model = _model);
 
         await waitsFor(() => model instanceof Schmackbone.Model);
 
@@ -120,7 +122,7 @@ describe('Request', () => {
         var model;
 
         request('nofetch', Schmackbone.Model, {component, fetch: false})
-            .then((_model) => model = _model);
+            .then(([_model]) => model = _model);
 
         await waitsFor(() => model instanceof Schmackbone.Model);
 
@@ -133,7 +135,7 @@ describe('Request', () => {
 
         expect(ModelCache.get('nofetch')).not.toBeDefined();
         request('nofetch', Schmackbone.Model, {component, fetch: false})
-            .then((_model) => model = _model);
+            .then(([_model]) => model = _model);
 
         await waitsFor(() => model instanceof Schmackbone.Model);
 
@@ -172,8 +174,8 @@ describe('Request', () => {
         var m1,
             m2;
 
-        promise.then((model) => m1 = model);
-        promise2.then((model) => m2 = model);
+        promise.then(([model]) => m1 = model);
+        promise2.then(([model]) => m2 = model);
 
         await waitsFor(() => m1 instanceof Schmackbone.Model);
 
@@ -209,34 +211,38 @@ describe('Request', () => {
       });
     });
 
-    it('sets status on the model before resolving', async(done) => {
-      var resultingModel = null;
+    it('adds status to resolved promise', async(done) => {
+      var resultingModel = null,
+          resultingStatus = null;
 
       waitSuccess = true;
 
-      request('newModel', Schmackbone.Model, {component}).then((model) => {
+      request('newModel', Schmackbone.Model, {component}).then(([model, status]) => {
         resultingModel = model;
+        resultingStatus = status;
       });
 
       await waitsFor(() => resultingModel instanceof Schmackbone.Model);
 
-      expect(resultingModel.status).toBe(200);
+      expect(resultingStatus).toBe(200);
       done();
     });
 
-    it('sets status on the model before rejecting', async(done) => {
-      var resultingModel = null;
+    it('adds status to rejected promise', async(done) => {
+      var resultingModel = null,
+          resultingStatus = null;
 
       waitSuccess = true;
       reject = true;
 
-      request('newModel', Schmackbone.Model, {component}).catch((model) => {
+      request('newModel', Schmackbone.Model, {component}).catch(([model, status]) => {
         resultingModel = model;
+        resultingStatus = status;
       });
 
       await waitsFor(() => resultingModel instanceof Schmackbone.Model);
 
-      expect(resultingModel.status).toBe(404);
+      expect(resultingStatus).toBe(404);
       done();
     });
 
@@ -248,7 +254,7 @@ describe('Request', () => {
         waitSuccess = true;
         reject = true;
 
-        request(CACHE_KEY, Schmackbone.Model, {component}).catch((model) => {
+        request(CACHE_KEY, Schmackbone.Model, {component}).catch(([model]) => {
           resultingModel = model;
         });
 
@@ -260,7 +266,7 @@ describe('Request', () => {
         resultingModel = null;
 
         // now let's try legacy cache, without model cache
-        request(CACHE_KEY, Schmackbone.Model).catch((model) => {
+        request(CACHE_KEY, Schmackbone.Model).catch(([model]) => {
           resultingModel = model;
         });
 
