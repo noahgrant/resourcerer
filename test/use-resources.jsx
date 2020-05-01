@@ -110,13 +110,13 @@ describe('useResources', () => {
           return window.setTimeout(() => {
             delayedResourceComplete = true;
             ModelCache.remove(key);
-            rej(model);
+            rej([model]);
           }, options.options.delay);
         }
 
         if (cached) {
           // treat model as though it were cached by resolving promise immediately
-          return res(model);
+          return res([model]);
         }
 
         // put requests in a RAF to 'mimic' the procession of non-cached
@@ -124,13 +124,11 @@ describe('useResources', () => {
         // resolve the promise)
         window.requestAnimationFrame(() => {
           if (shouldResourcesError || (options.options || {}).shouldError) {
-            model.status = 404;
             ModelCache.remove(key);
 
-            rej(model);
+            rej([model, 404]);
           } else {
-            model.status = 200;
-            res(model);
+            res([model, 200]);
           }
         });
       });
@@ -903,11 +901,11 @@ describe('useResources', () => {
               if (prefetchLoading) {
                 return false;
               } else if (prefetchError) {
-                return rej(model);
+                return rej([model]);
               }
 
               ModelCache.put(key, model, options.component);
-              res(model);
+              res([model]);
             } else {
               if (/searchQuery/.test(key) && searchQueryLoading) {
                 haveCalledSearchQuery = true;
@@ -916,7 +914,7 @@ describe('useResources', () => {
               }
 
               ModelCache.put(key, model, options.component);
-              res(model);
+              res([model]);
             }
           });
         }));
