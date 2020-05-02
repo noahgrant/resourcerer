@@ -898,7 +898,7 @@ ResourcesConfig.set(configObj);
 
 * Does `resourcerer` support SSR?  
   
-    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-withresources), it is likely that `resourcerer` can work nicely with an SSR setup that:  
+    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-resourcerer), it is likely that `resourcerer` can work nicely with an SSR setup that:  
     
     1. passes instantiated models directly through the app before calling `renderToString`  
     2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
