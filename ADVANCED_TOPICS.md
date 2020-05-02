@@ -25,7 +25,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         
         And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
-    ```js
+      ```js
       // overlay-wrapped component, where a loader will show over previously-rendered children,
       // which we want to then not update. but this component is also a child of a `withResources`
       // component that has a dependent resource
@@ -40,7 +40,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
       shouldComponentUpdate(nextProps) {
         return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
       }
-    ```
+      ```
 
     As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`.
        
@@ -58,7 +58,7 @@ const getResources = (props, ResourceKeys) => ({
 In general, using `dependsOn` is much more preferable, both in terms of semantics and functionality. The key difference here is that the dependent resource does not get put into a `PENDING` state, and `hasLoaded` depends on an unpredictable number of resources&mdash;for example, in the above scenario, what happens if `props.todoId` never arrives? Using `dependsOn`, `hasLoaded` would not be true, but using the conditional, it would be. This means that with the conditional, you can’t freely make assumptions behind the `hasLoaded`  flag:
 
 ```jsx
-{.hsLoaded ? (
+{hasLoaded ? (
   // with the conditional, you don't know which resources are available. with
   // `dependsOn`, you do
 ) : null}
@@ -100,8 +100,6 @@ ResourceKeys.add({
 UnfetchedResources.add(ResourceKeys.ACCOUNT_CONFIG);
 
 
-
-
 // account_model.js
 export default class AccountModel extends Model {
   constructor(attrs, options) {
@@ -115,6 +113,7 @@ export default class AccountModel extends Model {
   }
 
   static cacheFields = ['accountId']
+  
   static providesModels = (accountModel, ResourceKeys) => [{
     attributes: accountModel.get('config'),
     modelKey: ResourceKeys.ACCOUNT_CONFIG,
@@ -148,6 +147,7 @@ The resource config objects within `providesModels` have the same schema, as men
 export default class AccountModel extends Model {
   // ...
   static cacheFields: ['accountId']
+  
   static providesModels = (accountModel, ResourceKeys) => [{
     attributes: accountModel.get('config'),
     modelKey: ResourceKeys.ACCOUNT_CONFIG,
