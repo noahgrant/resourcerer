@@ -763,7 +763,7 @@ You can use `resourcerer`'s executor function to optimistically prefetch resourc
 ```jsx
 import {prefetch} from 'resourcerer';
 
-// here's our executor function just as we pass to withResources
+// here's our executor function just as we pass to useResources or withResources
 const getTodos = (props, ResourceKeys) => {
   const now = Date.now();
       
@@ -789,6 +789,7 @@ const getTodos = (props, ResourceKeys) => {
 Note, as mentioned in the comment above, that `expectedProps` should take the form of props expected when the resource is actually needed. For example, maybe we're viewing a list of users, and so there is no `props.userId` in the component that uses `prefetch`. But for the user in the list with id `'noahgrant'`, we would pass it an `expectedProps` that includes `{userId: 'noahgrant'}` because we know that when we click on the link and navigate to that url, `props.userId` should be equal to `'noahgrant'`.
 
 ## withLoadingOverlay
+##### (`withResources` HOC only)
 
 `resourcerer` also comes with a helper HOC to apply an overlay with a loader over current content while new data is fetched. It looks like this (shown over one of Sift's Insights Charts):
 
@@ -797,12 +798,12 @@ Note, as mentioned in the comment above, that `expectedProps` should take the fo
 Use it like:
 
 ```jsx
-  import {withLoadingOverlay} from 'resourcerer/utils';
-  import {withResources} from 'resourcerer';
+import {withLoadingOverlay} from 'resourcerer/utils';
+import {withResources} from 'resourcerer';
 
-  @withResources((props, ResourceKeys) => ({})
-  @withLoadingOverlay() // can also pass in {noLoader: true} to have an overlay without a spinner
-  class UserTodos extends React.Component {}
+@withResources((props, ResourceKeys) => ({})
+@withLoadingOverlay() // can also pass in {noLoader: true} to have an overlay without a spinner
+class UserTodos extends React.Component {}
 ```
 
 Now anytime `<UserTodos />` enters a loading state, its previous content will stay in place with a nice overlay on top until the next data returns and the component rerenders!
@@ -817,7 +818,7 @@ The Loader instance will get an `overlay: true` prop if it is rendered by `withL
 
 ### Usage with the `useResources` hook
 
-When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; however, since models are held as state, a loading overlay helper component is unnecessary to keep older models rendered while requesting new ones. We can simply use `hasInitiallyLoaded`:
+When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; however, since models are held as state, a loading overlay helper component is unnecessary to keep older models rendered while requesting new ones. We can simply use the `hasInitiallyLoaded` property mentioned earlier:
 
 ```jsx
 import {useResources} from 'resourcerer';
@@ -873,7 +874,8 @@ ResourcesConfig.set(configObj);
 * `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
 
 * `prefilter` (function): proxy for Schmackbone's [ajaxPrefilter](https://github.com/noahgrant/schmackbone#backboneajaxprefilter) method, which is a great place to add custom request headers (like auth headers) or do custom error response handling. See Schmackbone's documentation for more. Default noop.
-* `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, for ease of use in your executor function. Default `'urlParams'`.
+
+* `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, and `useResources` will return `end_time` and `start_time` for ease of use in your executor function. Default `'urlParams'`.
 
 * `track` (function): method invoked when [`measure: true`](#measure) is passed in a resource's config. Use this hook to send the measured data to your application analytics tracker. Default noop. The method is invoked with two arguments:
 
@@ -900,13 +902,13 @@ ResourcesConfig.set(configObj);
     
     1. passes instantiated models directly through the app before calling `renderToString`  
     2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
-        
-* ...can this be used as a React Hook?
-    
-    Yes! See the [useResources](#useresources-beta) section for how to use it and for critical differences between the HOC. Note that `useResources` is currently in beta.
 
 * Does it support async rendering?  
   
+    Short answer: For the `useResources` hook: yes! For the `withResources` HOC, no.
+    
+    Long answer:  
+    
     The `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. There are a couple of benefits to doing it this way instead of in `componentDidUpdate`:  
     1. It avoids an extra render caused by setting state after an update has happened.
     2. It allows us to read our models directly from the ModelCache and not set them as any sort of de-normalized state.
