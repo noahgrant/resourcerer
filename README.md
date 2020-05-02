@@ -594,14 +594,14 @@ Note that in the `useResources` hook, which does not pollute any `props` object,
 
 # Differences between useResources and withResources
 
-Note a couple critical differences:
+The hook and HOC largely operate interchangeably, but do Note a couple critical differences:
 
 1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes).
 
-1. The `setResourceState` prop utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does not auto-merge updates like `setState` does. Be sure to manually merge all resource state!
+1. The hooks's `setResourceState` function utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does not auto-merge updates like `setState` does. Be sure to manually merge all resource state!
 
     ```jsx
-    props.setResourceState((existingState) => ({
+    setResourceState((existingState) => ({
       ...existingState,
       timeRange: newTimeRange
     }));
