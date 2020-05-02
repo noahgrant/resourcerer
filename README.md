@@ -4,7 +4,7 @@
 
 ![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
 
-`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful `useResources` React hook or `withResources` higher-order React component (HOC) allows you to easily construct a component's data flow, including:
+`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful [`useResources`](#useresources) React hook or [`withResources`](#withresources) higher-order React component (HOC) allows you to easily construct a component's data flow, including:
 
 * serial requests
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
@@ -124,7 +124,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 1. [Nomenclature](#nomenclature)
 1. [Tutorial](#tutorial)
     1. [Intro](#tutorial)
-    1. [Other Props Passed from the HOC (Loading States)](#other-props-passed-from-the-hoc-loading-states)
+    1. [Other Props Returned from the Hook/Passed from the HOC (Loading States)](other-props-returned-from-the-hookpassed-from-the-hoc-loading-states)
     1. [Requesting Prop-driven Data](#requesting-prop-driven-data)
     1. [Changing Props](#changing-props)
     1. [Serial Requests](#serial-requests)
@@ -348,6 +348,8 @@ And here's what our model might look like:
 
 ```js
 // js/models/user-model.js
+import {Model} from 'resourcerer';
+
 export default class UserModel extends Model {
   constructor(attributes, options={}) {
     this.userId = options.userId;
@@ -367,12 +369,20 @@ The `cacheFields` static property is important here, as we'll see in a second; i
 1. the `attributes` object it is initialized with
 1. the `data` it gets passed in a fetch
 
-Our executor function might look like this:
+All three of these come from what's returned from our executor function; it might look like this:
 
 ```jsx
-@withResources((props, {USER}) => ({
-  [USER]: {options: {userId: props.id}}
-}))
+const getResources = (props, {USER}) => ({[USER]: {options: {userId: props.id}}}) 
+
+// hook
+function MyComponent(props) {
+  var resources = useResources(getResources, props);
+  
+  // ...
+}
+
+// HOC
+@withResources(getResources)
 class MyComponentWithAUser extends React.Component {}
 ```
  
@@ -387,7 +397,9 @@ In general, there are two ways to change `props.id` as in the previous example:
 
 1. Change the url, which is the top-most state-carrying entity of any application. The url can be changed either by path parameter or query paramter, i.e. `example.com/users/noahgrant` -> `example.com/users/fredsadaghiani`, or `example.com/users?id=noahgrant` -> `example.com/users?id=fredsadaghiani`. In this case, each prop change is _indexable_, which is sometimes desirable, sometimes not.
 
-1. Change internal application state. For these cases, `withResources` makes available another handy prop: `this.props.setResourceState`. `setResourceState` is a function that has the same method signature as the `setState` we all know and love. It sets the state of the wrapping component in the HOC, which is then passed down as props, overriding any initial prop, ie `this.props.setResourceState({id: 'fredsadaghiani'})`. This is _not_ indexable.
+1. Change internal application state. For these cases, `useResources`/`withResources` make available another handy prop: `setResourceState`. `setResourceState` is a function that has the same method signature as the `setState` we all know and love. It sets internal hook/HOC state, which is then returned/passed down, respectively, overriding any initial prop, ie `setResourceState({id: 'fredsadaghiani'})`. This is _not_ indexable.
+
+    Note that `setResourceState` has some subtle discrepancies between the hook and the HOC; see [Differences between useResources and withResources](#differences-between-useresources-and-withresources) for more.
 
 
 ## Serial Requests
