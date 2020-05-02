@@ -163,7 +163,7 @@ Modules have, however, been transpiled into CommonJS `require` syntax.
 
 # Nomenclature
 
-1. **Props**. Going forward in this tutorial, we'll try to describe behavior of both the `useResources` hook and the `withResources` HOC at once. Note that if we talking about a passed prop of, for example `isLoading`, that that corresponds to an `isLoading` property returned from the hook and a `this.props.isLoading` prop passed down from the HOC.
+1. **Props**. Going forward in this tutorial, we'll try to describe behavior of both the `useResources` hook and the `withResources` HOC at once; we'll also rotate between the two in examples. Note that if we talking about a passed prop of, for example `isLoading`, that that corresponds to an `isLoading` property returned from the hook and a `this.props.isLoading` prop passed down from the HOC. 
   
 1. **ResourceKeys**. These are the keys added to the `ModelMap` in the introduction that link to your model constructors. They are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
@@ -192,7 +192,9 @@ Modules have, however, been transpiled into CommonJS `require` syntax.
     };
     ```
 
-    It returns an object whose keys represent the resources to fetch and whose values are configuration objects that we'll discuss later.
+    It returns an object whose keys represent the resources to fetch and whose values are resource configuration objects that we'll discuss later (and is highlighted below).
+    
+1. **Resource Configuration Object (resource config)**. In the object returned by our executor function, each entry has a key equal to one of the `ResourceKeys` and whose value we will refer to in this document as a Resource Configuration Object. It holds the declarative instructions that `useResources` and `withResources` will use to request the resource.
 
 # Tutorial
 
@@ -407,21 +409,21 @@ In general, there are two ways to change `props.id` as in the previous example:
 In most situations, all resource requests should be parallelized; but that’s not always possible. Every so often, there may be a situation where one request depends on the result of another. For these cases, we have the `dependsOn` resource option and the `provides` resource option. These are probably best explained by example, so here is a simplified instance from the Sift Console, where we load a queue item that has info about a user, but we can't get further user information until we know what user id belongs to this queue item.
 
 ```js
-  @withResources((props, {QUEUE_ITEM, USER}) => ({
-    [USER]: {
-      options: {userId: props.userId},
-      dependsOn: ['userId']
-    },
-    [QUEUE_ITEM]: {
-      attributes: {id: props.itemId}
-      provides: {userId: getUserIdFromItem}
-    }
-  }))
-  export default class QueueItemPage extends React.Component {}
-    
-  function getUserIdFromItem(queueItemModel) {
-    return queueItemModel.get('userId');
+@withResources((props, {QUEUE_ITEM, USER}) => ({
+  [USER]: {
+    options: {userId: props.userId},
+    dependsOn: ['userId']
+  },
+  [QUEUE_ITEM]: {
+    attributes: {id: props.itemId}
+    provides: {userId: getUserIdFromItem}
   }
+}))
+export default class QueueItemPage extends React.Component {}
+    
+function getUserIdFromItem(queueItemModel) {
+  return queueItemModel.get('userId');
+}
 ```
 
 In this simplified example, only `props.itemId` is initially present at the url `items/<itemId>`, and since the UserModel depends on `props.userId` being present, that model won’t initially get fetched. Only the QueueItemModel gets fetched at first; it has the `provides` option, which is a map of `<string: function>`, where the string is the prop that it provides to the HOC wrapper, and the function is a private static ‘transform’ function&mdash;it takes its model as an argument and returns the value for the prop it provides.
@@ -433,31 +435,40 @@ One thing to note here is that while the `QUEUE_ITEM` resource is being fetched,
 Finally, if a model is to provide more than a single prop, use an underscore instead of the prop name in the `provides` object. Instead of the transform function returning the prop value, it should then return an object of prop keys and values, which will get spread to the component:
 
 ```js
-  @withResources((props, {QUEUE_ITEM, USER}) => ({
-    [USER]: {
-      options: {state: props.activeState, userId: props.userId},
-      // userModel depends on multiple props from queueItemModel
-      dependsOn: ['activeState', 'userId']
-    },
-    [QUEUE_ITEM]: {
-      attributes: {id: props.itemId}
-      // use an underscore here to tell resourcerer to spread the resulting object
-      provides: {_: getUserDataFromItem}
-    }
-  }))
-  export default class QueueItemPage extends React.Component {}
-    
-  function getUserDataFromItem(queueItemModel) {
-    // transform function now returns an object of prop names/values instead of a simple prop value
-    return {userId: queueItemModel.get('userId'), activeState: queueItemModel.get('state')};
+const getResources = (props, {QUEUE_ITEM, USER}) => ({
+  [USER]: {
+    options: {state: props.activeState, userId: props.userId},
+    // userModel depends on multiple props from queueItemModel
+    dependsOn: ['activeState', 'userId']
+  },
+  [QUEUE_ITEM]: {
+    attributes: {id: props.itemId}
+    // use an underscore here to tell resourcerer to spread the resulting object
+    provides: {_: getUserDataFromItem}
   }
+});
+  
+export default function QueueItemPage(props) {
+  // activeState and userId are internal state within `useResources` and returned
+  var {
+    activeState,
+    userId,
+    userModel,
+    queueItemModel
+  } = useResources(getResources, props);
+}
+    
+function getUserDataFromItem(queueItemModel) {
+  // transform function now returns an object of prop names/values instead of a simple prop value
+  return {userId: queueItemModel.get('userId'), activeState: queueItemModel.get('state')};
+}
 ```
 
 ## Other Common Resource Config Options
 
 ### data
 
-The `data` option is passed directly to the Schmackbone model’s data property and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
+The `data` option is passed directly to Schmackbone and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
 
 ```js
   @withResources((props, ResourceKeys) => {
@@ -484,11 +495,11 @@ Now, as the prop fields change, the data sent with the request changes as well (
   
 ### noncritical
 
-As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-states) section, not all resources used by the component are needed for rendering. By adding a `noncritical: true` option, we:
+As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-from-the-hoc-loading-states) section, not all resources used by the component are needed for rendering. By adding a `noncritical: true` option, we:
 
 - De-prioritize fetching the resource until after all critical resources have been fetched
-- Remove the resource from consideration within the component-wide loading states (`props.hasLoaded`, `props.isLoading`, `props.hasErrored`), giving us the ability to render without waiting on those resources
-- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer/utils`.
+- Remove the resource from consideration within the component-wide loading states (`hasLoaded`, `isLoading`, `hasErrored`), giving us the ability to render without waiting on those resources
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer/utils`.
   
   
 
@@ -498,8 +509,7 @@ As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-stat
 Passing a `measure: true` config option will record the time it takes for a particular resource to return and pass the data to the [track]() [configuration](#configuring-withresources) method that you can set up, sending it to your own app data aggregator. This allows you to see the effects of your endpoints from a user’s perspective.
 
 ```js
-  @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true, measure: true}}))
-  class MyComponentWithTodos extends React.Component {}
+const getResources = (props, ResourceKeys) => ({[ResourceKeys.TODOS]: {measure: true}});
 ```
 
 ### forceFetch
@@ -516,11 +526,19 @@ Sometimes you want the latest of a resource, bypassing whatever model has alread
 Passing a `modelKey: <ResourceKeys>` option allows you to pass a custom name as the `withResources` key, which will become the base name for component-related props passed down to the component. For example, this configuration:
 
 ```js
-  @withResources((props, ResourceKeys) => ({myRadTodos: {modelKey: ResourceKeys.TODOS}))
-  class MyComponentWithTodos extends React.Component {}
+const getResources = (props, ResourceKeys) => ({myRadTodos: {modelKey: ResourceKeys.TODOS});
+
+export default function MyComponentWithTodos {
+  var {
+    myRadTodosCollection,
+    myRadTodosLoadingState,
+    myRadTodosStatus,
+    ...rest
+  } = useResources(getResources, props);
+}
 ```
 
-would still fetch the todos resource, but the props passed to the `MyComponentWithTodos` instance will be `myRadTodosCollection`, `myRadTodosLoadingState`, and `myRadTodosStatus`, etc. This also allows us to fetch the same resource type multiple times for a single component.
+would still fetch the todos resource, but the properties returned/props passed to the `MyComponentWithTodos` instance will be `myRadTodosCollection`, `myRadTodosLoadingState`, and `myRadTodosStatus`, etc, as shown. This also allows us to fetch the same resource type multiple times for a single component.
 
 
 ### options 
@@ -528,65 +546,64 @@ would still fetch the todos resource, but the props passed to the `MyComponentWi
 [As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `constructor` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
 
 ```js
-  @withResources((props, ResourceKeys) => {
-    const now = Date.now();
+const getResources = (props, ResourceKeys) => {
+  const now = Date.now();
       
-    return {
-      [ResourceKeys.USER_TODOS]: {
-        data: {
-          limit: 20,
-          end_time: now,
-          start_time: now - props.timeRange,
-          sort_field: props.sortField
-        },
-        options: {userId: props.userId}
-      }
-    };
-  })
-  class UserTodos extends React.Component {}
+  return {
+    [ResourceKeys.USER_TODOS]: {
+      data: {
+        limit: 20,
+        end_time: now,
+        start_time: now - props.timeRange,
+        sort_field: props.sortField
+      },
+      options: {userId: props.userId}
+    }
+  };
+};
 ```
 
-Here, the UserTodos collection will be instantiated with an options hash including the `userId` property, which it uses to construct its url. We'll also want to add the `'userId'` string to the collection's static `cacheFields` array, because each cached collection should be specific to the user.
+Here, the UserTodos collection will be instantiated with an options hash including the `userId` property, which it uses to construct its url. We'll also want to add the `'userId'` string to the collection's [static `cacheFields` array](#requesting-prop-driven-data), because each cached collection should be specific to the user.
 
 ### attributes
 
-Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the model's [`constructor` method](https://backbonejs.org/#Model-constructor) along with the `options` property.
+Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the model's [`constructor` method](https://backbonejs.org/#Model-constructor) along with the [`options`](#options) property, and is typically less useful than providing the properties directly to the [`data`](#data) property. Like `data` and `options`, the `attributes` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more).
 
 ### prefetches
 
-This option is an array of props objects that represent what is _different_ from the props in the original resource. For each array entry, a new resource config will be calculated by passing in a combination of the current props with the new props, and the resulting request is made. In contrast to the original resource, however, no props representing the prefetched requests are passed down to any children (ie, there are no loading state props, no model props, etc). They are simply returned and kept in memory so that whenever they are requested, they are already available.
+This option is an array of props objects that represent what is _different_ from the props in the original resource. For each array entry, a new resource configuration object will be calculated by merging the current props with the new props, and the resulting request is made. In contrast to the original resource, however, _no props representing the prefetched requests are returned or passed down to any children (ie, there are no loading state props, no model props, etc)_. They are simply returned and kept in memory so that whenever they are requested, they are already available.
 
 A great example of this is for pagination. Let's take our previous example and add a `from` property to go with our `limit` that is based on the value of a `page` prop ([tracked either by url parameter or by `setResourceState`](#changing-props)). We want to request the first page but also prefetch the following page because we think the user is likely to click on it:
 
 ```js
-  @withResources((props, ResourceKeys) => {
-    const now = Date.now();
-    const REQUESTS_PER_PAGE = 20;
+const getResources = (props, ResourceKeys) => {
+  const now = Date.now();
+  const REQUESTS_PER_PAGE = 20;
       
-    return {
-      [ResourceKeys.USER_TODOS]: {
-        data: {
-          from: props.page * REQUESTS_PER_PAGE,
-          limit: REQUESTS_PER_PAGE,
-          end_time: now,
-          start_time: now - props.timeRange,
-          sort_field: props.sortField
-        },
-        options: {userId: props.userId},
-        // this entry is how we expect the props to change. in this case, we want props.page to be
-        // incremented. the resulting prefetched request will have a `from` value of 20, whereas the
-        // original request will have a `from` value of 0.
-        prefetches: [{page: props.page + 1}]
-      }
-    };
-  })
-  class UserTodos extends React.Component {}
+  return {
+    [ResourceKeys.USER_TODOS]: {
+      data: {
+        from: props.page * REQUESTS_PER_PAGE,
+        limit: REQUESTS_PER_PAGE,
+        end_time: now,
+        start_time: now - props.timeRange,
+        sort_field: props.sortField
+      },
+      options: {userId: props.userId},
+      // this entry is how we expect the props to change. in this case, we want props.page to be
+      // incremented. the resulting prefetched request will have a `from` value of 20, whereas the
+      // original request will have a `from` value of 0. The `userTodosCollection` returned (hook) or
+      // passed down as props (HOC) will be the latter.
+      prefetches: [{page: props.page + 1}]
+    }
+  };
+};
 ```
 
-When the user clicks on a 'next' arrow that updates page state, the collection will already be in the cache, and it will get passed as the new `this.props.userTodosCollection`. Accordingly, the third page will then get prefetched (`props.page` equal to 2 and `from` equal to 40). Two important things to note here:
+When the user clicks on a 'next' arrow that updates page state, the collection will already be in the cache, and it will get passed as the new `userTodosCollection`. Accordingly, the third page will then get prefetched (`props.page` equal to 2 and `from` equal to 40). Two important things to note here:
 
 1. Don't forget to add `from` to the [`cacheFields`](#declarative-cache-keys) list!
-1. The prefetched model does not get components registered to it; therefore, it is immediately scheduled for removal after the specified [cacheGracePeriod](#configuring). If the user clicks the next arrow, it then becomes the 'active' model and the `UserTodos` component will get registered to it, clearing the removal timer (see the next section).
+1. The prefetched model does not get components registered to it; therefore, it is immediately scheduled for removal after the specified [cacheGracePeriod](#configuring). If the user clicks the next arrow, it then becomes the 'active' model and the `UserTodos` component will get registered to it, clearing the removal timer (see the [caching](caching-resources-with-modelcache) section).
 
 If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
 
@@ -596,15 +613,15 @@ If you're looking to optimistically prefetch resources when a user hovers, say, 
 Our models are fetched via Schmackbone, and the results are kept in `Schmackbone.Model`/`Schmackbone.Collection` representations as opposed to React state. When we want to update the component after a `sync`, `change`, or `destroy` Schmackbone event, we can simply pass the `listen: true` option, which will `forceUpdate` the component, effectively making our data-state UI-state while keeping one single source-of-truth for our model abstractions.
 
 ```js
-  @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true}}))
-  class MyComponentWithTodos extends React.Component {}
+@withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true}}))
+class MyComponentWithTodos extends React.Component {}
 ```
 
 **Note:**
 
 1. Listening is often unnecessary—if a loading state is changed during request and removed when the request completes (as is the case with `withResources`), then the React component will update in the natural React cycle and can read from the latest resource without needing to trigger the `forceUpdate`.
 
-1. Listening on a collection will also trigger updates when one of the collection's models changes. That's an implentation detail of Backbone. So if we listen on the todos collection above, but make an update in our component with `this.props.todosCollection.at(0).save({name: 'Renamed Todo'})`, our component will still auto-update!
+1. Listening on a collection will also trigger updates when one of the collection's models changes. That's an implentation detail of Schmackbone. So if we listen on the todos collection above, but make an update in our component with `this.props.todosCollection.at(0).save({name: 'Renamed Todo'})`, our component will still auto-update!
 
 Note also that the `useResources` hook listens to changes on all resources by default. A similar update will be made in the future to `withResources`.
 
@@ -614,10 +631,10 @@ Note also that the `useResources` hook listens to changes on all resources by de
 Passing a `status: true` config option will pass props down to the component reflecting the resource’s status code. For example, if you pass the option to a `TODOS` resource that 404s, the wrapped component will have a prop called `todosStatus` that will be equal to `404`.
 
 ```js
-  @withResources((props, ResourceKeys) => ({
-    [ResourceKeys.TODOS]: {listen: true, measure: true, status: true}
-  }))
-  class MyComponentWithTodos extends React.Component {}
+@withResources((props, ResourceKeys) => ({
+  [ResourceKeys.TODOS]: {listen: true, measure: true, status: true}
+}))
+class MyComponentWithTodos extends React.Component {}
 ```
 
 Note that in the `useResources` hook, which does not pollute any `props` object, statuses are returned by default; you can choose which ones you want to use in your component and ignore the rest.
