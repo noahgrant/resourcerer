@@ -25,7 +25,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         
         And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
-    ```js
+      ```js
       // overlay-wrapped component, where a loader will show over previously-rendered children,
       // which we want to then not update. but this component is also a child of a `withResources`
       // component that has a dependent resource
@@ -40,7 +40,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
       shouldComponentUpdate(nextProps) {
         return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
       }
-    ```
+      ```
 
     As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`.
        
@@ -49,32 +49,33 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 Another way to effectively have a dependent resource is to use a conditional in your `getResources` method:
     
 ```js
-@withResources((props, ResourceKeys) => ({
+const getResources = (props, ResourceKeys) => ({
   [ResourceKeys.TODOS]: {},
   ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {attributes: {id: props.todoId}} : {})
-}))
+});
 ```
 
-In general, using `dependsOn` is much more preferable, both in terms of semantics and functionality. The key difference here is that the dependent resource does not get put into a `PENDING` state, and `hasLoaded` depends on an unpredictable number of resources&mdash;for example, in the above scenario, what happens if `props.todoId` never arrives? Using `dependsOn`, `hasLoaded` would not be true, but using the conditional, it would be. This means that with the conditional, you can’t freely make assumptions behind the `this.props.hasLoaded`  flag:
+In general, using `dependsOn` is much more preferable, both in terms of semantics and functionality. The key difference here is that the dependent resource does not get put into a `PENDING` state, and `hasLoaded` depends on an unpredictable number of resources&mdash;for example, in the above scenario, what happens if `props.todoId` never arrives? Using `dependsOn`, `hasLoaded` would not be true, but using the conditional, it would be. This means that with the conditional, you can’t freely make assumptions behind the `hasLoaded`  flag:
 
 ```jsx
-{this.props.hasLoaded ? (
+{hasLoaded ? (
   // with the conditional, you don't know which resources are available. with
   // `dependsOn`, you do
 ) : null}
 ```
 
-That doesn’t mean that the conditional can’t be useful&mdash;it’s just that its use should be relegated to components that have two discrete forms&mdash;one in which the dependent prop is always present, and one in which the dependent prop is never present. If you’re unsure whether a prop might exist, notably because it comes from a providing resource, you should use `dependsOn`. A good example of when to use a conditional is in this fake component that sometimes fetches a user model and sometimes fetches an order model depending on the presence of an `orderId` prop (user resource config not shown):
+That doesn’t mean that the conditional can’t be useful&mdash;it’s just that its use should be relegated to components that have two discrete forms&mdash;one in which the dependent prop is always present, and one in which the dependent prop is never present. If you’re unsure whether a prop might exist, notably because it comes from a providing resource, you should use `dependsOn`. A good example of when to use a conditional is in this fake component that sometimes fetches a user model and sometimes fetches an order model depending on the presence of an `orderId` prop:
 
 ```js
-@withResources(({userId, orderId}, ResourceKeys) => ({
+const getResources = ({userId, orderId}, ResourceKeys) => ({
+  ...userId ? {[ResourceKeys.USER]: {options: {userId}} : {},
   ...!userId && orderId ? {
     [ResourceKeys.ORDER]: {
       noncritical: true,
       attributes: {id: orderId}
     }
   } : {}
-}))
+});
 ```
 
 In this case, when the component is used as an order component (denoted by the presence of the `orderId` prop), we fetch the `order` resource. Otherwise, we don’t.
@@ -99,18 +100,21 @@ ResourceKeys.add({
 UnfetchedResources.add(ResourceKeys.ACCOUNT_CONFIG);
 
 
-
-
 // account_model.js
-export default Backbone.Model.extend({
-  initialize(attrs, options) {
+export default class AccountModel extends Model {
+  constructor(attrs, options) {
+    super();
+    
     this.accountId = options.accountId;
-  },
+  }
   
-  url: () => `/accounts/${this.accountId}`
-}, {
-  cacheKeys: ['accountId'],
-  providesModels: (accountModel, ResourceKeys) => [{
+  url() {
+    return `/accounts/${this.accountId}`;
+  }
+
+  static cacheFields = ['accountId']
+  
+  static providesModels = (accountModel, ResourceKeys) => [{
     attributes: accountModel.get('config'),
     modelKey: ResourceKeys.ACCOUNT_CONFIG,
     options: {accountModel}
@@ -118,13 +122,11 @@ export default Backbone.Model.extend({
 })
 ```
 
-The `providesModels` property is a function that takes the parent model and the `ResourceKeys` as arguments and returns an array of resource configs. The resource configs have the same schema as the those used in our general `withResources` executor functions. What this tells `resourcerer` to do is, after the parent model returns, instantiate the child model(s) and place them into the `ModelCache`. In other components, you can then access the model you know to exist in a `withResources` declaration:
+The `providesModels` property is a function that takes the parent model and the `ResourceKeys` as arguments and returns an array of resource configs. The resource configs have the same schema as the those used in our general executor functions. What this tells `resourcerer` to do is, after the parent model returns, instantiate the child model(s) and place them into the `ModelCache`. In other components, you can then access the model you know to exist in a `withResources` or `useResources` declaration:
 
 ```js
 // child_component.jsx, rendered only after the account model is known to return
-@withResources((props}, ResourceKeys) => ({
-  [ResourceKeys.ACCOUNT_CONFIG]: {}
-}))
+@withResources((props}, ResourceKeys) => ({[ResourceKeys.ACCOUNT_CONFIG]: {}}))
 class ChildComponent extends React.Component {
   // component has this.props.accountConfigModel from the cache!
   onClickSomething() {
@@ -136,17 +138,17 @@ class ChildComponent extends React.Component {
 
 In general, this should be used in cases where you can ascertain that the parent model has returned before trying to access the child model. However, if by chance it has not, and the child is not found in the cache, `resourcerer` will still not attempt to fetch it, because it is listed within the `UnfetchedResources` set. In that case, the model will get instantiated with no seed attributes and passed as a prop.
 
-Also, note that the `modelKey` property is required here instead of optionally being inferred from the resource config's object property, as is the case in our general `withResources` declarations. This is because here, in contrast, the models are simply placed in the cache and not actually used as props for any component, so they don't need to be named. Accordingly, resource configs are also returned as a list here instead of an object.
+Also, note that the `modelKey` property is required here instead of optionally being inferred from the resource config's object property, as is the case in our general `useResources`/`withResources` declarations. This is because here, in contrast, the models are simply placed in the cache and not actually used as props for any component, so they don't need to be named. Accordingly, resource configs are also returned as a list here instead of an object.
 
 The resource config objects within `providesModels` have the same schema, as mentioned, as normal. But they also accept an additional optional property, `shouldCache`, which is a function that takes the parent model and the resource config as an argument. If the function exists and returns false, the model will not get instantiated nor placed in the cache:
 
 ```js
 // account_model.js
-export default Backbone.Model.extend({
+export default class AccountModel extends Model {
   // ...
-}, {
-  cacheKeys: ['accountId'],
-  providesModels: (accountModel, ResourceKeys) => [{
+  static cacheFields: ['accountId']
+  
+  static providesModels = (accountModel, ResourceKeys) => [{
     attributes: accountModel.get('config'),
     modelKey: ResourceKeys.ACCOUNT_CONFIG,
     options: {accountModel},
