@@ -41,7 +41,7 @@ export default class TodosCollection extends Collection {
 import {ModelMap} from 'resourcerer/config';
 import TodosCollection from 'js/models/todos-collection';
 
-// choose any string as its key
+// choose any string as its key, which becomes its ResourceKey
 ModelMap.add({TODOS: TodosCollection});
 
 // in your top level js file
@@ -50,7 +50,7 @@ import 'js/core/resourcerer-config;
 
 3. Use the hook or HOC to request your models in any component:
 
-    1. `useResources`
+    1. ### useResources
     
         ```jsx
         import React from 'react';
@@ -86,7 +86,7 @@ import 'js/core/resourcerer-config;
         }
         ```
     
-    1. `withResources`
+    1. ### withResources
     
         ```jsx
         import React from 'react';
@@ -163,7 +163,9 @@ Modules have, however, been transpiled into CommonJS `require` syntax.
 
 # Nomenclature
 
-1. **Props**. Going forward in this tutorial, we'll try to describe behavior of both the `useResources` hook and the `withResources` HOC at once. Note that if we talking about a passed prop of, for example `props.isLoading`, that that corresponds to an `isLoading` property returned from the hook and a `this.props.isLoading` prop passed down from the HOC.
+1. **Props**. Going forward in this tutorial, we'll try to describe behavior of both the `useResources` hook and the `withResources` HOC at once. Note that if we talking about a passed prop of, for example `isLoading`, that that corresponds to an `isLoading` property returned from the hook and a `this.props.isLoading` prop passed down from the HOC.
+  
+1. **ResourceKeys**. These are the keys added to the `ModelMap` in the introduction that link to your model constructors. They are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
 1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. It accepts `props` and `ResourceKeys` as arguments and may look like, as we'll explore in an example later:
 
@@ -191,19 +193,24 @@ Modules have, however, been transpiled into CommonJS `require` syntax.
     ```
 
     It returns an object whose keys represent the resources to fetch and whose values are configuration objects that we'll discuss later.
-  
+
 # Tutorial
 
-Okay, back to the initial example. Let's take a look at our `withResources` usage in the component:
+Okay, back to the initial example. Let's take a look at our `useResources` usage in the component:
 
 ```js
 // Note: in these docs, you will see a combination of `ResourceKeys` in the executor function as well as
 // its more common destructured version, ie `@withResources((props, {TODOS}) => ({[TODOS]: {}}))`
-@withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {}}))
-class MyComponent extends React.Component {}
+const getResources = (props, ResourceKeys) => ({[ResourceKeys.TODOS]: {}});
+
+export default function MyComponent(props) {
+  var resources = useResources(getResources, props);
+  
+  // ...
+}
 ```
 
-You see that `withResources` takes an executor function that returns an object. The executor function
+You see that `useResources` takes an executor function that returns an object. The executor function
 takes two arguments: the current props, and an object of `ResourceKeys`. Where does `ResourceKeys` come
 from? From the ModelMap in the config file we added to earlier!
 
@@ -215,7 +222,7 @@ import TodosCollection from 'js/models/todos-collection';
 // after adding this key, resourcerer will add an identical key to the `ResourceKeys` object with a
 // camelCased version as its value. `ResourceKeys.TODOS` can then be used in our executor functions to reference
 // the Todos resource. The camelCased 'todos' string value will be the default prefix added to all todos-related
-// props passed from the HOC to the wrapped component. That's why we have `this.props.todosCollection`!
+// props passed from the HOC to the wrapped component. That's why we have `props.todosCollection`!
 ModelMap.add({TODOS: TodosCollection});
 ```
 
@@ -224,33 +231,36 @@ ModelMap.add({TODOS: TodosCollection});
 Back to the executor function. In the example above, you see it returns an object of `{[ResourceKeys.TODOS]: {}}`. In general, the object it should return is of type `{string<ResourceKey>: object<Options>}`, where `Options` is a generic map of config options, and can contain as many keys as resources you would like the component to request. In our initial example, the options object was empty. Further down, we'll go over the plethora of options and how to use them. For now let's take a look at some of the resource-related props this simple configuration provides our component.
 
 
-## Other Props Passed from the HOC (Loading States)
+## Other Props Returned from the Hook/Passed from the HOC (Loading States)
 
-Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from the API.  Some of the most **significant** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `withResources` HOC gives you several loading state helper props. From our last example:
+Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from the API.  Some of the most **significant** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `useResources` hook/`withResources` HOC gives you several loading state helper props. From our last example:
 
 
-- `this.props.todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
-- `this.props.hasLoaded` {boolean} - all critical resources have successfully completed and are ready to be used by the component
-- `this.props.isLoading` {boolean} - any of the critical resources are still in the process of being fetched
-- `this.props.hasErrored` {boolean} - any of the critical resource requests did not complete successfully
+- `todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
+- `hasLoaded` {boolean} - all critical resources have successfully completed and are ready to be used by the component
+- `isLoading` {boolean} - any of the critical resources are still in the process of being fetched
+- `hasErrored` {boolean} - any of the critical resource requests did not complete successfully
   
 `isLoading` , `hasLoaded` , and `hasErrored` are not based on individual loading states, but are rather a collective loading state for the aforementioned-critical component resources. In the previous example, the todos resource is the only critical resource, so `isLoading` / `hasLoaded` / `hasErrored` are solely based on `todosLoadingState`. But we can also add a non-critical `users` resource, responsible, say, for only display users' names alongside their TODOs&mdash;a small piece of the overall component and not worth delaying render over. Here’s how we do that:
 
 ```js
-@withResources((props, {TODOS, USER}) => ({
+const getResources = (props, {TODOS, USER}) => ({
   [TODOS]: {},
   [USERS]: {noncritical: true}
-}))
-class MyClassWithTodosAndAUsers extends React.Component {}
+});
+
+function MyClassWithTodosAndAUsers(props) {
+  var resources = useResources(getResources, props);
+}
 ```
 
 `MyClassWithDecisionsAndAnalysts` will now receive the following loading-related props, assuming we've assigned the `USERS` key a string value of `'users'` in our config file:
 
-- `this.props.todosLoadingState`
-- `this.props.usersLoadingState` 
-- `this.props.isLoading`
-- `this.props.hasLoaded` 
-- `this.props.hasErrored`
+- `todosLoadingState`
+- `usersLoadingState` 
+- `isLoading`
+- `hasLoaded` 
+- `hasErrored`
 
 In this case, `isLoading` , et al, are only representative of `todosLoadingState` and completely irrespective of `usersLoadingState` . This allow us an incredible amount of flexibility for rendering a component as quickly as possible.
 
@@ -258,45 +268,53 @@ Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 
 ```jsx
 // pure functions that accept loading states as arguments
-import {hasLoaded} from 'resourcerer/utils';
+import ResourcererUtils from 'resourcerer/utils';
 
-// ...
-    render() {
-      var getUserName = (userId) => {
-            // usersCollection guaranteed to exist here
-            var user = this.props.usersCollection.find(({id}) => id === userId);
+function MyClassWithTodosAndAUsers(props) {
+  var {
+    isLoading,
+    hasErrored,
+    hasLoaded,
+    todosCollection,
+    usersCollection,
+    usersLoadingState
+  } = useResources(getResources, props);
+  
+  var getUserName = (userId) => {
+    // usersCollection guaranteed to exist here
+    var user = usersCollection.find(({id}) => id === userId);
             
-            return (
-              <span className='user-name'>
-                {user && user.id || 'N/A'}
-              </span>
-            );
-          };
+    return (
+      <span className='user-name'>
+        {user && user.id || 'N/A'}
+      </span>
+    );
+  };
           
-      return (
-        <div className='MyClassWithTodosAndUsers'>
-          {this.props.isLoading ? <Loader /> : null}
+  return (
+    <div className='MyClassWithTodosAndUsers'>
+      {isLoading ? <Loader /> : null}
           
-          {this.props.hasLoaded ? (
-            // at this point we are guaranteed all critical resources exist
-            <ul>
-              {this.props.todosCollection.map((todoModel) => (
-                <li key={todoModel.id}>
-                  {hasLoaded(this.props.usersLoadingState) ?
-                    getUserName(todoModel.get('userId')) :
-                    // if you're anti-loader, you could opt to render nothing and have the
-                    // user name simply appear in place after loading
-                    <Loader size={Loader.Sizes.SMALL} />}
-                  {todoModel.get('name')}
-                </li>
-              )}
-            </ul>
-          ) : null}
+      {hasLoaded ? (
+        // at this point we are guaranteed all critical resources have returned.
+        // before that, todosCollection is a Collection instance, just empty
+        <ul>
+          {todosCollection.map((todoModel) => (
+            <li key={todoModel.id}>
+              {ResourcererUtils.hasLoaded(usersLoadingState) ?
+                getUserName(todoModel.get('userId')) :
+                // if you're anti-loader, you could opt to render nothing and have the
+                // user name simply appear in place after loading
+                <Loader size={Loader.Sizes.SMALL} />}
+              {todoModel.get('name')}
+            </li>
+          )}
+        </ul>
+      ) : null}
           
-          {this.props.hasErrored ? <ErrorMessage /> : null}
-        </div>
-      );
-    }
+      {hasErrored ? <ErrorMessage /> : null}
+    </div>
+  );
 ```
 
 Here's a real-life example from the Sift Console, where we load a customer's workflows without waiting for the workflow stats resource, which takes much longer. Instead, we gracefully show small loaders where the stats will eventually display, all-the-while keeping our console interactive:
@@ -307,7 +325,7 @@ And here's what it looks like when the stats endpoint returns:
 
 ![Noncritical Resource Returned](https://user-images.githubusercontent.com/1355779/57596646-9a425900-7500-11e9-8121-5ced72c0fcba.png)
 
-There’s one other loading prop passed down from `withResources`: `this.props.hasInitiallyLoaded`. This can be useful for showing a different UI for components that have already fetched the resource. An example might be a component with filters: as the initial resource is fetched, we may want to show a generic loader, but upon changing a filter (and re-fetching the resource), we may want to show a loader with an overlay over the previous version of the component.
+There’s one other loading prop offered from the hook/HOC: `hasInitiallyLoaded`. This can be useful for showing a different UI for components that have already fetched the resource. An example might be a component with filters: as the initial resource is fetched, we may want to show a generic loader, but upon changing a filter (and re-fetching the resource), we may want to show a loader with an overlay over the previous version of the component. See the [withLoadingOverlay](#withloadingoverlay) section for more.
 
 
 ## Requesting Prop-driven Data
