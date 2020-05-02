@@ -131,14 +131,14 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     1. [Other Common Resource Config Options](#other-common-resource-config-options)
         1. [data](#data)
         1. [noncritical](#noncritical)
-        1. [listen](#listen)
         1. [measure](#measure)
-        1. [status](#status)
         1. [forceFetch](#forcefetch)
         1. [Custom Resource Names](#custom-resource-names)
         1. [options](#options)
         1. [attributes](#attributes)
         1. [prefetches](#prefetches)
+        1. [listen](#listen)
+        1. [status](#status)
     1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
@@ -461,20 +461,6 @@ As alluded to in the [Other Props](#other-props-passed-from-the-hoc-loading-stat
 - Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `props.usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer/utils`.
   
   
-### listen
-
-Our models are fetched via Schmackbone, and the results are kept in `Schmackbone.Model`/`Schmackbone.Collection` representations as opposed to React state. When we want to update the component after a `sync`, `change`, or `destroy` Schmackbone event, we can simply pass the `listen: true` option, which will `forceUpdate` the component, effectively making our data-state UI-state while keeping one single source-of-truth for our model abstractions.
-
-```js
-  @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true}}))
-  class MyComponentWithTodos extends React.Component {}
-```
-
-**Note:**
-
-1. Listening is often unnecessary—if a loading state is changed during request and removed when the request completes (as is the case with `withResources`), then the React component will update in the natural React cycle and can read from the latest resource without needing to trigger the `forceUpdate`.
-
-1. Listening on a collection will also trigger updates when one of the collection's models changes. That's an implentation detail of Backbone. So if we listen on the todos collection above, but make an update in our component with `this.props.todosCollection.at(0).save({name: 'Renamed Todo'})`, our component will still auto-update!
 
 
 ### measure
@@ -483,17 +469,6 @@ Passing a `measure: true` config option will record the time it takes for a part
 
 ```js
   @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true, measure: true}}))
-  class MyComponentWithTodos extends React.Component {}
-```
-
-### status
-
-Passing a `status: true` config option will pass props down to the component reflecting the resource’s status code. For example, if you pass the option to a `TODOS` resource that 404s, the wrapped component will have a prop called `todosStatus` that will be equal to `404`.
-
-```js
-  @withResources((props, ResourceKeys) => ({
-    [ResourceKeys.TODOS]: {listen: true, measure: true, status: true}
-  }))
   class MyComponentWithTodos extends React.Component {}
 ```
 
@@ -585,40 +560,39 @@ When the user clicks on a 'next' arrow that updates page state, the collection w
 
 If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
 
-## `useResources` (beta)
+### listen
+##### *(`withResources` only)*
 
-So far, all `resourcerer` concepts have been discussed in the context of its `withResources` HOC. But they can also be used with its `useResources` hook inside functional components. All props that you'd expect to be passed down as props from the HOC are returned from the hook:
+Our models are fetched via Schmackbone, and the results are kept in `Schmackbone.Model`/`Schmackbone.Collection` representations as opposed to React state. When we want to update the component after a `sync`, `change`, or `destroy` Schmackbone event, we can simply pass the `listen: true` option, which will `forceUpdate` the component, effectively making our data-state UI-state while keeping one single source-of-truth for our model abstractions.
 
-```jsx
-import {useResources} from 'resourcerer';
-
-const getResources = (props, {TODOS}) => ({[TODOS]: {}});
-
-export default function MyComponent(props) {
-  var {
-    isLoading,
-    hasLoaded,
-    todosCollection,
-    todosLoadingState,
-    setResourceState
-    // etc...
-  } = useResources(getResources, props);
-
-  return (
-    <div className='MyComponent'>
-      {isLoading ? <Loader /> : null}
-          
-      {hasLoaded ? (
-        <ul>
-          {todosCollection.map((todoModel) => (
-            <li key={todoModel.id}>{todoModel.get('name')}</li>
-          )}
-        </ul>
-       ) : null}
-    </div>
-  );
-}
+```js
+  @withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true}}))
+  class MyComponentWithTodos extends React.Component {}
 ```
+
+**Note:**
+
+1. Listening is often unnecessary—if a loading state is changed during request and removed when the request completes (as is the case with `withResources`), then the React component will update in the natural React cycle and can read from the latest resource without needing to trigger the `forceUpdate`.
+
+1. Listening on a collection will also trigger updates when one of the collection's models changes. That's an implentation detail of Backbone. So if we listen on the todos collection above, but make an update in our component with `this.props.todosCollection.at(0).save({name: 'Renamed Todo'})`, our component will still auto-update!
+
+Note also that the `useResources` hook listens to changes on all resources by default. A similar update will be made in the future to `withResources`.
+
+### status
+##### *(`withResources` only)*
+
+Passing a `status: true` config option will pass props down to the component reflecting the resource’s status code. For example, if you pass the option to a `TODOS` resource that 404s, the wrapped component will have a prop called `todosStatus` that will be equal to `404`.
+
+```js
+  @withResources((props, ResourceKeys) => ({
+    [ResourceKeys.TODOS]: {listen: true, measure: true, status: true}
+  }))
+  class MyComponentWithTodos extends React.Component {}
+```
+
+Note that in the `useResources` hook, which does not pollute any `props` object, statuses are returned by default; you can choose which ones you want to use in your component and ignore the rest.
+
+# Differences between useResources and withResources
 
 Note a couple critical differences:
 
