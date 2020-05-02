@@ -4,7 +4,7 @@
 
 ![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
 
-`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful higher-order React component (HOC) `withResources` (or its [`useResources` hook](#useresources-beta)) allows you to easily construct a component's data flow, including:
+`resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful `useResources` React hook or `withResources` higher-order React component (HOC) allows you to easily construct a component's data flow, including:
 
 * serial requests
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
@@ -48,41 +48,80 @@ ModelMap.add({TODOS: TodosCollection});
 import 'js/core/resourcerer-config;
 ```
 
-3. Use `withResources` to request your models in any component:
+3. Use the hook or HOC to request your models in any component:
 
-```jsx
-import React from 'react';
-import {withResources} from 'resourcerer';
+    1. `useResources`
+    
+        ```jsx
+        import React from 'react';
+        import {useResources} from 'resourcerer';
 
-@withResources((props, {TODOS}) => ({[TODOS]: {}}))
-class MyComponent extends React.Component {
-  render() {
-    // when MyComponent is mounted, the todosCollection is fetched and available
-    // as `this.props.todosCollection`!
-    return (
-      <div className='MyComponent'>
-        {this.props.isLoading ? <Loader /> : null}
+        const getResources = (props, {TODOS}) => ({[TODOS]: {}});
         
-        {this.props.hasErrored ? <ErrorMessage /> : null}
+        function MyComponent(props) {
+          var {
+            isLoading,
+            hasErrored,
+            hasLoaded,
+            todosCollection
+          } = useResources(getResources, props);
+          
+          // when MyComponent is mounted, the todosCollection is fetched and available
+          // as `todosCollection`!
+          return (
+            <div className='MyComponent'>
+              {isLoading ? <Loader /> : null}
         
-        {this.props.hasLoaded ? (
-          <ul>
-            {this.props.todosCollection.map((todoModel) => (
-              <li key={todoModel.id}>{todoModel.get('name')}</li>
-            ))}
-          </ul>
-        ) : null}
-      </div>
-    );
-  }
-}
-```
+              {hasErrored ? <ErrorMessage /> : null}
+       
+              {hasLoaded ? (
+                <ul>
+                  {todosCollection.map((todoModel) => (
+                    <li key={todoModel.id}>{todoModel.get('name')}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
+          );
+        }
+        ```
+    
+    1. `withResources`
+    
+        ```jsx
+        import React from 'react';
+        import {withResources} from 'resourcerer';
+
+        @withResources((props, {TODOS}) => ({[TODOS]: {}}))
+        class MyComponent extends React.Component {
+          render() {
+            // when MyComponent is mounted, the todosCollection is fetched and available
+            // as `this.props.todosCollection`!
+            return (
+              <div className='MyComponent'>
+                {this.props.isLoading ? <Loader /> : null}
+        
+                {this.props.hasErrored ? <ErrorMessage /> : null}
+        
+                {this.props.hasLoaded ? (
+                  <ul>
+                    {this.props.todosCollection.map((todoModel) => (
+                      <li key={todoModel.id}>{todoModel.get('name')}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            );
+          }
+        }
+        ```
 
 There's a lot there, so let's unpack that a bit. There's also a lot more that we can do there, so let's also get into that. But first, some logistics:
 
 # Contents  
 
 1. [Installation](#installation)
+1. [Nomenclature](#nomenclature)
 1. [Tutorial](#tutorial)
     1. [Intro](#tutorial)
     1. [Other Props Passed from the HOC (Loading States)](#other-props-passed-from-the-hoc-loading-states)
@@ -100,7 +139,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [options](#options)
         1. [attributes](#attributes)
         1. [prefetches](#prefetches)
-    1. [useResources (beta)](#useresources-beta)
+    1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
     1. [Prefetch on Hover](#prefetch-on-hover)
@@ -121,6 +160,37 @@ object spread, and ES2015 module syntax transpiled. If you need to target older 
 
 Also worth noting is that this package does not do any bundling into a single file, instead letting the user use whatever bundler they like.
 Modules have, however, been transpiled into CommonJS `require` syntax.
+
+# Nomenclature
+
+1. **Props**. Going forward in this tutorial, we'll try to describe behavior of both the `useResources` hook and the `withResources` HOC at once. Note that if we talking about a passed prop of, for example `props.isLoading`, that that corresponds to an `isLoading` property returned from the hook and a `this.props.isLoading` prop passed down from the HOC.
+
+1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. It accepts `props` and `ResourceKeys` as arguments and may look like, as we'll explore in an example later:
+
+    ```js
+    const getResources = (props, {USER}) => ({[USER]: {options: {userId: props.id}}});
+    ```
+
+    or
+
+    ```js
+    const getResources = (props, {USER_TODOS}) => {
+      const now = Date.now();
+      
+      return {
+        [USER_TODOS]: {
+          data: {
+            limit: 20,
+            end_time: now,
+            start_time: now - props.timeRange,
+            sort_field: props.sortField
+          }
+        }
+      };
+    };
+    ```
+
+    It returns an object whose keys represent the resources to fetch and whose values are configuration objects that we'll discuss later.
   
 # Tutorial
 
@@ -156,7 +226,7 @@ Back to the executor function. In the example above, you see it returns an objec
 
 ## Other Props Passed from the HOC (Loading States)
 
-Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from API3.  Some of the most **critical** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `withResources` HOC gives you several loading state helper props. From our last example:
+Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from the API.  Some of the most **significant** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `withResources` HOC gives you several loading state helper props. From our last example:
 
 
 - `this.props.todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
