@@ -48,7 +48,7 @@ ModelMap.add({TODOS: TodosCollection});
 import 'js/core/resourcerer-config;
 ```
 
-3. Use the hook or HOC to request your models in any component:
+3. Use your preferred abstraction (`useResources` hook or `withResources` HOC) to request your models in any component:
 
     1. ### useResources
     
@@ -641,11 +641,11 @@ Note that in the `useResources` hook, which does not pollute any `props` object,
 
 # Differences between useResources and withResources
 
-The hook and HOC largely operate interchangeably, but do Note a couple critical differences:
+The hook and HOC largely operate interchangeably, but do note a couple critical differences:
 
-1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes).
+1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes). This is a definite advantage for the HOC right now, since, if we're already setting `hasErrored` clauses in our components to prepare for request errors, we can naturally gracefully degrade when an unexpected exception occurs. You'll need to manage this yourself with hooks until the equivalent functionality is released.
 
-1. The hooks's `setResourceState` function utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does not auto-merge updates like `setState` does. Be sure to manually merge all resource state!
+1. The hooks's `setResourceState` function utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does **not auto-merge updates like `setState` does**. Be sure to manually merge all resource state!
 
     ```jsx
     setResourceState((existingState) => ({
@@ -660,26 +660,25 @@ The hook and HOC largely operate interchangeably, but do Note a couple critical 
 
 1. With the executor function now inlined in your component, be extra careful to avoid this anti-pattern:
 
-    ```
+    ```js
     function MyComponent({start_time, ...props}) {
       var {todosCollection} = useResources((_props, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
       
       // ...
     ```
     
-    The subtle problem with the above is that the `start_time` executor function parameter is relying on a value in the function component closure instead of the generic props object; `props` passed to the executor function can be current or previous but are not the same as what is in the closure, which will always be current. This will lead to confusing bugs, so instead either read directly from the props parameter passed to the executor function:
+    The subtle problem with the above is that the `start_time` executor function parameter is relying on a value in the function component closure instead of the `_props` parameter object; props passed to the executor function can be current or previous but are not the same as what is in the closure, which will always be current. This will lead to confusing bugs, so instead either read directly from the props parameter passed to the executor function:
     
-    ```
+    ```js
     function MyComponent(props) {
       var {todosCollection} = useResources(({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
       
       // ...
     ```
     
-     or define your executor function outside of the component scope:
+     or define your executor function outside of the component scope, as we've done throughout this tutorial (now you know why!):
      
-     
-     ```
+     ```js
      const getResources = ({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}});
      
      function MyComponent(props) {
@@ -690,9 +689,9 @@ The hook and HOC largely operate interchangeably, but do Note a couple critical 
 
 ## Caching Resources with ModelCache
 
-`resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored by `withResources` in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
+`resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
 
-The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Backbone.Model|Backbone.Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `resourcerer` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default, to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go through the network.
+The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Model|Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `resourcerer` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default (but can be changed, see [Configuring resourcerer](#configuring-resourcerer)), to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go back through the network.
 
 Again, it’s unlikely that you’ll use `ModelCache` directly while using `resourcerer`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
 
@@ -707,22 +706,21 @@ As alluded to previously, `resourcerer` relies on the model classes themselves t
 Let's take a look at the USER_TODOS resource from above, where we want to request some top number of todos for a user sorted by some value over some time range. The resource declaration might look like this:
 
 ```js
-  @withResources((props, ResourceKeys) => {
-    const now = Date.now();
+const getResources = (props, ResourceKeys) => {
+  const now = Date.now();
       
-    return {
-      [ResourceKeys.USER_TODOS]: {
-        data: {
-          limit: props.limit,
-          end_time: now,
-          start_time: now - props.timeRange,
-          sort_field: props.sortField
-        },
-        options: {userId: props.userId}
-      }
-    };
-  })
-  class UserTodos extends React.Component {}
+  return {
+    [ResourceKeys.USER_TODOS]: {
+      data: {
+        limit: props.limit,
+        end_time: now,
+        start_time: now - props.timeRange,
+        sort_field: props.sortField
+      },
+      options: {userId: props.userId}
+    }
+  };
+};
 ```
 
 And our corresponding model definition might look like this:
