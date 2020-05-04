@@ -43,7 +43,9 @@ import TodosCollection from 'js/models/todos-collection';
 
 // choose any string as its key, which becomes its ResourceKey
 ModelMap.add({TODOS: TodosCollection});
+```
 
+```
 // in your top level js file
 import 'js/core/resourcerer-config;
 ```
@@ -283,7 +285,7 @@ function MyClassWithTodosAndAUsers(props) {
   } = useResources(getResources, props);
   
   var getUserName = (userId) => {
-    // usersCollection guaranteed to exist here
+    // usersCollection guaranteed to have returned here
     var user = usersCollection.find(({id}) => id === userId);
             
     return (
