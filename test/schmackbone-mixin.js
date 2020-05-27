@@ -35,13 +35,17 @@ describe('SchmackboneMixin', () => {
     dummyComponent.componentWillUnmount();
   });
 
-  it('calls the component\'s forceUpdate when any of its models sync, change, or destroy', () => {
+  it('calls the component\'s forceUpdate when any of its models trigger listened events', () => {
     model1.trigger('sync');
     expect(forceUpdateSpy).toHaveBeenCalled();
     model2.trigger('change');
     expect(forceUpdateSpy.calls.count()).toEqual(2);
     model3.trigger('destroy');
     expect(forceUpdateSpy.calls.count()).toEqual(3);
+    model1.trigger('update');
+    expect(forceUpdateSpy.calls.count()).toEqual(4);
+    model1.trigger('reset');
+    expect(forceUpdateSpy.calls.count()).toEqual(5);
   });
 
   it('removes event listeners before the component unmounts', () => {
@@ -51,6 +55,10 @@ describe('SchmackboneMixin', () => {
     model2.trigger('change');
     expect(forceUpdateSpy).not.toHaveBeenCalled();
     model3.trigger('destroy');
+    expect(forceUpdateSpy).not.toHaveBeenCalled();
+    model1.trigger('update');
+    expect(forceUpdateSpy).not.toHaveBeenCalled();
+    model2.trigger('reset');
     expect(forceUpdateSpy).not.toHaveBeenCalled();
   });
 

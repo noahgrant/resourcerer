@@ -27,7 +27,6 @@ const getResources = (props) => ({
   [ResourceKeys.ANALYSTS]: {noncritical: true, options: {noResolve: props.noResolve}},
   [ResourceKeys.DECISIONS]: {
     ...(props.includeDeleted ? {data: {include_deleted: true}} : {}),
-    listen: true,
     measure
   },
   [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
@@ -1012,7 +1011,11 @@ describe('useResources', () => {
     async(done) => {
       dataChild = findDataChild(renderUseResources({customName: true}));
 
-      await waitsFor(() => requestSpy.calls.count() === 4);
+      expect(dataChild.props.decisionsLoadingState).toEqual('loading');
+      expect(dataChild.props.customDecisionsLoadingState).toEqual('loading');
+      expect(dataChild.props.sift).not.toBeDefined();
+
+      await waitsFor(() => dataChild.props.hasLoaded);
 
       expect(requestSpy.calls.all().map((call) => call.args[0])).toEqual([
         'decisions',
@@ -1021,11 +1024,6 @@ describe('useResources', () => {
         'analysts'
       ]);
 
-      expect(dataChild.props.decisionsLoadingState).toEqual('loading');
-      expect(dataChild.props.customDecisionsLoadingState).toEqual('loading');
-      expect(dataChild.props.sift).not.toBeDefined();
-
-      await waitsFor(() => dataChild.props.hasLoaded);
       expect(dataChild.props.decisionsCollection.get('key')).toEqual('decisions');
       // key should be the same as for decisions, signaling that while fetch is
       // called ones for each resource, only one fetch would be made
