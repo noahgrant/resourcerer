@@ -380,6 +380,28 @@ describe('useResources', () => {
     done();
   });
 
+  it('listens to resources passed in via props', async(done) => {
+    var userModel = new Schmackbone.Model({name: 'goodUser'});
+
+    class TestChild extends React.Component {
+      render() {
+        return <span>{this.props.userModel.get('name')}</span>;
+      }
+    }
+
+    resources = renderUseResources({TestChildren: TestChild, userModel});
+    dataChild = findDataChild(resources, TestChild);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    expect(ReactDOM.findDOMNode(dataChild).textContent).toEqual('goodUser');
+
+    userModel.set({name: 'betterUser'});
+    expect(ReactDOM.findDOMNode(dataChild).textContent).toEqual('betterUser');
+
+    done();
+  });
+
   it('does not set loading states if the component unmounts before the request returns',
     async(done) => {
       var nextTick;
@@ -1049,26 +1071,25 @@ function unmountAndClearModelCache() {
 
 // we wrap our functional component that uses useResources with React classes
 // just as a cheap way of being able to use React's TestUtils methods
-class TestChildren extends React.Component {
+class DefaultTestChildren extends React.Component {
   render() {
     return <div />;
   }
 }
 
 function TestComponent(props) {
-  var resources = useResources(getResources, props);
+  var resources = useResources(getResources, props),
+      {TestChildren=DefaultTestChildren} = props;
 
   return <TestChildren {...props} {...resources} />;
 }
 
 class TestWrapper extends React.Component {
   render() {
-    return (
-      <TestComponent {...this.props} />
-    );
+    return <TestComponent {...this.props} />;
   }
 }
 
-function findDataChild(wrapper) {
-  return findRenderedComponentWithType(wrapper, TestChildren);
+function findDataChild(wrapper, type=DefaultTestChildren) {
+  return findRenderedComponentWithType(wrapper, type);
 }

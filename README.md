@@ -45,7 +45,7 @@ import TodosCollection from 'js/models/todos-collection';
 ModelMap.add({TODOS: TodosCollection});
 ```
 
-```
+```js
 // in your top level js file
 import 'js/core/resourcerer-config;
 ```
