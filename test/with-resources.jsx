@@ -42,7 +42,6 @@ const jasmineNode = document.createElement('div');
   [ResourceKeys.ANALYSTS]: {noncritical: true},
   [ResourceKeys.DECISIONS]: {
     ...(props.includeDeleted ? {data: {include_deleted: true}} : {}),
-    listen: true,
     measure,
     status: props.status
   },
@@ -361,7 +360,7 @@ describe('withResources', () => {
     done();
   });
 
-  it('only listens to resources passed with a \'listen\' option', async(done) => {
+  it('listens to all resources', async(done) => {
     var modelsSubscribed;
 
     ({resources, dataCarrier, dataChild} = getRenderedResourceComponents(renderWithResources()));
@@ -369,15 +368,17 @@ describe('withResources', () => {
     await waitsFor(() => dataChild.props.hasLoaded);
     modelsSubscribed = dataCarrier._getBackboneModels();
 
-    expect(modelsSubscribed.length).toEqual(1);
-    expect(modelsSubscribed[0].get('key')).toEqual('decisions');
+    expect(modelsSubscribed.length).toEqual(3);
+    expect(modelsSubscribed[0].get('key')).toEqual('analysts');
+    expect(modelsSubscribed[1].get('key')).toEqual('decisions');
+    expect(modelsSubscribed[2].get('key')).toEqual('userfraudLevel=high_userId=noah');
     done();
   });
 
-  it('updates even PureComponents when passed a \'listen\' option', async(done) => {
+  it('updates even PureComponents when a resource updates', async(done) => {
     var purey;
 
-    @withResources((props) => ({[ResourceKeys.DECISIONS]: {listen: true}}))
+    @withResources((props) => ({[ResourceKeys.DECISIONS]: {}}))
     class Purey extends React.PureComponent {
       render() {
         return <p>{this.props.decisionsCollection.get('id')}</p>;
@@ -436,7 +437,7 @@ describe('withResources', () => {
       // wait til the next tick to ensure our resources have been 'fetched'
       await waitsFor(() => nextTick);
 
-      expect(dataCarrier._getBackboneModels().length).toEqual(1);
+      expect(dataCarrier._getBackboneModels().length).toEqual(3);
       expect(attachListenersSpy).not.toHaveBeenCalled();
       expect(dataCarrier.state.decisionsLoadingState).toEqual(LoadingStates.LOADING);
       expect(dataCarrier.state.analystsLoadingState).toEqual(LoadingStates.LOADING);
@@ -1180,14 +1181,13 @@ describe('withResources', () => {
       done();
     });
 
-    it('can be updated via a model with \'{listen: true}\'', async(done) => {
+    it('can be updated via a model update', async(done) => {
       var FunctionComponent = (props) =>
             props.isLoading ?
               <span>LOADING</span> :
               <p onClick={() => props.userModel.set({id: 'zorah'})}>Hello, {props.userModel.id}</p>,
           WrappedFunctionComponent = withResources((props) => ({
             [ResourceKeys.USER]: {
-              listen: true,
               data: {id: props.userId},
               options: {userId: props.userId}
             }
@@ -1248,7 +1248,7 @@ describe('withResources', () => {
         done();
       });
 
-      it('will not update with a \'{listen: true}\' resource update', async(done) => {
+      it('will not update with a resource update', async(done) => {
         var FunctionComponent = React.memo((props) =>
               props.isLoading ?
                 <span>LOADING</span> : (
@@ -1258,7 +1258,6 @@ describe('withResources', () => {
                 )),
             WrappedFunctionComponent = withResources((props) => ({
               [ResourceKeys.USER]: {
-                listen: true,
                 data: {id: props.userId},
                 options: {userId: props.userId}
               }

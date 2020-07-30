@@ -139,7 +139,6 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [options](#options)
         1. [attributes](#attributes)
         1. [prefetches](#prefetches)
-        1. [listen](#listen)
         1. [status](#status)
     1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
@@ -609,24 +608,6 @@ When the user clicks on a 'next' arrow that updates page state, the collection w
 
 If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
 
-### listen
-##### *(`withResources` only)*
-
-Our models are fetched via Schmackbone, and the results are kept in `Schmackbone.Model`/`Schmackbone.Collection` representations as opposed to React state. When we want to update the component after a `sync`, `change`, or `destroy` Schmackbone event, we can simply pass the `listen: true` option, which will `forceUpdate` the component, effectively making our data-state UI-state while keeping one single source-of-truth for our model abstractions.
-
-```js
-@withResources((props, ResourceKeys) => ({[ResourceKeys.TODOS]: {listen: true}}))
-class MyComponentWithTodos extends React.Component {}
-```
-
-**Note:**
-
-1. Listening is often unnecessary—if a loading state is changed during request and removed when the request completes (as is the case with `withResources`), then the React component will update in the natural React cycle and can read from the latest resource without needing to trigger the `forceUpdate`.
-
-1. Listening on a collection will also trigger updates when one of the collection's models changes. That's an implentation detail of Schmackbone. So if we listen on the todos collection above, but make an update in our component with `this.props.todosCollection.at(0).save({name: 'Renamed Todo'})`, our component will still auto-update!
-
-Note also that the `useResources` hook listens to changes on all resources by default. A similar update will be made in the future to `withResources`.
-
 ### status
 ##### *(`withResources` only)*
 
@@ -634,7 +615,7 @@ Passing a `status: true` config option will pass props down to the component ref
 
 ```js
 @withResources((props, ResourceKeys) => ({
-  [ResourceKeys.TODOS]: {listen: true, measure: true, status: true}
+  [ResourceKeys.TODOS]: {measure: true, status: true}
 }))
 class MyComponentWithTodos extends React.Component {}
 ```
@@ -656,9 +637,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
     }));
     ```
 
-1. The hook does not accept a [`{listen: true}`](#listen) option like the HOC does because it listens to changes on all resources by default. A similar update will be made in the future to `withResources`.
-
-1. Likewise, the hook does not accept a [`{status: true}`](#status) option like the HOC does because it returns all statuses by default.
+1. The hook does not accept a [`{status: true}`](#status) option like the HOC does because it returns all statuses by default.
 
 1. With the executor function now inlined in your component, be extra careful to avoid this anti-pattern:
 
@@ -960,7 +939,7 @@ ResourcesConfig.set(configObj);
     })(UserTodos)
     ```
     
-    There is one caveat, though&mdash;function components should not be wrapped in `React.memo` if you intend to listen on a resource via the `listen: true` option.
+    There is one caveat, though&mdash;function components should not be wrapped in `React.memo` or they won't be updated when the resource updates.
 
 * Can `resourcerer` do anything other than `GET` requests?
 
@@ -972,9 +951,9 @@ ResourcesConfig.set(configObj);
     onClickSaveButton() {
       this.setState({isSaving: true});
   
-      // any other mounted component in the application listening to this model or its collection
+      // any other mounted component in the application that uses this resource
       // will get re-rendered with the updated name as soon as this is called
-      this.props.userTodoModel.save({name: 'Giving This Todo A New Name})
+      this.props.userTodoModel.save({name: 'Giving This Todo A New Name'})
           .then(() => notify('Todo save succeeded!'))
           .catch(() => notify('Todo save failed :/'))
           .then(() => this.setState({isSaving: false}));
