@@ -1,6 +1,13 @@
+# Contents  
+
+1. [Thoughts on the PENDING Resource](#thoughts-on-the-pending-resource)
+1. [Implicit dependent resources](#implicit-dependent-resources)
+1. [Unfetched Resources](#unfetched-resources)
+1. [Loading Overlays](#loading-overlays)
+
 ## Thoughts on the PENDING Resource
 
-Using `dependsOn` in simple cases like the one highlighted in the [README](https://github.com/SiftScience/resourcerer/blob/master/README.md) is pretty straightforward and very powerful. But `PENDING` resources bring additional complexities to your resource logic, some of which are enumerated here:
+Using `dependsOn` in simple cases like the one highlighted in the [README](https://github.com/noahgrant/resourcerer/blob/master/README.md) is pretty straightforward and very powerful. But `PENDING` resources bring additional complexities to your resource logic, some of which are enumerated here:
 
 
 1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `this.props.hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
@@ -21,7 +28,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
     
         When we provide using method (a), the dependent prop can be changed but not removed. When we provide using method (b), the dependent prop can be changed or removed.
     
-        So if we use method (a) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentWillReceiveProps`/`componentDidUpdate` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
+        So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentWillReceiveProps`/`componentDidUpdate` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
         
         And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
@@ -156,4 +163,40 @@ export default class AccountModel extends Model {
     shouldCache: (accountModel, config) => accountModel.get('state') === 'ACTIVE'
   }]
 })
+```
+
+## Loading Overlays
+
+You probably want to show loaders when you are moving between one model and the next. Because your resources are held as state, both exist in this intermediate state.
+Both the hook and the HOC provide a `hasInitiallyLoaded` prop that is useful here. Here's an example of what it might look like (shown over one of [Sift](https://sift.com)'s Insights Charts):
+
+![loading_overlay](https://user-images.githubusercontent.com/1355779/69263885-10440e80-0b7b-11ea-811d-29aa404b91d2.gif)
+
+Use it like:
+
+```jsx
+import {useResources} from 'resourcerer';
+
+const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+
+export default function UserTodos(props) {
+  var {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
+    
+  return (
+    <div className='MyComponent'>
+      // it's up to you to make this an OverlayLoader or InlineLoader, if you so choose.
+      {isLoading ? <Loader /> : null}
+      // this will render once first loaded and remain rendered with a previous
+      // model even while in a loading state. when a new resource request returns,
+      // this will render with the updated model and the loader will be removed.
+      {hasInitiallyLoaded ? (
+        <ul>
+          {todosCollection.map((todoModel) => (
+            <li key={todoModel.id}>{todoModel.get('name')}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
 ```
