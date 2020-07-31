@@ -8,7 +8,7 @@ export const UserModel = Schmackbone.Model.extend({
   url() {
     return `/root/users/${this.userId}`;
   }
-}, {cacheFields: ['fraudLevel', 'userId']});
+}, {cacheFields: ['fraudLevel', 'userId', 'id']});
 
 export const AnalystsCollection = Schmackbone.Collection.extend({
   url() {

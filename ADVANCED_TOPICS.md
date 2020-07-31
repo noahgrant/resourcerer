@@ -4,6 +4,7 @@
 1. [Implicit dependent resources](#implicit-dependent-resources)
 1. [Unfetched Resources](#unfetched-resources)
 1. [Loading Overlays](#loading-overlays)
+1. [Recaching newly-saved models](#recaching-newly-saved-models)
 
 ## Thoughts on the PENDING Resource
 
@@ -200,3 +201,52 @@ export default function UserTodos(props) {
   );
 }
 ```
+
+## Recaching newly-saved models
+
+A common pattern when creating a new instance of a resource is to keep it in state until the user decides to explicitly save it. For example, when setting up a new
+TODO, we might fill out a form with its name, all kept in state, at a deep-linkable RESTful url that might be `/todos/new`. After the user saves the TODO, we get a
+server-provided `id` property and we might navigate to `/todos/12345`, where `12345` is the new id. This presents an inconvenience: at `/new` we want to read from
+state, but at `/{id}` we want to read from the saved model (this is compounded if the UI allows the user to edit in-place).
+
+To accomodate this scenario, `resourcerer` provides a means of re-caching a model instance the first time it receives an id. Thus you can use it with `fetch: false` like
+this:
+
+```jsx
+import {useResources} from 'resourcerer';
+
+const getResources = (props, {TODO}) => ({
+  [TODO]: {
+    attributes: {id: props.id},
+    fetch: !!props.id
+  }
+});
+
+export default function UserTodo(props) {
+  var {todoModel} = useResources(getResources, props),
+      onChange = (evt) => todoModel.set('name', evt.target.value),
+      onSubmit = todoModel.save()
+        .then(([model]) => !props.id ? navigate(`/todos/${model.id}`) : null)
+        .catch(() => notify('An error occurred');
+
+  return (
+    <form onSubmit={onSubmit}>
+      <label>
+        TODO:
+        <input name='name' onChange={onChange} value={todoModel.get('name')} />
+      </label>
+      <button>Save</button>
+    </form>
+  );
+}
+```
+
+What's so nice about this example is that there's no balancing between React state and model state; in either case you read from
+the model requested from `resourcerer`. When you load `/todos/new`, nothing is fetched and the model is created first client-side;
+when you load `/todos/{todosId}`, the todos resource is first fetched. Both cases, however, are treated identically. And because of
+`resourcerer`'s recaching, when you save for the first time and navigate from `/todos/new` to `/todos/{todosId}`, the model is
+taken from its 'new' cache key and placed in its 'id' cache key, obviating the need to re-request the resource and moving seamlessly
+from one to the other.
+
+***NOTE:*** this is only for models requested individually and not as part of a larger collection. When adding a new model to a collection
+that is fetched by `resourcerer`, you can accomplish the above without recaching.
