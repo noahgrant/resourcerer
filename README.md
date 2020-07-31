@@ -2,8 +2,6 @@
 
 # resourcerer
 
-![CircleCI](https://circleci.com/gh/SiftScience/resourcerer/tree/master.svg?style=svg&circle-token=45a34426d0ed2c954ed07b8ce27248aa6f93cb06)
-
 `resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful [`useResources`](#useresources) React hook or [`withResources`](#withresources) higher-order React component (HOC) allows you to easily construct a component's data flow, including:
 
 * serial requests
@@ -144,8 +142,6 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
     1. [Prefetch on Hover](#prefetch-on-hover)
-    1. [withLoadingOverlay](#withloadingoverlay)
-        1. [usage with useResources](#usage-with-the-useresources-hook)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 
@@ -239,7 +235,7 @@ Back to the executor function. In the example above, you see it returns an objec
 Of course, in our initial example, the todos collection won’t get passed down immediately since, after all, the resource has to be fetched from the API.  Some of the most **significant** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `useResources` hook/`withResources` HOC gives you several loading state helper props. From our last example:
 
 
-- `todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/SiftScience/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
+- `todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/noahgrant/resourcerer/blob/master/lib/constants.js), and there will be one for each resource)
 - `hasLoaded` {boolean} - all critical resources have successfully completed and are ready to be used by the component
 - `isLoading` {boolean} - any of the critical resources are still in the process of being fetched
 - `hasErrored` {boolean} - any of the critical resource requests did not complete successfully
@@ -320,7 +316,7 @@ function MyClassWithTodosAndAUsers(props) {
   );
 ```
 
-Here's a real-life example from the Sift Console, where we load a customer's workflows without waiting for the workflow stats resource, which takes much longer. Instead, we gracefully show small loaders where the stats will eventually display, all-the-while keeping our console interactive:
+Here's a real-life example from the [Sift](https://sift.com) Console, where we load a customer's workflows without waiting for the workflow stats resource, which takes much longer. Instead, we gracefully show small loaders where the stats will eventually display, all-the-while keeping our console interactive:
 
 ![Noncritical Resource Loading](https://user-images.githubusercontent.com/1355779/57596645-99a9c280-7500-11e9-916d-f60cfd00ee10.png)
 
@@ -328,7 +324,7 @@ And here's what it looks like when the stats endpoint returns:
 
 ![Noncritical Resource Returned](https://user-images.githubusercontent.com/1355779/57596646-9a425900-7500-11e9-8121-5ced72c0fcba.png)
 
-There’s one other loading prop offered from the hook/HOC: `hasInitiallyLoaded`. This can be useful for showing a different UI for components that have already fetched the resource. An example might be a component with filters: as the initial resource is fetched, we may want to show a generic loader, but upon changing a filter (and re-fetching the resource), we may want to show a loader with an overlay over the previous version of the component. See the [withLoadingOverlay](#withloadingoverlay) section for more.
+There’s one other loading prop offered from the hook/HOC: `hasInitiallyLoaded`. This can be useful for showing a different UI for components that have already fetched the resource. An example might be a component with filters: as the initial resource is fetched, we may want to show a generic loader, but upon changing a filter (and re-fetching the resource), we may want to show a loader with an overlay over the previous version of the component. See the [Advanced Topics docs](/ADVANCED_TOPICS.md#loading-overlays) for more.
 
 
 ## Requesting Prop-driven Data
@@ -407,7 +403,7 @@ In general, there are two ways to change `props.id` as in the previous example:
 
 ## Serial Requests
 
-In most situations, all resource requests should be parallelized; but that’s not always possible. Every so often, there may be a situation where one request depends on the result of another. For these cases, we have the `dependsOn` resource option and the `provides` resource option. These are probably best explained by example, so here is a simplified instance from the Sift Console, where we load a queue item that has info about a user, but we can't get further user information until we know what user id belongs to this queue item.
+In most situations, all resource requests should be parallelized; but that’s not always possible. Every so often, there may be a situation where one request depends on the result of another. For these cases, we have the `dependsOn` resource option and the `provides` resource option. These are probably best explained by example, so here is a simplified instance from the [Sift](https://sift.com) Console, where we load a queue item that has info about a user, but we can't get further user information until we know what user id belongs to this queue item.
 
 ```js
 @withResources((props, {QUEUE_ITEM, USER}) => ({
@@ -769,65 +765,6 @@ const getTodos = (props, ResourceKeys) => {
 
 Note, as mentioned in the comment above, that `expectedProps` should take the form of props expected when the resource is actually needed. For example, maybe we're viewing a list of users, and so there is no `props.userId` in the component that uses `prefetch`. But for the user in the list with id `'noahgrant'`, we would pass it an `expectedProps` that includes `{userId: 'noahgrant'}` because we know that when we click on the link and navigate to that url, `props.userId` should be equal to `'noahgrant'`.
 
-## withLoadingOverlay
-##### (`withResources` HOC only)
-
-`resourcerer` also comes with a helper HOC to apply an overlay with a loader over current content while new data is fetched. It looks like this (shown over one of Sift's Insights Charts):
-
-![loading_overlay](https://user-images.githubusercontent.com/1355779/69263885-10440e80-0b7b-11ea-811d-29aa404b91d2.gif)
-
-Use it like:
-
-```jsx
-import {withLoadingOverlay} from 'resourcerer/utils';
-import {withResources} from 'resourcerer';
-
-@withResources((props, ResourceKeys) => ({})
-@withLoadingOverlay() // can also pass in {noLoader: true} to have an overlay without a spinner
-class UserTodos extends React.Component {}
-```
-
-Now anytime `<UserTodos />` enters a loading state, its previous content will stay in place with a nice overlay on top until the next data returns and the component rerenders!
-
-Note that there is no default spinner, and you must provide it in the [configuration](#configuring-resourcerer) as:
-
-```js
-ResourcesConfig.set({Loader: YourLoaderComponent});
-```
-
-The Loader instance will get an `overlay: true` prop if it is rendered by `withLoadingOverlay`, which you can use to make any custom styling changes.
-
-### Usage with the `useResources` hook
-
-When using `useResources`, the `withLoadingOverlay` HOC won't work without breaking up your components; however, since models are held as state, a loading overlay helper component is unnecessary to keep older models rendered while requesting new ones. We can simply use the `hasInitiallyLoaded` property mentioned earlier:
-
-```jsx
-import {useResources} from 'resourcerer';
-
-const getResources = (props, {TODOS}) => ({[TODOS]: {}});
-
-export default function UserTodos(props) {
-  var {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
-    
-  return (
-    <div className='MyComponent'>
-      // it's up to you to make this an OverlayLoader or InlineLoader, if you so choose.
-      {isLoading ? <Loader /> : null}
-      // this will render once first loaded and remain rendered with a previous
-      // model even while in a loading state. when a new resource request returns,
-      // this will render with the updated model and the loader will be removed.
-      {hasInitiallyLoaded ? (
-        <ul>
-          {todosCollection.map((todoModel) => (
-            <li key={todoModel.id}>{todoModel.get('name')}</li>
-          ))}
-        </ul>
-      ) : null}
-    </div>
-  );
-}
-```
-
 # Configuring `resourcerer`
 
 The same config file used to add to `ResourceKeys` and `ModelMap` also allows you to set custom configuration properties for your own application:
@@ -849,8 +786,6 @@ ResourcesConfig.set(configObj);
   <p>An error occurred.</p>
 </div>
 ```
-
-* `Loader` (React.Component): the spinner component that should be rendered when using [withLoadingOverlay](#withloadingoverlay). Default `null`.
 
 * `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
 
