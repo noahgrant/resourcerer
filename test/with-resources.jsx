@@ -47,7 +47,7 @@ const jasmineNode = document.createElement('div');
   },
   [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
-    fields: ['userId', 'fraudLevel'],
+    ...props.withId ? {attributes: {id: props.userId}} : {},
     options: {
       userId: props.userId,
       fraudLevel: props.fraudLevel,
@@ -127,7 +127,7 @@ describe('withResources', () => {
     requestSpy = spyOn(Request, 'default').and.callFake((key, Const, options) => {
       // mock fetch model cache behavior, where we put it in the cache immediately,
       // then request the model, and only if it errors do we remove it from cache
-      var model = new Schmackbone.Model({key, ...(options.data || {})});
+      var model = ModelCache.get(key) || new Schmackbone.Model({key, ...(options.data || {})});
 
       ModelCache.put(key, model, options.component);
 
@@ -1289,6 +1289,24 @@ describe('withResources', () => {
     expect(_prefetch).toEqual(prefetch);
     expect(Model).toEqual(Schmackbone.Model);
     expect(Collection).toEqual(Schmackbone.Collection);
+  });
+
+  it('recaches models that get an id for the first time', async() => {
+    var cachedModel;
+
+    UserModel.cacheFields = ['userId', 'fraudLevel', 'id'];
+    dataChild = findDataChild(renderWithResources());
+
+    await waitsFor(() => requestSpy.calls.count() === 3);
+    cachedModel = ModelCache.get('userfraudLevel=high_userId=noah');
+    expect(cachedModel).toBeDefined();
+
+    dataChild.props.setResourceState({withId: true});
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(ModelCache.get('userfraudLevel=high_userId=noah')).not.toBeDefined();
+    expect(ModelCache.get('userfraudLevel=high_id=noah_userId=noah')).toEqual(cachedModel);
+
+    expect(requestSpy.calls.count()).toEqual(4);
   });
 });
 /* eslint-enable max-nested-callbacks */
