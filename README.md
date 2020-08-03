@@ -130,18 +130,18 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     1. [Serial Requests](#serial-requests)
     1. [Other Common Resource Config Options](#other-common-resource-config-options)
         1. [data](#data)
-        1. [noncritical](#noncritical)
-        1. [measure](#measure)
-        1. [forceFetch](#forcefetch)
-        1. [Custom Resource Names](#custom-resource-names)
         1. [options](#options)
         1. [attributes](#attributes)
+        1. [noncritical](#noncritical)
+        1. [forceFetch](#forcefetch)
+        1. [Custom Resource Names](#custom-resource-names)
         1. [prefetches](#prefetches)
         1. [status](#status)
     1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
     1. [Prefetch on Hover](#prefetch-on-hover)
+    1. [Tracking Request Times](#tracking-request-times)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 
@@ -489,6 +489,34 @@ Now, as the prop fields change, the data sent with the request changes as well (
 
 `https://example.com/users/noahgrant/todos?limit=20&end_time=1494611831024&start_time=1492019831024&sort_field=importance`
 
+### options 
+
+[As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `constructor` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
+
+```js
+const getResources = (props, ResourceKeys) => {
+  const now = Date.now();
+      
+  return {
+    [ResourceKeys.USER_TODOS]: {
+      data: {
+        limit: 20,
+        end_time: now,
+        start_time: now - props.timeRange,
+        sort_field: props.sortField
+      },
+      options: {userId: props.userId}
+    }
+  };
+};
+```
+
+Here, the UserTodos collection will be instantiated with an options hash including the `userId` property, which it uses to construct its url. We'll also want to add the `'userId'` string to the collection's [static `cacheFields` array](#requesting-prop-driven-data), because each cached collection should be specific to the user.
+
+### attributes
+
+Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the model's [`constructor` method](https://backbonejs.org/#Model-constructor) along with the [`options`](#options) property, and is typically less useful than providing the properties directly to the [`data`](#data) property. Like `data` and `options`, the `attributes` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more).
+
   
 ### noncritical
 
@@ -499,15 +527,6 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
 - Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer/utils`.
   
   
-
-
-### measure
-
-Passing a `measure: true` config option will record the time it takes for a particular resource to return and pass the data to the [track]() [configuration](#configuring-withresources) method that you can set up, sending it to your own app data aggregator. This allows you to see the effects of your endpoints from a user’s perspective.
-
-```js
-const getResources = (props, ResourceKeys) => ({[ResourceKeys.TODOS]: {measure: true}});
-```
 
 ### forceFetch
 
@@ -536,35 +555,6 @@ export default function MyComponentWithTodos {
 ```
 
 would still fetch the todos resource, but the properties returned/props passed to the `MyComponentWithTodos` instance will be `myRadTodosCollection`, `myRadTodosLoadingState`, and `myRadTodosStatus`, etc, as shown. This also allows us to fetch the same resource type multiple times for a single component.
-
-
-### options 
-
-[As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `constructor` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
-
-```js
-const getResources = (props, ResourceKeys) => {
-  const now = Date.now();
-      
-  return {
-    [ResourceKeys.USER_TODOS]: {
-      data: {
-        limit: 20,
-        end_time: now,
-        start_time: now - props.timeRange,
-        sort_field: props.sortField
-      },
-      options: {userId: props.userId}
-    }
-  };
-};
-```
-
-Here, the UserTodos collection will be instantiated with an options hash including the `userId` property, which it uses to construct its url. We'll also want to add the `'userId'` string to the collection's [static `cacheFields` array](#requesting-prop-driven-data), because each cached collection should be specific to the user.
-
-### attributes
-
-Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the model's [`constructor` method](https://backbonejs.org/#Model-constructor) along with the [`options`](#options) property, and is typically less useful than providing the properties directly to the [`data`](#data) property. Like `data` and `options`, the `attributes` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more).
 
 ### prefetches
 
@@ -764,6 +754,24 @@ const getTodos = (props, ResourceKeys) => {
 ```
 
 Note, as mentioned in the comment above, that `expectedProps` should take the form of props expected when the resource is actually needed. For example, maybe we're viewing a list of users, and so there is no `props.userId` in the component that uses `prefetch`. But for the user in the list with id `'noahgrant'`, we would pass it an `expectedProps` that includes `{userId: 'noahgrant'}` because we know that when we click on the link and navigate to that url, `props.userId` should be equal to `'noahgrant'`.
+
+## Tracking Request Times
+
+If you have a metrics aggregator and want to track API request times, you can do this by setting a `measure` static property on your model or collection. `measure` can either be a boolean or a function that returns a boolean. The function takes the resource config object as a parameter:
+
+```js
+import {Model} from 'resourcerer';
+
+class MyMeasuredModel extends Model {
+  // either a boolean, which will track every request of this model instance
+  static measure = true
+
+  // or a function that returns a boolean, which will track instance requests based on a condition
+  static measure = ({attributes={}}) => attributes.id === 'noahgrant'
+}
+```
+
+When the static `measure` property is/returns true, `resourcerer` will record the time it takes for that resource to return and pass the data to the [track configuration](#configuring-resourcerer) method that you can set up, sending it to your own app data aggregator. This allows you to see the effects of your endpoints from a user’s perspective.
 
 # Configuring `resourcerer`
 
