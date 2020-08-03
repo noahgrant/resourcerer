@@ -769,12 +769,9 @@ class MyMeasuredModel extends Model {
   // or a function that returns a boolean, which will track instance requests based on a condition
   static measure = ({attributes={}}) => attributes.id === 'noahgrant'
 }
+```
 
 When the static `measure` property is/returns true, `resourcerer` will record the time it takes for that resource to return and pass the data to the [track configuration](#configuring-resourcerer) method that you can set up, sending it to your own app data aggregator. This allows you to see the effects of your endpoints from a user’s perspective.
-
-```js
-const getResources = (props, ResourceKeys) => ({[ResourceKeys.TODOS]: {measure: true}});
-```
 
 # Configuring `resourcerer`
 
