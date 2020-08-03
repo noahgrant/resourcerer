@@ -9,7 +9,7 @@ import {
   Model,
   withResources
 } from '../lib/index';
-import {DecisionLogsCollection, UserModel} from './model-mocks';
+import {DecisionLogsCollection, DecisionsCollection, UserModel} from './model-mocks';
 import {
   findDataCarrier,
   findDataChild,
@@ -845,10 +845,14 @@ describe('withResources', () => {
     describe('that when set to true', () => {
       beforeEach(async(done) => {
         measure = true;
-        spyOn(ModelCache, 'get').and.returnValue(undefined);
+        spyOn(ModelCache, 'get').and.returnValue();
         dataChild = findDataChild(renderWithResources());
         await waitsFor(() => dataChild.props.hasLoaded);
         done();
+      });
+
+      afterEach(() => {
+        measure = false;
       });
 
       it('measures the request time', () => {
@@ -864,6 +868,63 @@ describe('withResources', () => {
           options: undefined,
           duration: 5
         });
+      });
+    });
+
+    describe('as a static property', () => {
+      beforeEach(() => {
+        spyOn(ModelCache, 'get').and.returnValue(undefined);
+      });
+
+      it('can be a boolean', async(done) => {
+        DecisionsCollection.measure = true;
+        dataChild = findDataChild(renderWithResources());
+        await waitsFor(() => dataChild.props.hasLoaded);
+
+        expect(markName).toEqual(ResourceKeys.DECISIONS);
+        expect(measureCount).toEqual(1);
+        expect(measureName).toEqual(ResourceKeys.DECISIONS);
+        expect(ResourcesConfig.track).toHaveBeenCalledWith('API Fetch', {
+          Resource: ResourceKeys.DECISIONS,
+          data: undefined,
+          options: undefined,
+          duration: 5
+        });
+
+        delete DecisionsCollection.measure;
+
+        done();
+      });
+
+      it('can be a function that returns a boolean', async(done) => {
+        DecisionsCollection.measure = ({data={}}) => data.include_deleted;
+
+        // no include_deleted here, so it shouldn't measure
+        dataChild = findDataChild(renderWithResources());
+        await waitsFor(() => dataChild.props.hasLoaded);
+
+        expect(markCount).toEqual(0);
+        expect(measureCount).toEqual(0);
+        expect(ResourcesConfig.track).not.toHaveBeenCalled();
+
+        ReactDOM.unmountComponentAtNode(jasmineNode);
+        // now it should measure
+        dataChild = findDataChild(renderWithResources({includeDeleted: true}));
+        await waitsFor(() => dataChild.props.hasLoaded);
+
+        expect(markName).toEqual(ResourceKeys.DECISIONS);
+        expect(measureCount).toEqual(1);
+        expect(measureName).toEqual(ResourceKeys.DECISIONS);
+        expect(ResourcesConfig.track).toHaveBeenCalledWith('API Fetch', {
+          Resource: ResourceKeys.DECISIONS,
+          data: {include_deleted: true},
+          options: undefined,
+          duration: 5
+        });
+
+        delete DecisionsCollection.measure;
+
+        done();
       });
     });
   });
