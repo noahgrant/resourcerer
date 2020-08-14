@@ -196,21 +196,43 @@ describe('useResources', () => {
     done();
   });
 
-  it('\'hasInitiallyLoaded\' is initially true if all critical models are passed', () => {
-    dataChild = findDataChild(renderUseResources({
-      decisionsCollection: new Schmackbone.Collection(),
-      userModel: new Schmackbone.Model()
-    }));
+  describe('\'hasInitiallyLoaded\' is initially true', () => {
+    it('if all critical models are passed', () => {
+      dataChild = findDataChild(renderUseResources({
+        decisionsCollection: new Schmackbone.Collection(),
+        userModel: new Schmackbone.Model()
+      }));
 
-    expect(dataChild.props.hasInitiallyLoaded).toBe(true);
-    unmountAndClearModelCache();
+      expect(dataChild.props.hasInitiallyLoaded).toBe(true);
+      unmountAndClearModelCache();
 
-    dataChild = findDataChild(renderUseResources({
-      // analystsCollection is noncritical
-      analystsCollection: new Schmackbone.Collection(),
-      userModel: new Schmackbone.Model()
-    }));
-    expect(dataChild.props.hasInitiallyLoaded).toBe(false);
+      dataChild = findDataChild(renderUseResources({
+        // analystsCollection is noncritical
+        analystsCollection: new Schmackbone.Collection(),
+        userModel: new Schmackbone.Model()
+      }));
+      expect(dataChild.props.hasInitiallyLoaded).toBe(false);
+    });
+
+    it('if the critical models already exist in the cache', () => {
+      var decisionsCollection = new Schmackbone.Collection(),
+          userModel = new Schmackbone.Model();
+
+      ModelCache.put('decisions', decisionsCollection);
+      ModelCache.put('userfraudLevel=high_userId=noah', userModel);
+      dataChild = findDataChild(renderUseResources());
+
+      expect(dataChild.props.hasLoaded).toBe(true);
+      expect(dataChild.props.hasInitiallyLoaded).toBe(true);
+      expect(dataChild.props.decisionsCollection).toEqual(decisionsCollection);
+      expect(dataChild.props.userModel).toEqual(userModel);
+      unmountAndClearModelCache();
+
+      ModelCache.remove('userfraudLevel=high_userId=noah');
+      dataChild = findDataChild(renderUseResources());
+      expect(dataChild.props.hasLoaded).toBe(false);
+      expect(dataChild.props.hasInitiallyLoaded).toBe(false);
+    });
   });
 
   it('resource keys get turned into props of the same name, with \'Model\' or ' +
@@ -1009,7 +1031,7 @@ describe('useResources', () => {
         await waitsFor(() => dataChild.props.searchQueryModel && haveCalledPrefetch);
         expect(dataChild.props.hasLoaded).toBe(true);
 
-        ReactDOM.unmountComponentAtNode(jasmineNode);
+        unmountAndClearModelCache();
         prefetchLoading = false;
         prefetchError = true;
         haveCalledPrefetch = false;
@@ -1019,7 +1041,7 @@ describe('useResources', () => {
         await waitsFor(() => dataChild.props.searchQueryModel && haveCalledPrefetch);
         expect(dataChild.props.hasLoaded).toBe(true);
 
-        ReactDOM.unmountComponentAtNode(jasmineNode);
+        unmountAndClearModelCache();
         prefetchError = false;
         searchQueryLoading = true;
         haveCalledPrefetch = false;
