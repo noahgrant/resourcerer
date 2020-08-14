@@ -1074,7 +1074,7 @@ describe('withResources', () => {
         await waitsFor(() => dataChild.props.searchQueryModel && haveCalledPrefetch);
         expect(dataChild.props.hasLoaded).toBe(true);
 
-        ReactDOM.unmountComponentAtNode(jasmineNode);
+        unmountAndClearModelCache();
         prefetchLoading = false;
         prefetchError = true;
         haveCalledPrefetch = false;
@@ -1084,7 +1084,7 @@ describe('withResources', () => {
         await waitsFor(() => dataChild.props.searchQueryModel && haveCalledPrefetch);
         expect(dataChild.props.hasLoaded).toBe(true);
 
-        ReactDOM.unmountComponentAtNode(jasmineNode);
+        unmountAndClearModelCache();
         prefetchError = false;
         searchQueryLoading = true;
         haveCalledPrefetch = false;
@@ -1208,6 +1208,12 @@ describe('withResources', () => {
     });
 
   describe('wrapping stateless functional components', () => {
+    beforeEach(() => {
+      // TODO: unclear why this needs to be removed explicitly instead of relying
+      // on unmountAndClearModelCache
+      ModelCache.remove('useruserId=noah');
+    });
+
     it('receive props normally', async(done) => {
       var FunctionComponent = (props) =>
             props.isLoading ?
