@@ -1,7 +1,16 @@
-import {camelize, hasErrored, hasLoaded, isLoading, isPending} from '../lib/utils';
+import {
+  camelize,
+  hasErrored,
+  hasLoaded,
+  isLoading,
+  isPending,
+  omit,
+  once,
+  pick
+} from '../lib/utils';
 import {LoadingStates} from '../lib/constants';
 
-describe('modelLoadingStatus', () => {
+describe('Utils', () => {
   describe('hasErrored method', () => {
     it('returns true if any loading state has errored', () => {
       expect(hasErrored([LoadingStates.ERROR, LoadingStates.LOADING])).toBe(true);
@@ -100,6 +109,43 @@ describe('modelLoadingStatus', () => {
 
     it('turns space-separated words into camelcase', () => {
       expect(camelize('space separated words')).toEqual('spaceSeparatedWords');
+    });
+  });
+
+  describe('once', () => {
+    it('invokes a function maximum once', () => {
+      var testFn = jasmine.createSpy('once'),
+          testFnOnce = once(testFn);
+
+      testFnOnce();
+      testFnOnce();
+      testFnOnce();
+      testFnOnce();
+      testFnOnce();
+      testFnOnce();
+
+      expect(testFn.calls.count()).toEqual(1);
+    });
+  });
+
+  describe('pick', () => {
+    it('picks an objects properties and returns a new object', () => {
+      expect(pick({foo: 'foo', bar: 'bar', baz: 'baz'}, 'foo', 'quux')).toEqual({foo: 'foo'});
+    });
+
+    it('works with defaults', () => {
+      expect(pick()).toEqual({});
+    });
+  });
+
+  describe('omit', () => {
+    it('omits an objects properties and returns a new object', () => {
+      expect(omit({foo: 'foo', bar: 'bar', baz: 'baz'}, 'foo', 'quux'))
+          .toEqual({bar: 'bar', baz: 'baz'});
+    });
+
+    it('works with defaults', () => {
+      expect(omit()).toEqual({});
     });
   });
 });
