@@ -31,7 +31,7 @@ const getResources = (props) => ({
   },
   [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
-    ...props.withId ? {attributes: {id: props.userId}} : {},
+    attributes: {id: props.withId ? props.userId : null},
     options: {
       userId: props.userId,
       fraudLevel: props.fraudLevel,
