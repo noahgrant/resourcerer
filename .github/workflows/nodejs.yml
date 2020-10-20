@@ -24,6 +24,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm ci && npm i react react-dom
+    - run: npm ci && npm i react@16 react-dom@16
     - run: npm run lint
     - run: npm test
