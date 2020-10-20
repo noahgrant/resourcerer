@@ -11,6 +11,7 @@
 Using `dependsOn` in simple cases like the one highlighted in the [README](https://github.com/noahgrant/resourcerer/blob/master/README.md) is pretty straightforward and very powerful. But `PENDING` resources bring additional complexities to your resource logic, some of which are enumerated here:
 
 
+
 1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `this.props.hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
     
 1. When a `PENDING` resource request is not in flight, its model prop will be an empty model instance whose properties are frozen (the same happens when the resource has `ERRORED`). This is to more predictably handle our resources in our components. We don’t need to be defensive with syntax like:
