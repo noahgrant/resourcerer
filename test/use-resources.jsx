@@ -1,12 +1,7 @@
 import * as Request from '../lib/request';
 
-import {DecisionsCollection, UserModel} from './model-mocks';
-import {
-  EMPTY_COLLECTION,
-  EMPTY_MODEL,
-  getCacheKey,
-  useResources
-} from '../lib/index';
+import {DecisionsCollection, NotesModel, UserModel} from './model-mocks';
+import {getCacheKey, useResources} from '../lib/index';
 import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 
@@ -593,11 +588,12 @@ describe('useResources', () => {
       await waitsFor(() => dataChild.props.hasLoaded);
       // these are our two critical resources, whose models have been placed in
       // the cache before fetching
-      expect(dataChild.props.decisionsCollection).not.toEqual(EMPTY_COLLECTION);
-      expect(dataChild.props.userModel).not.toEqual(EMPTY_MODEL);
+      expect(dataChild.props.decisionsCollection.isEmptyModel).not.toBeDefined();
+      expect(dataChild.props.userModel.isEmptyModel).not.toBeDefined();
 
       // however, this is a pending resource, so it should not be in the cache
-      expect(dataChild.props.notesModel).toEqual(EMPTY_MODEL);
+      expect(dataChild.props.notesModel.isEmptyModel).toBe(true);
+      expect(dataChild.props.notesModel instanceof NotesModel).toBe(true);
 
       unmountAndClearModelCache();
 
@@ -607,8 +603,11 @@ describe('useResources', () => {
 
       await waitsFor(() => dataChild.props.hasErrored);
 
-      expect(dataChild.props.decisionsCollection).toEqual(EMPTY_COLLECTION);
-      expect(dataChild.props.userModel).toEqual(EMPTY_MODEL);
+      expect(dataChild.props.decisionsCollection.isEmptyModel).toBe(true);
+      expect(dataChild.props.decisionsCollection instanceof DecisionsCollection).toBe(true);
+
+      expect(dataChild.props.userModel.isEmptyModel).toBe(true);
+      expect(dataChild.props.userModel instanceof UserModel).toBe(true);
       done();
     });
 
@@ -919,7 +918,7 @@ describe('useResources', () => {
       // we have a new model cache key for the dependent model because
       // the value of serialProp has changed. so the cache lookup should
       // again be empty
-      expect(dataChild.props.decisionLogsCollection).toEqual(EMPTY_COLLECTION);
+      expect(dataChild.props.decisionLogsCollection.isEmptyModel).toBe(true);
       done();
     });
   });
