@@ -1,6 +1,6 @@
 import * as Request from '../lib/request';
 
-import {DecisionsCollection, NotesModel, UserModel} from './model-mocks';
+import {AnalystsCollection, DecisionsCollection, NotesModel, UserModel} from './model-mocks';
 import {getCacheKey, useResources} from '../lib/index';
 import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
@@ -19,7 +19,10 @@ const transformSpy = jasmine.createSpy('transform');
 const jasmineNode = document.createElement('div');
 
 const getResources = (props) => ({
-  [ResourceKeys.ANALYSTS]: {noncritical: true, options: {noResolve: props.noResolve}},
+  [ResourceKeys.ANALYSTS]: {
+    noncritical: true,
+    data: {shouldError: props.analystsError}
+  },
   [ResourceKeys.DECISIONS]: {
     ...(props.includeDeleted ? {data: {include_deleted: true}} : {}),
     measure
@@ -27,12 +30,11 @@ const getResources = (props) => ({
   [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
     attributes: {id: props.withId ? props.userId : null},
-    options: {
-      userId: props.userId,
-      fraudLevel: props.fraudLevel,
-      ...(props.delay ? {delay: props.delay} : {}),
-      ...(props.shouldError ? {shouldError: true} : {})
-    }
+    data: {
+      ...(props.shouldError ? {shouldError: true} : {}),
+      ...(props.delay ? {delay: props.delay} : {})
+    },
+    options: {userId: props.userId, fraudLevel: props.fraudLevel}
   },
   ...props.prefetch ? {
     [ResourceKeys.SEARCH_QUERY]: {
@@ -72,7 +74,6 @@ describe('useResources', () => {
 
       requestSpy,
       shouldResourcesError,
-      cached,
       delayedResourceComplete,
 
       defaultProps = {
@@ -85,49 +86,41 @@ describe('useResources', () => {
         ReactDOM.render(<TestWrapper {...defaultProps} {...props} />, jasmineNode);
 
   beforeEach(() => {
-    UserModel.realCacheFields = UserModel.cacheFields;
-    UserModel.cacheFields = ['userId', 'fraudLevel', 'id'];
-    document.body.appendChild(jasmineNode);
-
-    requestSpy = spyOn(Request, 'default').and.callFake((key, Model, options) => {
-      // mock fetch model cache behavior, where we put it in the cache immediately,
-      // then request the model, and only if it errors do we remove it from cache
-      var model = ModelCache.get(key) || new Schmackbone.Model({key, ...(options.data || {})});
-
-      ModelCache.put(key, model, options.component);
-
+    var fetchMock = function(options) {
       return new Promise((res, rej) => {
-        if ((options.options || {}).noResolve) {
-          return;
+        // do this just to help identify and differentiate our models
+        if (options.data) {
+          this.data = options.data;
         }
 
-        if ((options.options || {}).delay) {
+        if ((options.data || {}).delay) {
           return window.setTimeout(() => {
             delayedResourceComplete = true;
-            ModelCache.remove(key);
-            rej([model]);
-          }, options.options.delay);
+
+            rej([this, {status: 404}]);
+          }, options.data.delay);
         }
 
-        if (cached) {
-          // treat model as though it were cached by resolving promise immediately
-          return res([model]);
-        }
-
-        // put requests in a RAF to 'mimic' the procession of non-cached
-        // resources (ie, loading states get set because we don't immediately
-        // resolve the promise)
+        // just wait a frame to keep the promise callbacks from getting invoked
+        // in the same JS frame
         window.requestAnimationFrame(() => {
-          if (shouldResourcesError || (options.options || {}).shouldError) {
-            ModelCache.remove(key);
+          window.requestAnimationFrame(() => {
+            if (shouldResourcesError || (options.data || {}).shouldError) {
+              rej([this, {status: 404}]);
+            }
 
-            rej([model, 404]);
-          } else {
-            res([model, 200]);
-          }
+            res([this, {}, {response: {status: 200}}]);
+          });
         });
       });
-    });
+    };
+
+    UserModel.realCacheFields = UserModel.cacheFields;
+    document.body.appendChild(jasmineNode);
+
+    requestSpy = spyOn(Request, 'default').and.callThrough();
+    spyOn(Schmackbone.Model.prototype, 'fetch').and.callFake(fetchMock);
+    spyOn(Schmackbone.Collection.prototype, 'fetch').and.callFake(fetchMock);
 
     // phantomjs has a performance object, but no individual methods
     window.performance = {
@@ -143,17 +136,18 @@ describe('useResources', () => {
     spyOn(ModelCache, 'unregister').and.callThrough();
   });
 
-  afterEach(() => {
+  afterEach(async(done) => {
     UserModel.cacheFields = UserModel.realCacheFields;
 
+    dataChild = null;
     window.performance = originalPerf;
     unmountAndClearModelCache();
     jasmineNode.remove();
     shouldResourcesError = false;
+    done();
   });
 
   it('fetches all resources before mounting', async(done) => {
-    requestSpy.and.returnValue({then: (res) => ({catch: () => false})});
     dataChild = findDataChild(renderUseResources());
 
     await waitsFor(() => requestSpy.calls.count());
@@ -179,11 +173,11 @@ describe('useResources', () => {
   });
 
   it('resources marked as noncritical don\'t factor into the loading props', async(done) => {
-    dataChild = findDataChild(renderUseResources({noResolve: true}));
+    dataChild = findDataChild(renderUseResources({analystsError: true}));
 
     await waitsFor(() => dataChild.props.hasLoaded);
 
-    expect(dataChild.props.analystsLoadingState).toEqual(LoadingStates.LOADING);
+    expect(dataChild.props.analystsLoadingState).toEqual(LoadingStates.ERROR);
     expect(dataChild.props.hasLoaded).toBe(true);
     expect(dataChild.props.hasInitiallyLoaded).toBe(true);
     expect(dataChild.props.isLoading).toBe(false);
@@ -194,8 +188,8 @@ describe('useResources', () => {
   describe('\'hasInitiallyLoaded\' is initially true', () => {
     it('if all critical models are passed', () => {
       dataChild = findDataChild(renderUseResources({
-        decisionsCollection: new Schmackbone.Collection(),
-        userModel: new Schmackbone.Model()
+        decisionsCollection: new DecisionsCollection(),
+        userModel: new UserModel()
       }));
 
       expect(dataChild.props.hasInitiallyLoaded).toBe(true);
@@ -203,8 +197,8 @@ describe('useResources', () => {
 
       dataChild = findDataChild(renderUseResources({
         // analystsCollection is noncritical
-        analystsCollection: new Schmackbone.Collection(),
-        userModel: new Schmackbone.Model()
+        analystsCollection: new AnalystsCollection(),
+        userModel: new UserModel()
       }));
       expect(dataChild.props.hasInitiallyLoaded).toBe(false);
     });
@@ -237,9 +231,9 @@ describe('useResources', () => {
     await waitsFor(() => dataChild.props.hasLoaded);
 
     // keys in this case represent the returned models (since we're stubbing fetch)
-    expect(dataChild.props.decisionsCollection.get('key')).toEqual(ResourceKeys.DECISIONS);
-    expect(dataChild.props.userModel.get('key')).toBe('userfraudLevel=high_userId=noah');
-    expect(dataChild.props.analystsCollection.get('key')).toBe(ResourceKeys.ANALYSTS);
+    expect(dataChild.props.decisionsCollection instanceof DecisionsCollection).toBe(true);
+    expect(dataChild.props.userModel instanceof UserModel).toBe(true);
+    expect(dataChild.props.analystsCollection instanceof AnalystsCollection).toBe(true);
 
     done();
   });
@@ -356,17 +350,22 @@ describe('useResources', () => {
 
   it('listens to all resources', async(done) => {
     spyOn(Schmackbone.Model.prototype, 'on');
+    spyOn(Schmackbone.Model.prototype, 'off');
+    spyOn(Schmackbone.Collection.prototype, 'on');
+    spyOn(Schmackbone.Collection.prototype, 'off');
 
     dataChild = findDataChild(renderUseResources());
+    expect(Schmackbone.Model.prototype.on.calls.count()).toEqual(0);
 
     await waitsFor(() => dataChild.props.hasLoaded);
 
-    expect(Schmackbone.Model.prototype.on.calls.count()).toEqual(3);
-    expect(Schmackbone.Model.prototype.on.calls.argsFor(0)[2])
+    expect(Schmackbone.Model.prototype.on.calls.count()).toEqual(1);
+    expect(Schmackbone.Collection.prototype.on.calls.count()).toEqual(2);
+    expect(Schmackbone.Collection.prototype.on.calls.argsFor(0)[2])
         .toEqual(dataChild.props.analystsCollection);
-    expect(Schmackbone.Model.prototype.on.calls.argsFor(1)[2])
+    expect(Schmackbone.Collection.prototype.on.calls.argsFor(1)[2])
         .toEqual(dataChild.props.decisionsCollection);
-    expect(Schmackbone.Model.prototype.on.calls.argsFor(2)[2])
+    expect(Schmackbone.Model.prototype.on.calls.argsFor(0)[2])
         .toEqual(dataChild.props.userModel);
 
     done();
@@ -399,7 +398,7 @@ describe('useResources', () => {
   });
 
   it('listens to resources passed in via props', async(done) => {
-    var userModel = new Schmackbone.Model({name: 'goodUser'});
+    var userModel = new UserModel({name: 'goodUser'});
 
     class TestChild extends React.Component {
       render() {
@@ -425,6 +424,7 @@ describe('useResources', () => {
       var nextTick;
 
       spyOn(Schmackbone.Model.prototype, 'on');
+      spyOn(Schmackbone.Collection.prototype, 'on');
       dataChild = findDataChild(renderUseResources());
 
       // start mock clock now because we need to make assertions between when
@@ -437,6 +437,7 @@ describe('useResources', () => {
       await waitsFor(() => nextTick);
 
       expect(Schmackbone.Model.prototype.on).not.toHaveBeenCalled();
+      expect(Schmackbone.Collection.prototype.on).not.toHaveBeenCalled();
       expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADING);
       expect(dataChild.props.analystsLoadingState).toEqual(LoadingStates.LOADING);
       expect(dataChild.props.userLoadingState).toEqual(LoadingStates.LOADING);
@@ -466,7 +467,7 @@ describe('useResources', () => {
     });
 
   it('passes a false \'fetch\' option if the model key is of an unfetched model', async(done) => {
-    requestSpy.and.returnValue(Promise.resolve());
+    requestSpy.and.callFake(() => Promise.resolve([]));
     renderUseResources({unfetch: true});
 
     await waitsFor(() => requestSpy.calls.count());
@@ -537,7 +538,6 @@ describe('useResources', () => {
 
     afterEach(() => {
       delayedResourceComplete = null;
-      cached = null;
       jasmine.clock().uninstall();
     });
 
@@ -571,12 +571,11 @@ describe('useResources', () => {
       expect(dataChild.props.userLoadingState).toEqual(LoadingStates.ERROR);
 
       // trigger cWRP with a new user, but the user that's 'already cached'
-      cached = true;
       dataChild = findDataChild(renderUseResources({userId: 'zorah', fraudLevel: null}));
 
       // now assert that we turn back to a loaded state from the cached resource
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.userModel.get('key')).toEqual('useruserId=zorah');
+      expect(dataChild.props.userModel.userId).toEqual('zorah');
       done();
     });
   });
@@ -674,17 +673,17 @@ describe('useResources', () => {
       componentRef = requestSpy.calls.mostRecent().args[2].component;
 
       expect(ModelCache.put.calls.count()).toEqual(5);
-      expect(ModelCache.put.calls.argsFor(3)[0])
+      expect(ModelCache.put.calls.argsFor(2)[0])
           .toEqual('decisionInstanceentityId=noah_entityType=content');
-      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.DECISION_INSTANCE])
+      expect(ModelCache.put.calls.argsFor(2)[1] instanceof ModelMap[ResourceKeys.DECISION_INSTANCE])
+          .toBe(true);
+      expect(ModelCache.put.calls.argsFor(2)[2]).toEqual(componentRef);
+
+      expect(ModelCache.put.calls.argsFor(3)[0])
+          .toEqual('labelInstanceuserId=noah');
+      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
           .toBe(true);
       expect(ModelCache.put.calls.argsFor(3)[2]).toEqual(componentRef);
-
-      expect(ModelCache.put.calls.argsFor(4)[0])
-          .toEqual('labelInstanceuserId=noah');
-      expect(ModelCache.put.calls.argsFor(4)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
-          .toBe(true);
-      expect(ModelCache.put.calls.argsFor(4)[2]).toEqual(componentRef);
 
       done();
     });
@@ -713,11 +712,11 @@ describe('useResources', () => {
       ]).not.toContain(testKey);
 
       // label still gets called!
-      expect(ModelCache.put.calls.argsFor(3)[0])
+      expect(ModelCache.put.calls.argsFor(2)[0])
           .toEqual('labelInstanceuserId=noah');
-      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
+      expect(ModelCache.put.calls.argsFor(2)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
           .toBe(true);
-      expect(ModelCache.put.calls.argsFor(3)[2]).toEqual(componentRef);
+      expect(ModelCache.put.calls.argsFor(2)[2]).toEqual(componentRef);
 
       // same test model should exist at the test key
       expect(ModelCache.get(testKey)).toEqual(testModel);
@@ -736,9 +735,9 @@ describe('useResources', () => {
         ...config,
         shouldCache: () => false
       }));
-      renderUseResources();
+      dataChild = findDataChild(renderUseResources());
 
-      await waitsFor(() => Request.default.calls.count() === 3);
+      await waitsFor(() => dataChild.props.hasLoaded);
       expect(ModelCache.put.calls.count()).toEqual(3);
       done();
     });
@@ -900,6 +899,7 @@ describe('useResources', () => {
       await waitsFor(() => dataChild.props.serialProp);
       expect(requestSpy.calls.count()).toEqual(5);
       expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+      await waitsFor(() => dataChild.props.hasLoaded);
       done();
     });
 
@@ -930,10 +930,10 @@ describe('useResources', () => {
       dataChild = findDataChild(renderUseResources({serial: true}));
 
       expect(dataChild.props.serialProp).not.toBeDefined();
-      expect(transformSpy).toHaveBeenCalled();
+      await waitsFor(() => transformSpy.calls.count());
       actionsModel = transformSpy.calls.mostRecent().args[0];
-      expect(actionsModel instanceof Schmackbone.Model).toBe(true);
-      expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
+      expect(actionsModel instanceof Schmackbone.Collection).toBe(true);
+      expect(actionsModel.key).toEqual('actions');
 
       await waitsFor(() => dataChild.props.serialProp);
       expect(dataChild.props.serialProp).toEqual(42);
@@ -950,8 +950,8 @@ describe('useResources', () => {
       expect(transformSpy).toHaveBeenCalled();
 
       actionsModel = transformSpy.calls.mostRecent().args[0];
-      expect(actionsModel instanceof Schmackbone.Model).toBe(true);
-      expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
+      expect(actionsModel instanceof Schmackbone.Collection).toBe(true);
+      expect(actionsModel.key).toEqual('actions');
 
       await waitsFor(() => dataChild.props.provides1);
       expect(dataChild.props.provides1).toEqual('moose');
@@ -966,7 +966,7 @@ describe('useResources', () => {
 
       // first entry has data: {from: 0}
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
+      expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
       done();
     });
 
@@ -983,7 +983,7 @@ describe('useResources', () => {
             .filter((key) => /^searchQuery/.test(key)).length).toEqual(2);
 
         await waitsFor(() => dataChild.props.hasLoaded);
-        expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
+        expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
         done();
       });
 
@@ -1129,10 +1129,10 @@ describe('useResources', () => {
         'analysts'
       ]);
 
-      expect(dataChild.props.decisionsCollection.get('key')).toEqual('decisions');
+      expect(dataChild.props.decisionsCollection.key).toEqual('decisions');
       // key should be the same as for decisions, signaling that while fetch is
       // called ones for each resource, only one fetch would be made
-      expect(dataChild.props.customDecisionsCollection.get('key')).toEqual('decisions');
+      expect(dataChild.props.customDecisionsCollection.key).toEqual('decisions');
       expect(dataChild.props.decisionsLoadingState).toEqual('loaded');
       expect(dataChild.props.customDecisionsLoadingState).toEqual('loaded');
       expect(dataChild.props.customDecisionsStatus).toEqual(200);
@@ -1145,7 +1145,7 @@ describe('useResources', () => {
 
     dataChild = findDataChild(renderUseResources());
 
-    await waitsFor(() => requestSpy.calls.count() === 3);
+    await waitsFor(() => dataChild.props.hasLoaded);
     cachedModel = ModelCache.get('userfraudLevel=high_userId=noah');
     expect(cachedModel).toBeDefined();
 
@@ -1163,10 +1163,8 @@ describe('useResources', () => {
  * models have been removed for the next test.
  */
 function unmountAndClearModelCache() {
-  jasmine.clock().install();
   ReactDOM.unmountComponentAtNode(jasmineNode);
-  jasmine.clock().tick(150000);
-  jasmine.clock().uninstall();
+  ModelCache.__removeAll__();
 }
 
 // we wrap our functional component that uses useResources with React classes

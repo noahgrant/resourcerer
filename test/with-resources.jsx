@@ -7,7 +7,13 @@ import {
   Model,
   withResources
 } from '../lib/index';
-import {DecisionLogsCollection, DecisionsCollection, NotesModel, UserModel} from './model-mocks';
+import {
+  AnalystsCollection,
+  DecisionLogsCollection,
+  DecisionsCollection,
+  NotesModel,
+  UserModel
+} from './model-mocks';
 import {
   findDataCarrier,
   findDataChild,
@@ -45,12 +51,12 @@ const jasmineNode = document.createElement('div');
   },
   [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
-    ...props.withId ? {attributes: {id: props.userId}} : {},
-    options: {
-      userId: props.userId,
-      fraudLevel: props.fraudLevel,
+    attributes: {id: props.withId ? props.userId : null},
+    data: {
+      ...(props.shouldError ? {shouldError: true} : {}),
       ...(props.delay ? {delay: props.delay} : {})
-    }
+    },
+    options: {userId: props.userId, fraudLevel: props.fraudLevel}
   },
   ...props.prefetch ? {
     [ResourceKeys.SEARCH_QUERY]: {
@@ -102,7 +108,6 @@ describe('withResources', () => {
 
       requestSpy,
       shouldResourcesError,
-      cached,
       delayedResourceComplete,
 
       defaultProps = {
@@ -115,48 +120,44 @@ describe('withResources', () => {
         ReactDOM.render(<TestComponent {...defaultProps} {...props} />, jasmineNode);
 
   beforeEach(() => {
+    var fetchMock = function(options) {
+      return new Promise((res, rej) => {
+        // do this just to help identify and differentiate our models
+        if (options.data) {
+          this.data = options.data;
+        }
+
+        if ((options.data || {}).delay) {
+          return window.setTimeout(() => {
+            delayedResourceComplete = true;
+
+            rej([this, {status: 404}]);
+          }, options.data.delay);
+        }
+
+        // just wait a frame to keep the promise callbacks from getting invoked
+        // in the same JS frame
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            if (shouldResourcesError || (options.data || {}).shouldError) {
+              rej([this, {status: 404}]);
+            }
+
+            res([this, {}, {response: {status: 200}}]);
+          });
+        });
+      });
+    };
+
     UserModel.realCacheFields = UserModel.cacheFields;
     DecisionLogsCollection.realCacheFields = DecisionLogsCollection.cacheFields;
-    UserModel.cacheFields = ['userId', 'fraudLevel'];
     DecisionLogsCollection.cacheFields = null;
 
     document.body.appendChild(jasmineNode);
 
-    requestSpy = spyOn(Request, 'default').and.callFake((key, Const, options) => {
-      // mock fetch model cache behavior, where we put it in the cache immediately,
-      // then request the model, and only if it errors do we remove it from cache
-      var model = ModelCache.get(key) || new Schmackbone.Model({key, ...(options.data || {})});
-
-      ModelCache.put(key, model, options.component);
-
-      return new Promise((res, rej) => {
-        if ((options.options || {}).delay) {
-          return window.setTimeout(() => {
-            delayedResourceComplete = true;
-            ModelCache.remove(key);
-            rej([model]);
-          }, options.options.delay);
-        }
-
-        if (cached) {
-          // treat model as though it were cached by resolving promise immediately
-          return res([model]);
-        }
-
-        // put requests in a RAF to 'mimic' the procession of non-cached
-        // resources (ie, loading states get set because we don't immediately
-        // resolve the promise)
-        window.requestAnimationFrame(() => {
-          if (shouldResourcesError) {
-            ModelCache.remove(key);
-
-            rej([model, !model.isEmptyModel ? 404 : null]);
-          } else {
-            res([model, !model.isEmptyModel ? 200 : null]);
-          }
-        });
-      });
-    });
+    requestSpy = spyOn(Request, 'default').and.callThrough();
+    spyOn(Schmackbone.Model.prototype, 'fetch').and.callFake(fetchMock);
+    spyOn(Schmackbone.Collection.prototype, 'fetch').and.callFake(fetchMock);
 
     // phantomjs has a performance object, but no individual methods
     window.performance = {
@@ -169,6 +170,7 @@ describe('withResources', () => {
     };
 
     spyOn(ModelCache, 'put').and.callThrough();
+    spyOn(ModelCache, 'unregister').and.callThrough();
   });
 
   afterEach(() => {
@@ -231,7 +233,7 @@ describe('withResources', () => {
 
     dataChild = findDataChild(renderWithResources({
       // analystsCollection is noncritical
-      analystsCollection: new Schmackbone.Collection(),
+      analystsCollection: new AnalystsCollection(),
       userModel: new Schmackbone.Model()
     }));
     expect(dataChild.props.hasInitiallyLoaded).toBe(false);
@@ -244,9 +246,9 @@ describe('withResources', () => {
     await waitsFor(() => dataChild.props.hasLoaded);
 
     // keys in this case represent the returned models (since we're stubbing fetch)
-    expect(dataChild.props.decisionsCollection.get('key')).toEqual(ResourceKeys.DECISIONS);
-    expect(dataChild.props.userModel.get('key')).toBe('userfraudLevel=high_userId=noah');
-    expect(dataChild.props.analystsCollection.get('key')).toBe(ResourceKeys.ANALYSTS);
+    expect(dataChild.props.decisionsCollection.key).toEqual('decisions');
+    expect(dataChild.props.userModel.key).toBe('user');
+    expect(dataChild.props.analystsCollection.key).toBe('analysts');
 
     done();
   });
@@ -317,19 +319,16 @@ describe('withResources', () => {
   });
 
   describe('unregisters the component from the ModelCache', () => {
-    var unregisterSpy;
-
     beforeEach(async(done) => {
-      unregisterSpy = spyOn(ModelCache, 'unregister').and.callThrough();
       resources = renderWithResources();
       await waitsFor(() => findDataChild(resources).props.hasLoaded);
       done();
     });
 
     it('when a resource\'s field prop changes', () => {
-      expect(unregisterSpy).not.toHaveBeenCalled();
+      expect(ModelCache.unregister).not.toHaveBeenCalled();
       findDataCarrier(resources).props.setResourceState({userId: 'zorah'});
-      expect(unregisterSpy).toHaveBeenCalledWith(
+      expect(ModelCache.unregister).toHaveBeenCalledWith(
         findDataCarrier(resources),
         'userfraudLevel=high_userId=noah'
       );
@@ -338,9 +337,9 @@ describe('withResources', () => {
     it('when a component unmounts', () => {
       // note: assign dataCarrier reference here because after unmount the ref becomes null
       dataCarrier = findDataCarrier(resources);
-      expect(unregisterSpy).not.toHaveBeenCalled();
+      expect(ModelCache.unregister).not.toHaveBeenCalled();
       unmountAndClearModelCache();
-      expect(unregisterSpy).toHaveBeenCalledWith(dataCarrier);
+      expect(ModelCache.unregister).toHaveBeenCalledWith(dataCarrier);
     });
   });
 
@@ -367,19 +366,19 @@ describe('withResources', () => {
     modelsSubscribed = dataCarrier._getBackboneModels();
 
     expect(modelsSubscribed.length).toEqual(3);
-    expect(modelsSubscribed[0].get('key')).toEqual('analysts');
-    expect(modelsSubscribed[1].get('key')).toEqual('decisions');
-    expect(modelsSubscribed[2].get('key')).toEqual('userfraudLevel=high_userId=noah');
+    expect(modelsSubscribed[0].key).toEqual('analysts');
+    expect(modelsSubscribed[1].key).toEqual('decisions');
+    expect(modelsSubscribed[2].key).toEqual('user');
     done();
   });
 
   it('updates even PureComponents when a resource updates', async(done) => {
     var purey;
 
-    @withResources((props) => ({[ResourceKeys.DECISIONS]: {}}))
+    @withResources((props) => ({[ResourceKeys.NOTES]: {}}))
     class Purey extends React.PureComponent {
       render() {
-        return <p>{this.props.decisionsCollection.get('id')}</p>;
+        return <p>{this.props.notesModel.get('id')}</p>;
       }
     }
 
@@ -389,7 +388,7 @@ describe('withResources', () => {
     await waitsFor(() => purey.props.hasLoaded);
 
     expect(ReactDOM.findDOMNode(purey).textContent).toEqual('');
-    purey.props.decisionsCollection.set('id', 'adifferentid');
+    purey.props.notesModel.set('id', 'adifferentid');
     // it should update!!
     expect(ReactDOM.findDOMNode(purey).textContent).toEqual('adifferentid');
 
@@ -435,7 +434,8 @@ describe('withResources', () => {
       // wait til the next tick to ensure our resources have been 'fetched'
       await waitsFor(() => nextTick);
 
-      expect(dataCarrier._getBackboneModels().length).toEqual(3);
+      // this returns 0 because no model has been put in the cache since nothing has returned
+      expect(dataCarrier._getBackboneModels().length).toEqual(0);
       expect(attachListenersSpy).not.toHaveBeenCalled();
       expect(dataCarrier.state.decisionsLoadingState).toEqual(LoadingStates.LOADING);
       expect(dataCarrier.state.analystsLoadingState).toEqual(LoadingStates.LOADING);
@@ -460,9 +460,11 @@ describe('withResources', () => {
     expect(requestSpy.calls.argsFor(4)[2].prefetch).toBeDefined();
   });
 
-  it('passes a false \'fetch\' option if the model key is of an unfetched model', () => {
-    requestSpy.and.returnValue(Promise.resolve());
+  it('passes a false \'fetch\' option if the model key is of an unfetched model', async(done) => {
+    requestSpy.and.callFake(() => Promise.resolve([]));
     renderWithResources({unfetch: true});
+
+    await waitsFor(() => requestSpy.calls.count());
 
     expect(requestSpy.calls.argsFor(0)[2].fetch).toBe(true);
     expect(requestSpy.calls.argsFor(1)[2].fetch).toBe(true);
@@ -470,6 +472,7 @@ describe('withResources', () => {
     expect(requestSpy.calls.argsFor(2)[0]).toEqual('accountConfig');
     expect(requestSpy.calls.argsFor(2)[2].fetch).toBe(false);
     expect(requestSpy.calls.argsFor(3)[2].fetch).toBe(true);
+    done();
   });
 
   describe('creates a cache key', () => {
@@ -590,18 +593,19 @@ describe('withResources', () => {
 
     afterEach(() => {
       delayedResourceComplete = null;
-      cached = null;
       jasmine.clock().uninstall();
     });
 
     it('for a non-cached resource', async(done) => {
       dataChild = findDataChild(renderWithResources({delay: 5000}));
-      expect(requestSpy.calls.count()).toEqual(3);
+
+      await waitsFor(() => requestSpy.calls.count() === 3);
+
       dataChild = findDataChild(renderWithResources({userId: 'zorah'}));
 
       await waitsFor(() => dataChild.props.hasLoaded);
 
-      expect(requestSpy.calls.count()).toEqual(4);
+      await waitsFor(() => requestSpy.calls.count() === 4);
       jasmine.clock().tick(6000);
 
       await waitsFor(() => delayedResourceComplete);
@@ -626,12 +630,11 @@ describe('withResources', () => {
       expect(dataChild.props.userLoadingState).toEqual('error');
 
       // trigger cWRP with a new user, but the user that's 'already cached'
-      cached = true;
       dataChild = findDataChild(renderWithResources({userId: 'zorah', fraudLevel: null}));
 
       // now assert that we turn back to a loaded state from the cached resource
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.userModel.get('key')).toEqual('useruserId=zorah');
+      expect(dataChild.props.userModel.userId).toEqual('zorah');
       done();
     });
   });
@@ -726,17 +729,17 @@ describe('withResources', () => {
       await waitsFor(() => dataChild.props.hasLoaded);
 
       expect(ModelCache.put.calls.count()).toEqual(5);
-      expect(ModelCache.put.calls.argsFor(3)[0])
+      expect(ModelCache.put.calls.argsFor(2)[0])
           .toEqual('decisionInstanceentityId=noah_entityType=content');
-      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.DECISION_INSTANCE])
+      expect(ModelCache.put.calls.argsFor(2)[1] instanceof ModelMap[ResourceKeys.DECISION_INSTANCE])
+          .toBe(true);
+      expect(ModelCache.put.calls.argsFor(2)[2]).toEqual(dataCarrier);
+
+      expect(ModelCache.put.calls.argsFor(3)[0])
+          .toEqual('labelInstanceuserId=noah');
+      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
           .toBe(true);
       expect(ModelCache.put.calls.argsFor(3)[2]).toEqual(dataCarrier);
-
-      expect(ModelCache.put.calls.argsFor(4)[0])
-          .toEqual('labelInstanceuserId=noah');
-      expect(ModelCache.put.calls.argsFor(4)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
-          .toBe(true);
-      expect(ModelCache.put.calls.argsFor(4)[2]).toEqual(dataCarrier);
 
       done();
     });
@@ -764,11 +767,11 @@ describe('withResources', () => {
       ]).not.toContain(testKey);
 
       // label still gets called!
-      expect(ModelCache.put.calls.argsFor(3)[0])
+      expect(ModelCache.put.calls.argsFor(2)[0])
           .toEqual('labelInstanceuserId=noah');
-      expect(ModelCache.put.calls.argsFor(3)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
+      expect(ModelCache.put.calls.argsFor(2)[1] instanceof ModelMap[ResourceKeys.LABEL_INSTANCE])
           .toBe(true);
-      expect(ModelCache.put.calls.argsFor(3)[2]).toEqual(dataCarrier);
+      expect(ModelCache.put.calls.argsFor(2)[2]).toEqual(dataCarrier);
 
       // same test model should exist at the test key
       expect(ModelCache.get(testKey)).toEqual(testModel);
@@ -785,7 +788,7 @@ describe('withResources', () => {
       }));
       ({dataChild, dataCarrier} = getRenderedResourceComponents(renderWithResources()));
 
-      await waitsFor(() => Request.default.calls.count() === 3);
+      await waitsFor(() => dataChild.props.hasLoaded);
       expect(ModelCache.put.calls.count()).toEqual(3);
       done();
     });
@@ -946,6 +949,7 @@ describe('withResources', () => {
       await waitsFor(() => dataCarrier.props.serialProp);
       expect(requestSpy.calls.count()).toEqual(5);
       expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+      await waitsFor(() => dataChild.props.hasLoaded);
       done();
     });
 
@@ -959,8 +963,8 @@ describe('withResources', () => {
       await waitsFor(() => hasLoaded(dataCarrier.state.decisionLogsLoadingState));
       resources.setState({serialProp: null});
 
-      await waitsFor(() => !dataCarrier.props.serialProp);
-      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
+      await waitsFor(() => dataCarrier.state.decisionLogsLoadingState === 'pending');
+      expect(!!dataCarrier.props.serialProp).toBe(false);
       // we have a new model cache key for the dependent model because
       // the value of serialProp has changed. so the cache lookup should
       // again be empty
@@ -976,10 +980,10 @@ describe('withResources', () => {
       dataCarrier = findDataCarrier(renderWithResources({serial: true}));
 
       expect(dataCarrier.props.serialProp).not.toBeDefined();
-      expect(transformSpy).toHaveBeenCalled();
+      await waitsFor(() => transformSpy.calls.count());
       actionsModel = transformSpy.calls.mostRecent().args[0];
-      expect(actionsModel instanceof Schmackbone.Model).toBe(true);
-      expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
+      expect(actionsModel instanceof Schmackbone.Collection).toBe(true);
+      expect(actionsModel.key).toEqual('actions');
 
       await waitsFor(() => dataCarrier.props.serialProp);
       expect(dataCarrier.props.serialProp).toEqual(42);
@@ -996,8 +1000,8 @@ describe('withResources', () => {
       expect(transformSpy).toHaveBeenCalled();
 
       actionsModel = transformSpy.calls.mostRecent().args[0];
-      expect(actionsModel instanceof Schmackbone.Model).toBe(true);
-      expect(actionsModel.get('key')).toEqual(ResourceKeys.ACTIONS);
+      expect(actionsModel instanceof Schmackbone.Collection).toBe(true);
+      expect(actionsModel.key).toEqual('actions');
 
       await waitsFor(() => dataCarrier.props.provides1);
       expect(dataCarrier.props.provides1).toEqual('moose');
@@ -1012,7 +1016,7 @@ describe('withResources', () => {
 
       // first entry has data: {from: 0}
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
+      expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
       done();
     });
 
@@ -1028,7 +1032,7 @@ describe('withResources', () => {
             .filter((key) => /^searchQuery/.test(key)).length).toEqual(2);
 
         await waitsFor(() => dataChild.props.hasLoaded);
-        expect(dataChild.props.searchQueryModel.get('from')).toEqual(0);
+        expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
         done();
       });
 
@@ -1197,10 +1201,10 @@ describe('withResources', () => {
       expect(dataChild.props.sift).not.toBeDefined();
 
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.decisionsCollection.get('key')).toEqual('decisions');
+      expect(dataChild.props.decisionsCollection.key).toEqual('decisions');
       // key should be the same as for decisions, signaling that while fetch is
       // called ones for each resource, only one fetch would be made
-      expect(dataChild.props.customDecisionsCollection.get('key')).toEqual('decisions');
+      expect(dataChild.props.customDecisionsCollection.key).toEqual('decisions');
       expect(dataChild.props.decisionsLoadingState).toEqual('loaded');
       expect(dataChild.props.customDecisionsLoadingState).toEqual('loaded');
       expect(dataChild.props.customDecisionsStatus).toEqual(200);
@@ -1221,7 +1225,7 @@ describe('withResources', () => {
               <span>LOADING</span> :
               <p>Hello, {props.userModel.id}</p>,
           WrappedFunctionComponent = withResources((props) => (
-            {[ResourceKeys.USER]: {options: {userId: props.userId}, data: {id: props.userId}}}
+            {[ResourceKeys.USER]: {options: {userId: props.userId}, attributes: {id: props.userId}}}
           ))(FunctionComponent);
 
       ({dataCarrier, resources} = getRenderedResourceComponents(
@@ -1229,7 +1233,7 @@ describe('withResources', () => {
       ));
       expect(ReactDOM.findDOMNode(resources).textContent).toEqual('LOADING');
       expect(requestSpy.calls.count()).toEqual(1);
-      expect(requestSpy.calls.mostRecent().args[0]).toEqual('useruserId=noah');
+      expect(requestSpy.calls.mostRecent().args[0]).toEqual('userid=noah_userId=noah');
 
       // wait for model to load and verify function updates
       await waitsFor(() => hasLoaded(dataCarrier.state.userLoadingState));
@@ -1240,7 +1244,7 @@ describe('withResources', () => {
       dataCarrier.props.setResourceState({userId: 'zorah'});
       expect(ReactDOM.findDOMNode(resources).textContent).toEqual('LOADING');
       expect(requestSpy.calls.count()).toEqual(2);
-      expect(requestSpy.calls.mostRecent().args[0]).toEqual('useruserId=zorah');
+      expect(requestSpy.calls.mostRecent().args[0]).toEqual('userid=zorah_userId=zorah');
 
       await waitsFor(() => hasLoaded(dataCarrier.state.userLoadingState));
 
@@ -1256,7 +1260,7 @@ describe('withResources', () => {
               <p onClick={() => props.userModel.set({id: 'zorah'})}>Hello, {props.userModel.id}</p>,
           WrappedFunctionComponent = withResources((props) => ({
             [ResourceKeys.USER]: {
-              data: {id: props.userId},
+              attributes: {id: props.userId},
               options: {userId: props.userId}
             }
           }))(FunctionComponent);
@@ -1266,7 +1270,7 @@ describe('withResources', () => {
       ));
       expect(ReactDOM.findDOMNode(resources).textContent).toEqual('LOADING');
       expect(requestSpy.calls.count()).toEqual(1);
-      expect(requestSpy.calls.mostRecent().args[0]).toEqual('useruserId=noah');
+      expect(requestSpy.calls.mostRecent().args[0]).toEqual('userid=noah_userId=noah');
 
       // wait for model to load and verify function updates
       await waitsFor(() => hasLoaded(dataCarrier.state.userLoadingState));
@@ -1287,16 +1291,19 @@ describe('withResources', () => {
               props.isLoading ?
                 <span>LOADING</span> :
                 <p>Hello, {props.userModel.id}</p>),
-            WrappedFunctionComponent = withResources((props) => (
-              {[ResourceKeys.USER]: {options: {userId: props.userId}, data: {id: props.userId}}}
-            ))(FunctionComponent);
+            WrappedFunctionComponent = withResources((props) => ({
+              [ResourceKeys.USER]: {
+                options: {userId: props.userId},
+                attributes: {id: props.userId}
+              }
+            }))(FunctionComponent);
 
         ({dataCarrier, resources} = getRenderedResourceComponents(
           ReactDOM.render(<WrappedFunctionComponent {...defaultProps} />, jasmineNode)
         ));
         expect(ReactDOM.findDOMNode(resources).textContent).toEqual('LOADING');
         expect(requestSpy.calls.count()).toEqual(1);
-        expect(requestSpy.calls.mostRecent().args[0]).toEqual('useruserId=noah');
+        expect(requestSpy.calls.mostRecent().args[0]).toEqual('userid=noah_userId=noah');
 
         // wait for model to load and verify function updates
         await waitsFor(() => hasLoaded(dataCarrier.state.userLoadingState));
@@ -1307,7 +1314,7 @@ describe('withResources', () => {
         dataCarrier.props.setResourceState({userId: 'zorah'});
         expect(ReactDOM.findDOMNode(resources).textContent).toEqual('LOADING');
         expect(requestSpy.calls.count()).toEqual(2);
-        expect(requestSpy.calls.mostRecent().args[0]).toEqual('useruserId=zorah');
+        expect(requestSpy.calls.mostRecent().args[0]).toEqual('userid=zorah_userId=zorah');
 
         await waitsFor(() => hasLoaded(dataCarrier.state.userLoadingState));
 
@@ -1326,7 +1333,7 @@ describe('withResources', () => {
                 )),
             WrappedFunctionComponent = withResources((props) => ({
               [ResourceKeys.USER]: {
-                data: {id: props.userId},
+                attributes: {id: props.userId},
                 options: {userId: props.userId}
               }
             }))(FunctionComponent);
@@ -1336,7 +1343,7 @@ describe('withResources', () => {
         ));
         expect(ReactDOM.findDOMNode(resources).textContent).toEqual('LOADING');
         expect(requestSpy.calls.count()).toEqual(1);
-        expect(requestSpy.calls.mostRecent().args[0]).toEqual('useruserId=noah');
+        expect(requestSpy.calls.mostRecent().args[0]).toEqual('userid=noah_userId=noah');
 
         // wait for model to load and verify function updates
         await waitsFor(() => hasLoaded(dataCarrier.state.userLoadingState));
@@ -1362,10 +1369,9 @@ describe('withResources', () => {
   it('recaches models that get an id for the first time', async() => {
     var cachedModel;
 
-    UserModel.cacheFields = ['userId', 'fraudLevel', 'id'];
     dataChild = findDataChild(renderWithResources());
 
-    await waitsFor(() => requestSpy.calls.count() === 3);
+    await waitsFor(() => dataChild.props.hasLoaded);
     cachedModel = ModelCache.get('userfraudLevel=high_userId=noah');
     expect(cachedModel).toBeDefined();
 
@@ -1384,8 +1390,6 @@ describe('withResources', () => {
  * models have been removed for the next test.
  */
 function unmountAndClearModelCache() {
-  jasmine.clock().install();
   ReactDOM.unmountComponentAtNode(jasmineNode);
-  jasmine.clock().tick(150000);
-  jasmine.clock().uninstall();
+  ModelCache.__removeAll__();
 }

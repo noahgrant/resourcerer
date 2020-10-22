@@ -96,24 +96,33 @@ describe('Request', () => {
     });
 
     it('puts a model in the ModelCache', async(done) => {
-      waitSuccess = true;
-      await request('newModel', Schmackbone.Model, {component});
+      var modelRequest;
 
+      waitSuccess = true;
+      modelRequest = request('newModel', Schmackbone.Model, {component});
+
+      expect(existsInCache('newModel')).toBe(false);
+      expect(ModelCache.put).not.toHaveBeenCalled();
+
+      await modelRequest;
       expect(existsInCache('newModel')).toBe(true);
       expect(ModelCache.get('newModel')).toBeDefined();
       expect(ModelCache.put).toHaveBeenCalled();
 
       unregisterComponent(component);
 
-      await request('newModel2', Schmackbone.Model, {prefetch: true});
+      modelRequest = request('newModel2', Schmackbone.Model, {prefetch: true});
+      expect(existsInCache('newModel2')).toBe(false);
+      expect(ModelCache.get('newModel2')).not.toBeDefined();
+      expect(ModelCache.put.calls.count()).toEqual(1);
 
+      await modelRequest;
       expect(existsInCache('newModel2')).toBe(true);
       expect(ModelCache.get('newModel2')).toBeDefined();
       expect(ModelCache.put.calls.count()).toEqual(2);
       // haven't called register since no component was passed
       expect(ModelCache.register.calls.count()).toEqual(1);
 
-      await request('newModel2', Schmackbone.Model, {prefetch: true});
       done();
     });
 
@@ -258,20 +267,8 @@ describe('Request', () => {
           resultingModel = model;
         });
 
-        expect(ModelCache.get(CACHE_KEY)).toBeDefined();
-
         await waitsFor(() => resultingModel instanceof Schmackbone.Model);
         expect(ModelCache.get(CACHE_KEY)).not.toBeDefined();
-
-        resultingModel = null;
-
-        // now let's try legacy cache, without model cache
-        request(CACHE_KEY, Schmackbone.Model).catch(([model]) => {
-          resultingModel = model;
-        });
-
-        await waitsFor(() => resultingModel instanceof Schmackbone.Model);
-        expect(existsInCache(CACHE_KEY)).toBe(false);
 
         waitSuccess = false;
         reject = false;
