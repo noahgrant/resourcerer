@@ -14,7 +14,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 
 1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `this.props.hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
     
-1. When a `PENDING` resource request is not in flight, its model prop will be an empty model instance whose properties are frozen (the same happens when the resource has `ERRORED`). This is to more predictably handle our resources in our components. We don’t need to be defensive with syntax like:
+1. When a `PENDING` resource request is not in flight, its model prop will still be the empty model instance whose properties are frozen (as happens when the resource is in the other three possible loading states). This is to more predictably handle our resources in our components. We don’t need to be defensive with syntax like:
 
    ```js
    this.props.todosCollection && this.props.todosCollection.toJSON(); // unnecessary
@@ -25,8 +25,6 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
    ```js
    this.props.todosCollection.myInstanceMethod(); // guaranteed not to error regardless of loading state
    ```
-    
-    1. When a resource is `LOADING`, its model prop will likely be the same empty model instance as in the `PENDING`/`ERRORED` state. I say likely because just before fetching, a new model is instantiated and put in the cache, initialized with any data passed to it via the executor function. However, unless your component re-renders between requesting and returning, that model won't get surfaced to the component until after returning. This instance is the same instance of the model that will be populated when it is `LOADED`. This is all an implementation detail that will likely never need to be considered in development.
         
 1. When a previously-`PENDING` but currently `LOADED` resource has its dependent prop removed, it goes back to a `PENDING` state (recall that if the dependent prop is changed, it gets put back into a `LOADING` state while the new resource is fetched). This puts us in an interesting state:
     
