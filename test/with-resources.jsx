@@ -108,7 +108,6 @@ describe('withResources', () => {
 
       requestSpy,
       shouldResourcesError,
-      delayedResourceComplete,
 
       defaultProps = {
         userId: 'noah',
@@ -129,8 +128,6 @@ describe('withResources', () => {
 
         if ((options.data || {}).delay) {
           return window.setTimeout(() => {
-            delayedResourceComplete = true;
-
             rej([this, {status: 404}]);
           }, options.data.delay);
         }
@@ -592,7 +589,6 @@ describe('withResources', () => {
     });
 
     afterEach(() => {
-      delayedResourceComplete = null;
       jasmine.clock().uninstall();
     });
 
@@ -608,7 +604,6 @@ describe('withResources', () => {
       await waitsFor(() => requestSpy.calls.count() === 4);
       jasmine.clock().tick(6000);
 
-      await waitsFor(() => delayedResourceComplete);
       // even though old resource errored, we're still in a loaded state!
       expect(dataChild.props.hasLoaded).toBe(true);
       done();
