@@ -1156,6 +1156,38 @@ describe('useResources', () => {
 
     expect(requestSpy.calls.count()).toEqual(4);
   });
+
+  it('still puts cached resource into a loading state before re-fetching, to keep in sync ' +
+      'with model', async(done) => {
+    var zorahModel = new UserModel(),
+        ok;
+
+    ModelCache.put('userfraudLevel=high_userId=zorah', zorahModel);
+    dataChild = findDataChild(renderUseResources());
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    // just leave it hanging for a bit so that we can actually make our loading state assertion
+    requestSpy.and.callFake(() => new Promise((res) => {
+      var interval = window.setInterval(() => {
+        if (ok) {
+          window.clearInterval(interval);
+          res([zorahModel]);
+        }
+      }, 100);
+    }));
+    dataChild = findDataChild(renderUseResources({userId: 'zorah'}));
+
+    await waitsFor(() => dataChild.props.userLoadingState === LoadingStates.LOADING);
+    expect(dataChild.props.hasLoaded).toBe(false);
+    ok = true;
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(dataChild.props.userLoadingState).toEqual(LoadingStates.LOADED);
+    expect(dataChild.props.hasLoaded).toBe(true);
+
+    done();
+  });
 });
 
 /**
