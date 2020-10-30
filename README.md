@@ -785,7 +785,7 @@ ResourcesConfig.set(configObj);
 
 `ResourcesConfig.set` accepts an object with any of the following properties:
 
-* `cacheGracePeriod` (number in ms): the length of time a resource will be kept in the cache after being scheduled for removal (see the [caching section](#caching-resources-with-modelcache) for more). Default 120000 (2 minutes).
+* `cacheGracePeriod` (number in ms): the length of time a resource will be kept in the cache after being scheduled for removal (see the [caching section](#caching-resources-with-modelcache) for more). **Default:** 120000 (2 minutes).
 
 * `errorBoundaryChild` (JSX/React.Element): the element or component that should be rendered in the ErrorBoundary included in every `withResources` wrapping. By default, a caught error renders this child:
 
@@ -795,13 +795,13 @@ ResourcesConfig.set(configObj);
 </div>
 ```
 
-* `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. Default noop.
+* `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. **Default:** noop.
 
-* `prefilter` (function): proxy for Schmackbone's [ajaxPrefilter](https://github.com/noahgrant/schmackbone#backboneajaxprefilter) method, which is a great place to add custom request headers (like auth headers) or do custom error response handling. See Schmackbone's documentation for more. Default noop.
+* `prefilter` (function): proxy for Schmackbone's [ajaxPrefilter](https://github.com/noahgrant/schmackbone#backboneajaxprefilter) method, which is a great place to add custom request headers (like auth headers) or do custom error response handling. See Schmackbone's documentation for more. **Default:** the identity function.
 
-* `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, and `useResources` will return `end_time` and `start_time` for ease of use in your executor function. Default `'urlParams'`.
+* `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, and `useResources` will return `end_time` and `start_time` for ease of use in your executor function. **Default:** `'urlParams'`.
 
-* `track` (function): method invoked when [`measure: true`](#measure) is passed in a resource's config. Use this hook to send the measured data to your application analytics tracker. Default noop. The method is invoked with two arguments:
+* `track` (function): method invoked when [`measure: true`](#measure) is passed in a resource's config. Use this hook to send the measured data to your application analytics tracker. **Default:** noop. The method is invoked with two arguments:
 
     * the event string, `'API Fetch'`
     * event data object with the following properties:
@@ -833,13 +833,11 @@ ResourcesConfig.set(configObj);
     
     Long answer:  
     
-    The `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. There are a couple of benefits to doing it this way instead of in `componentDidUpdate`:  
-    1. It avoids an extra render caused by setting state after an update has happened.
-    2. It allows us to read our models directly from the ModelCache and not set them as any sort of de-normalized state.
+    The `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit to using cWRP is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `withResources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
 
-    The downside is that it prevents `withResources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
-
-    The `useResources` React hook, on the other hand, will support async rendering. It also, however requires that extra render that the HOC avoids, and that its models are set as state.
+    The `useResources` React hook, on the other hand, will support async rendering. It also, however requires that extra render that the HOC avoids.
+    
+    In the future, we really have no choice but to migrate `withResources` to use `componentDidUpdate`, which will make it compatible with async rendering but will also have the extra render call.
 
         
 * Can the `withResources` HOC be used with both function components and class components?
