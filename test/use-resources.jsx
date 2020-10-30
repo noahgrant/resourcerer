@@ -1,6 +1,12 @@
 import * as Request from '../lib/request';
 
-import {AnalystsCollection, DecisionsCollection, NotesModel, UserModel} from './model-mocks';
+import {
+  AnalystsCollection,
+  DecisionLogsCollection,
+  DecisionsCollection,
+  NotesModel,
+  UserModel
+} from './model-mocks';
 import {getCacheKey, useResources} from '../lib/index';
 import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
@@ -886,11 +892,13 @@ describe('useResources', () => {
     beforeEach(async(done) => {
       dataChild = findDataChild(renderUseResources({serial: true}));
 
-      await waitsFor(() => requestSpy.calls.count());
+      expect(dataChild.props.decisionLogsLoadingState).toEqual(LoadingStates.PENDING);
       done();
     });
 
     it('will not fetch until the dependent prop is available', async(done) => {
+      await waitsFor(() => requestSpy.calls.count());
+
       expect(requestSpy.calls.count()).toEqual(4);
       expect(requestSpy.calls.all().map((call) => call.args[0])
           .includes(ResourceKeys.ACTIONS)).toBe(true);
@@ -904,8 +912,6 @@ describe('useResources', () => {
     });
 
     it('reverts back to pending state if its dependencies are removed', async(done) => {
-      expect(dataChild.props.decisionLogsLoadingState).toEqual(LoadingStates.PENDING);
-
       await waitsFor(() => dataChild.props.serialProp);
       expect(isLoading(dataChild.props.decisionLogsLoadingState)).toBe(true);
       expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
@@ -919,6 +925,31 @@ describe('useResources', () => {
       // the value of serialProp has changed. so the cache lookup should
       // again be empty
       expect(dataChild.props.decisionLogsCollection.isEmptyModel).toBe(true);
+      done();
+    });
+
+    it('stays in loaded state if removed dependent prop does not affect cache key', async(done) => {
+      var originalCacheFields = DecisionLogsCollection.cacheFields;
+
+      unmountAndClearModelCache();
+      DecisionLogsCollection.cacheFields = [];
+
+      dataChild = findDataChild(renderUseResources({serial: true}));
+
+      expect(dataChild.props.decisionLogsLoadingState).toEqual('pending');
+
+      await waitsFor(() => dataChild.props.serialProp);
+      expect(isLoading(dataChild.props.decisionLogsLoadingState)).toBe(true);
+      expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+
+      await waitsFor(() => hasLoaded(dataChild.props.decisionLogsLoadingState));
+      dataChild.props.setResourceState((state) => ({...state, serialProp: null}));
+
+      await waitsFor(() => !dataChild.props.serialProp);
+      expect(hasLoaded(dataChild.props.decisionLogsLoadingState)).toBe(true);
+      expect(!!dataChild.props.decisionLogsCollection.isEmptyModel).toBe(false);
+
+      DecisionLogsCollection.cacheFields = originalCacheFields;
       done();
     });
   });
