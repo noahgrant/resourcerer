@@ -60,7 +60,6 @@ const jasmineNode = document.createElement('div');
   },
   ...props.prefetch ? {
     [ResourceKeys.SEARCH_QUERY]: {
-      fields: ['page'],
       data: {from: props.page},
       prefetches: [{page: props.page + 10}]
     }
@@ -72,7 +71,10 @@ const jasmineNode = document.createElement('div');
         {_: transformSpy.and.returnValue({provides1: 'moose', provides2: 'theberner'})} :
         {serialProp: transformSpy.and.returnValue(42)}
     },
-    [ResourceKeys.DECISION_LOGS]: {fields: ['serialProp'], dependsOn: ['serialProp']}
+    [ResourceKeys.DECISION_LOGS]: {
+      options: {logs: props.serialProp},
+      dependsOn: ['serialProp']
+    }
   } : {},
   ...props.customName ? {
     customDecisions: {
@@ -147,8 +149,6 @@ describe('withResources', () => {
     };
 
     UserModel.realCacheFields = UserModel.cacheFields;
-    DecisionLogsCollection.realCacheFields = DecisionLogsCollection.cacheFields;
-    DecisionLogsCollection.cacheFields = null;
 
     document.body.appendChild(jasmineNode);
 
@@ -172,7 +172,6 @@ describe('withResources', () => {
 
   afterEach(() => {
     UserModel.cacheFields = UserModel.realCacheFields;
-    DecisionLogsCollection.cacheFields = DecisionLogsCollection.realCacheFields;
 
     window.performance = originalPerf;
     unmountAndClearModelCache();
@@ -255,6 +254,7 @@ describe('withResources', () => {
       resources = renderWithResources();
       dataCarrier = findDataCarrier(resources);
       dataChild = findDataChild(resources);
+      await waitsFor(() => dataChild.props.hasLoaded);
 
       dataCarrier.props.setResourceState({userId: 'alex'});
       expect(dataCarrier.props.userId).toEqual('alex');
@@ -263,26 +263,8 @@ describe('withResources', () => {
     });
 
   describe('updates a resource', () => {
-    it('when a prop changes that is specified in its fields option', async(done) => {
-      resources = renderWithResources();
-      expect(requestSpy.calls.count()).toEqual(3);
-      findDataCarrier(resources).props.setResourceState({userId: 'alex'});
-      expect(requestSpy.calls.count()).toEqual(4);
-      expect(requestSpy.calls.mostRecent().args[0]).toEqual('userfraudLevel=high_userId=alex');
-      expect(requestSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.USER]);
-      expect(requestSpy.calls.mostRecent().args[2].options).toEqual({
-        userId: 'alex',
-        fraudLevel: 'high'
-      });
-
-      await waitsFor(() => findDataChild(resources).props.hasLoaded);
-
-      done();
-    });
-
-    it('when its cache key changes with nextProps', async(done) => {
-      // decisions collection doesn't have a `fields` prop in this component,
-      // but it should still update when passed `include_deleted`, since that
+    it('when its cache key changes with prop changes', async(done) => {
+      // decisions collection should update when passed `include_deleted`, since that
       // exists on its cacheFields property
       resources = renderWithResources();
       expect(requestSpy.calls.count()).toEqual(3);
@@ -305,7 +287,7 @@ describe('withResources', () => {
       findDataCarrier(resources).props.setResourceState({noah: true});
       expect(requestSpy.calls.count()).toEqual(4);
       expect(findDataCarrier(resources).state.notesLoadingState).toEqual(LoadingStates.LOADING);
-      // dependsOn prop won't factor into cache key unless part of fields
+      // dependsOn prop won't factor into cache key
       expect(requestSpy.calls.mostRecent().args[0]).toEqual('notes');
       expect(requestSpy.calls.mostRecent().args[1]).toEqual(ModelMap[ResourceKeys.NOTES]);
 
@@ -517,68 +499,6 @@ describe('withResources', () => {
             lastName: 'grant'
           }
         })).toEqual('userfraudLevel=highgrant_lastName=grant_userId=noah');
-      });
-    });
-
-    describe('when a model does not have a cacheFields property', () => {
-      beforeEach(() => {
-        UserModel.cacheFields = null;
-      });
-
-      it('with the GS key as the base and value fields alphabetized', () => {
-        expect(getCacheKey({
-          modelKey: ResourceKeys.USER,
-          fields: ['userId', 'fraudLevel', 'lastName']
-        }, {
-          userId: 'noah',
-          fraudLevel: 'high',
-          lastName: 'grant'
-        })).toEqual('usergrant_high_noah');
-
-        expect(getCacheKey({
-          modelKey: ResourceKeys.USER,
-          fields: ['userId', 'fraudLevel', 'lastName']
-        }, {
-          userId: 'alex',
-          fraudLevel: 'low',
-          lastName: 'lopatron'
-        })).toEqual('useralex_lopatron_low');
-
-        expect(getCacheKey({
-          modelKey: ResourceKeys.USER,
-          fields: ['userId', 'score', 'lastName', 'someNumber']
-        }, {
-          userId: 'alex',
-          score: 12,
-          lastName: 'lopatron',
-          someNumber: 2
-        })).toEqual('user12_2_alex_lopatron');
-      });
-
-      it('ignoring any fields with \'cacheIgnore\': true', () => {
-        expect(getCacheKey({
-          modelKey: ResourceKeys.USER,
-          fields: ['userId', {name: 'fraudLevel', cacheIgnore: true}, 'lastName']
-        }, {
-          userId: 'noah',
-          fraudLevel: 'high',
-          lastName: 'grant'
-        })).toEqual('usergrant_noah');
-      });
-
-      it('that modifies any prop value if a field has a \'map\' property', () => {
-        expect(getCacheKey({
-          modelKey: ResourceKeys.USER,
-          fields: [
-            {name: 'userId', map: (val, props) => `super${props.fraudLevel}${val}`},
-            'fraudLevel',
-            'lastName'
-          ]
-        }, {
-          userId: 'noah',
-          fraudLevel: 'high',
-          lastName: 'grant'
-        })).toEqual('usergrant_high_superhighnoah');
       });
     });
   });
@@ -929,10 +849,14 @@ describe('withResources', () => {
   });
 
   describe('for a resource with a \'dependsOn\' option', () => {
-    beforeEach(() => {
+    beforeEach(async(done) => {
       ({dataChild, dataCarrier, resources} = getRenderedResourceComponents(
         renderWithResources({serial: true})
       ));
+
+      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
+
+      done();
     });
 
     it('will not fetch until the dependent prop is available', async(done) => {
@@ -949,8 +873,6 @@ describe('withResources', () => {
     });
 
     it('reverts back to pending state if its dependencies are removed', async(done) => {
-      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
-
       await waitsFor(() => dataCarrier.props.serialProp);
       expect(isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
       expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
@@ -964,6 +886,33 @@ describe('withResources', () => {
       // the value of serialProp has changed. so the cache lookup should
       // again be empty
       expect(dataChild.props.decisionLogsCollection.isEmptyModel).toBe(true);
+      done();
+    });
+
+    it('stays in loaded state if removed dependent prop does not affect cache key', async(done) => {
+      var originalCacheFields = DecisionLogsCollection.cacheFields;
+
+      unmountAndClearModelCache();
+      DecisionLogsCollection.cacheFields = [];
+
+      ({dataChild, dataCarrier, resources} = getRenderedResourceComponents(
+        renderWithResources({serial: true})
+      ));
+
+      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
+
+      await waitsFor(() => dataCarrier.props.serialProp);
+      expect(isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
+      expect(requestSpy.calls.mostRecent().args[0]).toMatch(ResourceKeys.DECISION_LOGS);
+
+      await waitsFor(() => hasLoaded(dataCarrier.state.decisionLogsLoadingState));
+      resources.setState({serialProp: null});
+
+      await waitsFor(() => !dataCarrier.props.serialProp);
+      expect(hasLoaded(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
+      expect(!!dataChild.props.decisionLogsCollection.isEmptyModel).toBe(false);
+
+      DecisionLogsCollection.cacheFields = originalCacheFields;
       done();
     });
   });

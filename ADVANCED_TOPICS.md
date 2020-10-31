@@ -32,32 +32,34 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         
     2. Recall that we can provide the dependent prop in one of two ways:
         1. We can include it in another resource’s `provides` property, in which case the dependent prop gets saved as HOC state.
-        2. We can modify the url in the component’s `componentWillReceiveProps`/`componentDidUpdate` (either url path or query parameter), which will filter the prop down.
+        2. We can modify the url in the component’s `componentDidUpdate` (either url path or query parameter), which will filter the prop down.
     
         When we provide using method (a), the dependent prop can be changed but not removed. When we provide using method (b), the dependent prop can be changed or removed.
     
-        So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentWillReceiveProps`/`componentDidUpdate` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
+        So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentDidUpdate` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
         
         And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
-      ```js
-      // overlay-wrapped component, where a loader will show over previously-rendered children,
-      // which we want to then not update. but this component is also a child of a `withResources`
-      // component that has a dependent resource
-      shouldComponentUpdate(nextProps) {
-        // using `return !nextProps.isLoading;` would update the component in the above
-        // scenario, even though `nextProps.myDependentModel` would be empty
-        return nextProps.hasLoaded;
-      }
-    
-      // this assumes that the parent is handling the `hasErrored` state. if it is not, then
-      // you may need to instead use:
-      shouldComponentUpdate(nextProps) {
-        return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
-      }
-      ```
+        ```js
+        // overlay-wrapped component, where a loader will show over previously-rendered children,
+        // which we want to then not update. but this component is also a child of a `withResources`
+        // component that has a dependent resource
+        shouldComponentUpdate(nextProps) {
+          // using `return !nextProps.isLoading;` would update the component in the above
+          // scenario, even though `nextProps.myDependentModel` would be empty
+          return nextProps.hasLoaded;
+        }
+      
+        // this assumes that the parent is handling the `hasErrored` state. if it is not, then
+        // you may need to instead use:
+        shouldComponentUpdate(nextProps) {
+          return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
+        }
+        ```
 
-    As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`.
+        As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`.
+
+    3. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state remains in a LOADED state instead of returning to PENDING.
        
 ## Implicit dependent resources
 

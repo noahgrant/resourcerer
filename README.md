@@ -829,16 +829,11 @@ ResourcesConfig.set(configObj);
 
 * Does it support async rendering?  
   
-    Short answer: For the `useResources` hook: yes! For the `withResources` HOC, no.
-    
-    Long answer:  
-    
-    The `withResources` HOC still employs one instance of `UNSAFE_componentWillReceiveProps` to set loading states prior to fetching a new resource. The benefit to using cWRP is that it avoids an extra render caused by setting state after an update has happened. The downside is that it prevents `withResources`, for now, from safely using some of React's newer APIs, such as asynchronous rendering with Suspense. Full disclosure: I am sad that `componentWillReceiveProps` has been deprecated, and I would much prefer to keep it and have the React team trust developers not to put side effects in it. But I still think it has an important place in preventing extra renders. [getDerivedStateFromProps](https://reactjs.org/docs/react-component.html#static-getderivedstatefromprops) does not allow you to compare previous to next without doing some state hackery.
+    Yes! `withResources` used to depend on `componentWillReceiveProps`, but as of v0.9 it has been updated to use `componentDidUpdate` instead.
+    The upside is that it now supports async rendering; the downside, however, is that it requires an extra render before updating a resource
+    (since `componentDidUpdate` gets called after `render`, setting any loading states will cause an additional subsequent render).
 
-    The `useResources` React hook, on the other hand, will support async rendering. It also, however requires that extra render that the HOC avoids.
-    
-    In the future, we really have no choice but to migrate `withResources` to use `componentDidUpdate`, which will make it compatible with async rendering but will also have the extra render call.
-
+    `useResources` has always supported async rendering.
         
 * Can the `withResources` HOC be used with both function components and class components?
 
