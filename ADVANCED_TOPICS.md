@@ -59,7 +59,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 
         As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`.
 
-    3. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state remains in a LOADED state instead of returning to PENDING.
+    3. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
        
 ## Implicit dependent resources
 

@@ -20,7 +20,7 @@ import {
   getRenderedResourceComponents,
   waitsFor
 } from './test-utils';
-import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
+import {hasErrored, hasLoaded, isLoading, isPending, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 import {
   scryRenderedComponentsWithType,
@@ -889,7 +889,7 @@ describe('withResources', () => {
       done();
     });
 
-    it('stays in loaded state if removed dependent prop does not affect cache key', async(done) => {
+    it('reverts to pending if removed dependent prop does not affect cache key', async(done) => {
       var originalCacheFields = DecisionLogsCollection.cacheFields;
 
       unmountAndClearModelCache();
@@ -899,7 +899,7 @@ describe('withResources', () => {
         renderWithResources({serial: true})
       ));
 
-      expect(dataCarrier.state.decisionLogsLoadingState).toEqual('pending');
+      expect(isPending(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
 
       await waitsFor(() => dataCarrier.props.serialProp);
       expect(isLoading(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
@@ -909,7 +909,7 @@ describe('withResources', () => {
       resources.setState({serialProp: null});
 
       await waitsFor(() => !dataCarrier.props.serialProp);
-      expect(hasLoaded(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
+      expect(isPending(dataCarrier.state.decisionLogsLoadingState)).toBe(true);
       expect(!!dataChild.props.decisionLogsCollection.isEmptyModel).toBe(false);
 
       DecisionLogsCollection.cacheFields = originalCacheFields;

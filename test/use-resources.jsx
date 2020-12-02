@@ -8,7 +8,7 @@ import {
   UserModel
 } from './model-mocks';
 import {getCacheKey, useResources} from '../lib/index';
-import {hasErrored, hasLoaded, isLoading, noOp} from '../lib/utils';
+import {hasErrored, hasLoaded, isLoading, isPending, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 
 import {findRenderedComponentWithType} from 'react-dom/test-utils';
@@ -928,7 +928,7 @@ describe('useResources', () => {
       done();
     });
 
-    it('stays in loaded state if removed dependent prop does not affect cache key', async(done) => {
+    it('reverts to pending if removed dependent prop does not affect cache key', async(done) => {
       var originalCacheFields = DecisionLogsCollection.cacheFields;
 
       unmountAndClearModelCache();
@@ -936,7 +936,7 @@ describe('useResources', () => {
 
       dataChild = findDataChild(renderUseResources({serial: true}));
 
-      expect(dataChild.props.decisionLogsLoadingState).toEqual('pending');
+      expect(isPending(dataChild.props.decisionLogsLoadingState)).toBe(true);
 
       await waitsFor(() => dataChild.props.serialProp);
       expect(isLoading(dataChild.props.decisionLogsLoadingState)).toBe(true);
@@ -946,7 +946,7 @@ describe('useResources', () => {
       dataChild.props.setResourceState((state) => ({...state, serialProp: null}));
 
       await waitsFor(() => !dataChild.props.serialProp);
-      expect(hasLoaded(dataChild.props.decisionLogsLoadingState)).toBe(true);
+      expect(isPending(dataChild.props.decisionLogsLoadingState)).toBe(true);
       expect(!!dataChild.props.decisionLogsCollection.isEmptyModel).toBe(false);
 
       DecisionLogsCollection.cacheFields = originalCacheFields;
