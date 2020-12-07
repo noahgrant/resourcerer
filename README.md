@@ -150,13 +150,31 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 `$ npm i resourcerer`
 
-`resourcerer` depends on React >= 16 and Schmackbone (which itself depends on [Underscore](https://github.com/jashkenas/underscore) and [qs](https://github.com/ljharb/qs)).
+`resourcerer` depends on React >= 16 and Schmackbone (which itself lightly depends on [Underscore](https://github.com/jashkenas/underscore) and [qs](https://github.com/ljharb/qs)).
 
-The `resourcerer` package is compiled into ESNext, with only its [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md),
-object spread, and ES2015 module syntax transpiled. If you need to target older browsers, you can incorporate this package into your own build system to transpile further.
+Note that Resourcerer uses ES2015 in its source and does no transpiling&mdash;including import/export (Local babel configuration is for testing, only).
+This means that if you're not babelifying your `node_modules` folder, you'll need to make an exception for this package, ie:
 
-Also worth noting is that this package does not do any bundling into a single file, instead letting the user use whatever bundler they like.
-Modules have, however, been transpiled into CommonJS `require` syntax.
+```js
+// webpack.config.js or similar
+module: {
+  rules: [{
+    test: /\.jsx?$/,
+    exclude: /node_modules\/(?!(resourcerer))/,
+    use: {loader: 'babel-loader?cacheDirectory=true'}
+  }]
+}
+```
+
+Also note that it also uses [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md), so you'll need to use the [babel decorators plugin](https://babeljs.io/docs/en/babel-plugin-proposal-decorators) with the `{legacy: true}` option:
+
+```
+// .babelrc
+  "plugins": [
+    ["@babel/proposal-decorators", {"legacy": true}],
+    // ...
+  ]
+```
 
 # Nomenclature
 
