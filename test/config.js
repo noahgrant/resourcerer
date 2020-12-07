@@ -1,9 +1,9 @@
 import * as Config from '../lib/config';
+import * as Schmackbone from 'schmackbone';
 import {noOp} from '../lib/utils';
-import Schmackbone from 'schmackbone';
 
-const TestModel = Schmackbone.Model.extend();
-const TestModel2 = Schmackbone.Model.extend();
+class TestModel extends Schmackbone.Model {}
+class TestModel2 extends Schmackbone.Model {}
 
 /* eslint-disable max-nested-callbacks */
 describe('Config', () => {
@@ -89,8 +89,6 @@ describe('Config', () => {
       expect(Config.ResourcesConfig.prefilter).toEqual(noOp);
       expect(Config.ResourcesConfig.track).toEqual(noOp);
       expect(Config.ResourcesConfig.queryParamsPropName).toEqual('urlParams');
-      // default is the identity fn
-      expect(Schmackbone.ajaxPrefilter('foo')).toEqual('foo');
 
       Config.ResourcesConfig.set({
         cacheGracePeriod: 300000,
@@ -105,7 +103,6 @@ describe('Config', () => {
       expect(Config.ResourcesConfig.prefilter).toEqual(prefilterSpy);
       expect(Config.ResourcesConfig.track).toEqual(trackSpy);
       expect(Config.ResourcesConfig.queryParamsPropName).toEqual('queryPs');
-      expect(Schmackbone.ajaxPrefilter).toEqual(prefilterSpy);
 
       Config.ResourcesConfig.set({
         cacheGracePeriod: 120000,
@@ -114,7 +111,6 @@ describe('Config', () => {
         track: noOp,
         queryParamsPropName: 'queryParamsPropName'
       });
-      Schmackbone.ajaxPrefilter = (x) => x;
     });
   });
 });

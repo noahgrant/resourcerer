@@ -1,9 +1,9 @@
 import * as Request from '../lib/request';
 import {DecisionsCollection, UserModel} from './model-mocks';
 
+import {Collection} from 'schmackbone';
 import prefetch from '../lib/prefetch';
 import ReactDOM from 'react-dom';
-import Schmackbone from 'schmackbone';
 
 const jasmineNode = document.createElement('div');
 const getResources = (props, {DECISIONS, USER}) => ({
@@ -19,7 +19,7 @@ const dummyEvt = {target: jasmineNode};
 describe('prefetch', () => {
   beforeEach(() => {
     document.body.appendChild(jasmineNode);
-    spyOn(Request, 'default').and.callFake(() => Promise.resolve(new Schmackbone.Collection([])));
+    spyOn(Request, 'default').and.callFake(() => Promise.resolve(new Collection([])));
 
     jasmine.clock().install();
   });

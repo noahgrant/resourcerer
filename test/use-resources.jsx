@@ -1,4 +1,5 @@
 import * as Request from '../lib/request';
+import * as Schmackbone from 'schmackbone';
 
 import {
   AnalystsCollection,
@@ -16,7 +17,6 @@ import {LoadingStates} from '../lib/constants';
 import ModelCache from '../lib/model-cache';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import Schmackbone from 'schmackbone';
 import {waitsFor} from './test-utils';
 
 var measure;
@@ -634,12 +634,12 @@ describe('useResources', () => {
 
       expect(() => decisionsCollection.models.push({frontend: 'farmers'})).toThrow();
       expect(decisionsCollection.length).toEqual(0);
-      decisionsCollection.add({frontend: 'farmers'});
+      expect(() => decisionsCollection.add({frontend: 'farmers'})).toThrow();
       expect(decisionsCollection.length).toEqual(0);
 
       expect(() => userModel.attributes.frontend = 'farmers').toThrow();
       expect(userModel.attributes.frontend).not.toBeDefined();
-      userModel.set('frontend', 'farmers');
+      expect(() => userModel.set('frontend', 'farmers')).toThrow();
       expect(userModel.attributes.frontend).not.toBeDefined();
 
       done();

@@ -14,7 +14,7 @@
   ],
   "plugins": [
     "@babel/plugin-transform-runtime",
-    ["@babel/proposal-decorators", {"legacy": true}]
-  ],
-  "ignore": ["**/node_modules/**"]
+    ["@babel/proposal-decorators", {"legacy": true}],
+    "@babel/plugin-proposal-class-properties"
+  ]
 }

@@ -28,8 +28,11 @@ module.exports = (config) => {
       module: {
         rules: [{
           test: /\.jsx?$/,
-          exclude: /node_modules/,
-          use: {loader: 'babel-loader?cacheDirectory=true'}
+          exclude: /node_modules\/(?!(schmackbone)\/).*/,
+          use: {
+            loader: 'babel-loader?cacheDirectory=true',
+            options: {configFile: './.babelrc'}
+          }
         }]
       }
     }

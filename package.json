@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "repository": "github.com/SiftScience/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
@@ -23,6 +23,7 @@
   "devDependencies": {
     "@babel/cli": "^7.10.5",
     "@babel/core": "^7.10.5",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/plugin-proposal-decorators": "^7.10.5",
     "@babel/plugin-transform-runtime": "^7.10.5",
     "@babel/preset-env": "^7.10.4",
@@ -45,7 +46,7 @@
     "@babel/runtime": "^7.10.5",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
-    "schmackbone": "^1.5.1",
+    "schmackbone": "^2.0.0",
     "underscore": "^1.8.3"
   },
   "peerDependencies": {
