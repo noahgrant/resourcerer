@@ -36,7 +36,7 @@ export default class TodosCollection extends Collection {
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap} from 'resourcerer/config';
+import {ModelMap} from 'resourcerer';
 import TodosCollection from 'js/models/todos-collection';
 
 // choose any string as its key, which becomes its ResourceKey
@@ -215,7 +215,7 @@ from? From the ModelMap in the config file we added to earlier!
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap} from 'resourcerer/config';
+import {ModelMap} from 'resourcerer';
 import TodosCollection from 'js/models/todos-collection';
 
 // after adding this key, resourcerer will add an identical key to the `ResourceKeys` object with a
@@ -266,8 +266,7 @@ In this case, `isLoading` , et al, are only representative of `todosLoadingState
 Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 
 ```jsx
-// pure functions that accept loading states as arguments
-import ResourcererUtils from 'resourcerer/utils';
+import * as resourcerer from 'resourcerer';
 
 function MyClassWithTodosAndAUsers(props) {
   var {
@@ -300,7 +299,8 @@ function MyClassWithTodosAndAUsers(props) {
         <ul>
           {todosCollection.map((todoModel) => (
             <li key={todoModel.id}>
-              {ResourcererUtils.hasLoaded(usersLoadingState) ?
+              // pure function that accepts loading states as arguments
+              {resourcerer.hasLoaded(usersLoadingState) ?
                 getUserName(todoModel.get('userId')) :
                 // if you're anti-loader, you could opt to render nothing and have the
                 // user name simply appear in place after loading
@@ -333,7 +333,7 @@ Let's say we wanted to request not the entire users collection, but just a speci
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap} from 'resourcerer/config';
+import {ModelMap} from 'resourcerer';
 import TodosCollection from 'js/models/todos-collection';
 import UserModel from 'js/models/user-model';
 
@@ -524,7 +524,7 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
 
 - De-prioritize fetching the resource until after all critical resources have been fetched
 - Remove the resource from consideration within the component-wide loading states (`hasLoaded`, `isLoading`, `hasErrored`), giving us the ability to render without waiting on those resources
-- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer/utils`.
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer`.
   
   
 
@@ -778,7 +778,7 @@ When the static `measure` property is/returns true, `resourcerer` will record th
 The same config file used to add to `ResourceKeys` and `ModelMap` also allows you to set custom configuration properties for your own application:
 
 ```js
-import {ResourcesConfig} from 'resourcerer/config';
+import {ResourcesConfig} from 'resourcerer';
 
 ResourcesConfig.set(configObj);
 ```

@@ -8,7 +8,7 @@ import {
   NotesModel,
   UserModel
 } from './model-mocks';
-import {getCacheKey, useResources} from '../lib/index';
+import {getCacheKey, useResources} from '../lib/resourcerer';
 import {hasErrored, hasLoaded, isLoading, isPending, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 

@@ -106,7 +106,7 @@ You may find, at some point in your application, that you have a `PUT` endpoint 
 
 ```js
 // resources_conifg.js
-import {ResourceKeys, UnfetchedResources} from 'resourcerer/config';
+import {ResourceKeys, UnfetchedResources} from 'resourcerer';
 
 ResourceKeys.add({
   ACCOUNT: 'account',

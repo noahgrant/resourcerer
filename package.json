@@ -1,7 +1,7 @@
 {
   "name": "resourcerer",
   "version": "0.10.0",
-  "repository": "github.com/SiftScience/resourcerer",
+  "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
     "declarative data-fetching framework",
@@ -16,10 +16,9 @@
   "scripts": {
     "checks": "npm test && npm run lint",
     "lint": "eslint lib/*.js* test/*.js*",
-    "prepublishOnly": "babel lib -d ./ && babel test/test-utils.js -o ./test-utils.js",
     "test": "NODE_ENV=test && karma start"
   },
-  "author": "",
+  "module": "index.js",
   "devDependencies": {
     "@babel/cli": "^7.10.5",
     "@babel/core": "^7.10.5",
@@ -43,11 +42,9 @@
     "webpack": "^4.29.6"
   },
   "dependencies": {
-    "@babel/runtime": "^7.10.5",
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
-    "schmackbone": "^2.0.0",
-    "underscore": "^1.8.3"
+    "schmackbone": "^2.0.0"
   },
   "peerDependencies": {
     "react": "^16.8.6",
