@@ -10,6 +10,8 @@
   ],
   "files": [
     "*.js",
+    "lib/*.js",
+    "test/*.js",
     "*.md"
   ],
   "main": "index.js",
