@@ -1,7 +1,7 @@
+import * as Schmackbone from 'schmackbone';
 import request, {existsInCache, getFromCache} from '../lib/request';
 
 import ModelCache from '../lib/model-cache';
-import Schmackbone from 'schmackbone';
 import {waitsFor} from './test-utils';
 
 const component = {};

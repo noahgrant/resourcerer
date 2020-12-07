@@ -1,12 +1,12 @@
+import {Collection, Model} from 'schmackbone';
 import React from 'react';
-import Schmackbone from 'schmackbone';
 import schmackboneMixin from '../lib/schmackbone-mixin';
 
 describe('SchmackboneMixin', () => {
   var dummyComponent,
-      model1 = new Schmackbone.Model(),
-      model2 = new Schmackbone.Collection(),
-      model3 = new Schmackbone.Model(),
+      model1 = new Model(),
+      model2 = new Collection(),
+      model3 = new Model(),
       forceUpdateSpy;
 
   beforeEach(() => {

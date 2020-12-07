@@ -1,12 +1,6 @@
 import * as Request from '../lib/request';
+import * as Schmackbone from 'schmackbone';
 
-import {
-  prefetch as _prefetch,
-  Collection,
-  getCacheKey,
-  Model,
-  withResources
-} from '../lib/index';
 import {
   AnalystsCollection,
   DecisionLogsCollection,
@@ -20,6 +14,7 @@ import {
   getRenderedResourceComponents,
   waitsFor
 } from './test-utils';
+import {getCacheKey, withResources} from '../lib/resourcerer';
 import {hasErrored, hasLoaded, isLoading, isPending, noOp} from '../lib/utils';
 import {ModelMap, ResourceKeys, ResourcesConfig} from '../lib/config';
 import {
@@ -31,10 +26,8 @@ import {
 import ErrorBoundary from '../lib/error-boundary';
 import {LoadingStates} from '../lib/constants';
 import ModelCache from '../lib/model-cache';
-import prefetch from '../lib/prefetch';
 import React from 'react';
 import ReactDOM from 'react-dom';
-import Schmackbone from 'schmackbone';
 
 var measure,
     causeLogicError;
@@ -601,12 +594,12 @@ describe('withResources', () => {
 
       expect(() => decisionsCollection.models.push({frontend: 'farmers'})).toThrow();
       expect(decisionsCollection.length).toEqual(0);
-      decisionsCollection.add({frontend: 'farmers'});
+      expect(() => decisionsCollection.add({frontend: 'farmers'})).toThrow();
       expect(decisionsCollection.length).toEqual(0);
 
       expect(() => userModel.attributes.frontend = 'farmers').toThrow();
       expect(userModel.attributes.frontend).not.toBeDefined();
-      userModel.set('frontend', 'farmers');
+      expect(() => userModel.set('frontend', 'farmers')).toThrow();
       expect(userModel.attributes.frontend).not.toBeDefined();
 
       done();
@@ -1302,12 +1295,6 @@ describe('withResources', () => {
         done();
       });
     });
-  });
-
-  it('exports Model and Collection constructors directly', () => {
-    expect(_prefetch).toEqual(prefetch);
-    expect(Model).toEqual(Schmackbone.Model);
-    expect(Collection).toEqual(Schmackbone.Collection);
   });
 
   it('recaches models that get an id for the first time', async() => {

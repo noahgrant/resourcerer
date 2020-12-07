@@ -1,48 +1,58 @@
-import Schmackbone from 'schmackbone';
+import {Collection, Model} from 'schmackbone';
 
-export const UserModel = Schmackbone.Model.extend({
-  key: 'user',
+export class UserModel extends Model {
+  key = 'user'
 
   initialize(attrs, options={}) {
     this.userId = options.userId;
     this.fraudLevel = options.fraudLevel;
-  },
+  }
 
   url() {
     return `/root/users/${this.userId}`;
   }
-}, {cacheFields: ['fraudLevel', 'userId', 'id']});
 
-export const AnalystsCollection = Schmackbone.Collection.extend({
-  key: 'analysts',
+  static cacheFields = ['fraudLevel', 'userId', 'id']
+}
+
+export class AnalystsCollection extends Collection {
+  key = 'analysts'
+
   url() {
     return '/root/analysts';
   }
-});
+}
 
-export const DecisionsCollection = Schmackbone.Collection.extend({
-  key: 'decisions',
+export class DecisionsCollection extends Collection {
+  key = 'decisions'
+
   url() {
     return '/root/decisions';
   }
-}, {cacheFields: ['include_deleted']});
 
-export const NotesModel = Schmackbone.Model.extend({
-  key: 'notes',
+  static cacheFields = ['include_deleted']
+}
+
+export class NotesModel extends Model {
+  key = 'notes'
+
   initialize(attributes, options={}) {
     this.userId = options.userId;
-  },
+  }
 
   url() {
     return `/root/${this.userId}/notes`;
   }
-}, {cacheFields: ['userId']});
 
-export const SearchQueryModel = Schmackbone.Model.extend({
-  key: 'search',
+  static cacheFields = ['userId']
+}
+
+export class SearchQueryModel extends Model {
+  key = 'search'
+
   initialize(attributes, options={}) {
     this.userId = options.userId;
-  },
+  }
 
   fetch(options={}) {
     options = {
@@ -52,50 +62,59 @@ export const SearchQueryModel = Schmackbone.Model.extend({
       type: 'POST'
     };
 
-    return Schmackbone.Model.prototype.fetch.call(this, options);
-  },
+    return Model.prototype.fetch.call(this, options);
+  }
 
   url() {
     return '/root/search';
   }
-}, {cacheFields: ['type', 'detailed', 'filter', 'sort', 'limit', 'from']});
 
-export const SignalsCollection = Schmackbone.Collection.extend({
-  key: 'signals',
+  static cacheFields = ['type', 'detailed', 'filter', 'sort', 'limit', 'from']
+}
+
+export class SignalsCollection extends Collection {
+  key = 'signals'
+
   url() {
     return '/root/signals';
   }
-});
+}
 
-export const ActionsCollection = Schmackbone.Collection.extend({
-  key: 'actions',
+export class ActionsCollection extends Collection {
+  key = 'actions'
+
   url() {
     return '/root/actions';
   }
-});
+}
 
-export const DecisionLogsCollection = Schmackbone.Collection.extend({
-  key: 'decisionLogs',
+export class DecisionLogsCollection extends Collection {
+  key = 'decisionLogs'
+
   url() {
     return '/root/decision_logs';
   }
-}, {cacheFields: ['logs']});
+
+  static cacheFields = ['logs']
+}
 
 // next three are unfetched resources
-export const DecisionInstanceModel = Schmackbone.Model.extend(
-  {},
-  {cacheFields: ['entityType', 'entityId']}
-);
+export class DecisionInstanceModel extends Model {
+  static cacheFields = ['entityType', 'entityId']
+}
 
-export const LabelInstanceModel = Schmackbone.Model.extend({}, {cacheFields: ['userId']});
+export class LabelInstanceModel extends Model {
+  static cacheFields = ['userId']
+}
 
-export const AccountConfigModel = Schmackbone.Model.extend({
-  key: 'accountConfig',
+export class AccountConfigModel extends Model {
+  key = 'accountConfig'
+
   initialize(attrs, options={}) {
     this.accountId = options.accountId;
-  },
+  }
 
   url() {
     return `/root/accounts/${this.accountId}/config`;
   }
-});
+}
