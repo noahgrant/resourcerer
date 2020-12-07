@@ -42,8 +42,6 @@
     "webpack": "^4.29.6"
   },
   "dependencies": {
-    "react": "^16.14.0",
-    "react-dom": "^16.14.0",
     "schmackbone": "^2.0.0"
   },
   "peerDependencies": {
