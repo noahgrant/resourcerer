@@ -587,10 +587,10 @@ describe('withResources', () => {
       // we know these are the empty models from the previous test
       ({decisionsCollection, userModel} = dataChild.props);
 
-      expect(() => decisionsCollection.frontend = 'farmers').toThrow();
-      expect(decisionsCollection.frontend).not.toBeDefined();
-      expect(() => userModel.frontend = 'farmers').toThrow();
-      expect(userModel.frontend).not.toBeDefined();
+      decisionsCollection.frontend = 'farmers';
+      expect(decisionsCollection.frontend).toEqual('farmers');
+      userModel.frontend = 'farmers';
+      expect(userModel.frontend).toEqual('farmers');
 
       expect(() => decisionsCollection.models.push({frontend: 'farmers'})).toThrow();
       expect(decisionsCollection.length).toEqual(0);
