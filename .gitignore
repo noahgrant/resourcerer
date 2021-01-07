@@ -13,6 +13,5 @@
 **/tmp/**
 
 node_modules
-*.js
 !lib/*.js
 !test/*.js
