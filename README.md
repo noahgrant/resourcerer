@@ -14,6 +14,7 @@ Additional features include:
 
 * first-class loading and error state support
 * smart client-side caching
+* refetching
 * updating a component when a resource updates
 * ...and more
 
@@ -141,6 +142,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
     1. [Prefetch on Hover](#prefetch-on-hover)
+    1. [Refetching](#refetching)
     1. [Tracking Request Times](#tracking-request-times)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
@@ -772,6 +774,28 @@ const getTodos = (props, ResourceKeys) => {
 ```
 
 Note, as mentioned in the comment above, that `expectedProps` should take the form of props expected when the resource is actually needed. For example, maybe we're viewing a list of users, and so there is no `props.userId` in the component that uses `prefetch`. But for the user in the list with id `'noahgrant'`, we would pass it an `expectedProps` that includes `{userId: 'noahgrant'}` because we know that when we click on the link and navigate to that url, `props.userId` should be equal to `'noahgrant'`.
+
+## Refetching
+
+`resourcerer` also returns a `refetch` function that you can use to re-request a resource _that has already been requested_ on-demand. A couple examples of where this could come in handy:
+
+1. A request timed out and you want to give the user the option of retrying.
+2. You have made a change to one resource that may render an auxiliary resource stale, and you want to bring the auxiliary resource up-to-date.
+
+It takes a function that is passed `ResourceKeys` and should return a list of `ResourceKeys`. Each entry will get refetched.
+
+```js
+function MyComponent(props) {
+  var {todosCollection, refetch} = useResources(({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
+      
+  // ...
+  
+  return <Button onClick={() => refetch(({TODOS}) => [TODOS])}>Refetch me</Button>;
+```
+
+**NOTE:**
+* The list returned by the function should only include keys that are currently returned by the executor function. In the example above, returning `USER_TODOS` would not fetch anything because it is not part of the current executor function. To conditionally fetch another resource, add it to the executor function with [dependsOn](#serial-requests).
+* The resource that will be refetched is the version returned by the executor function with the current props. To fetch a different version, use the standard props flow instead of refetching.
 
 ## Tracking Request Times
 
