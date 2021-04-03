@@ -1345,6 +1345,25 @@ describe('withResources', () => {
 
     done();
   });
+
+  it('refetches resources imperatively via the \'refresh\' function', async() => {
+    dataChild = findDataChild(renderWithResources());
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    expect(requestSpy.calls.count()).toEqual(3);
+    dataChild.props.refetch(({DECISIONS, USER}) => [DECISIONS, USER]);
+
+    await waitsFor(() => !dataChild.props.hasLoaded);
+
+    expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADING);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
+    expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADED);
+
+    expect(requestSpy.calls.count()).toEqual(5);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+  });
 });
 /* eslint-enable max-nested-callbacks */
 
