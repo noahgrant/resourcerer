@@ -4,6 +4,7 @@
 1. [Implicit dependent resources](#implicit-dependent-resources)
 1. [Unfetched Resources](#unfetched-resources)
 1. [Loading Overlays](#loading-overlays)
+1. [isOrWillBeLoading](#isorwillbeloading)
 1. [Recaching newly-saved models](#recaching-newly-saved-models)
 
 ## Thoughts on the PENDING Resource
@@ -206,6 +207,46 @@ export default function UserTodos(props) {
           ))}
         </ul>
       ) : null}
+    </div>
+  );
+}
+```
+
+## isOrWillBeLoading
+
+Taking the previous example of [Loading Overlays](#loading-overlays) just a bit further, what if the todosCollection was 5000 entries long? Okay, you'd probably paginate. But that's not the point! Let's say it's an `<ExpensiveComponent />`, and as it is now, when we change loading states, the parent `MyComponent` would render `<ExpensiveComponent />` on every change, which will kill your UX. So let's wrap it in a `React.memo`!
+
+But how do we tell `React.memo` when to not render? This is tricky for a couple of reasons:
+
+* Because `useEffect`/`componentDidUpdate` occurs _after_ render, we actually have two renders we want to opt out of:
+    * parent props change
+    * render is called (opt out!)
+    * resourcerer changes loaded state to loading from the change in props
+    * render is called (opt out!). parent shows the overlay loader
+    * request returns and loading state changes back to loaded
+    * render (we want this update!)
+
+    This is actually the reason why I am sad React did away with `componentWillReceiveProps` and does not offer an equivalent hook&mdash;using that instead would batch the props change and the loaded -> loading state change, and we'd only need to opt out of a single render. *sigh*. I digress.
+    
+* React.memo, unlike `shouldComponentUpdate`, does not change its `prevProps` if it skips a render. This makes sense if you think about `memo` being a higher-order-component&mdash;if the component doesn't update, its props don't change. But that makes it much harder to compare `prevProps` and `nextProps` when needing to skip two update cycles.
+
+Enter `isOrWillBeLoading`. `isOrWillBeLoading` is a function returned by `useResources`/`withResources` that will take care of all these things for you, and you can invoke it in your `React.memo` [areEqual function](https://reactjs.org/docs/react-api.html#reactmemo). The previous example becomes:
+
+```jsx
+import ExpensiveComponent from 'components/expensive_component/expensive_component';
+import {memo} from 'react';
+import {useResources} from 'resourcerer';
+
+const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+const MemoizedExpensiveComponent = memo(ExpensiveComponent, (prevProps, nextProps) => nextProps.isOrWillBeLoading());
+
+export default function UserTodos(props) {
+  var {isLoading, isOrWillBeLoading, hasInitiallyLoaded} = useResources(getResources, props);
+    
+  return (
+    <div className='MyComponent'>
+      {isLoading ? <Loader /> : null}
+      {hasInitiallyLoaded ? <MemoizedExpensiveComponent {...{isOrWillBeLoading}} /> : null}
     </div>
   );
 }
