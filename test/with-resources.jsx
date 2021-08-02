@@ -42,7 +42,7 @@ const jasmineNode = document.createElement('div');
     measure,
     status: props.status
   },
-  [ResourceKeys.NOTES]: {noncritical: true, dependsOn: ['noah']},
+  [ResourceKeys.NOTES]: {attributes: {pretend: true}, noncritical: true, dependsOn: ['noah']},
   [ResourceKeys.USER]: {
     attributes: {id: props.withId ? props.userId : null},
     data: {
@@ -559,6 +559,7 @@ describe('withResources', () => {
 
       // however, this is a pending resource, so it should not be in the cache
       expect(dataChild.props.notesModel.isEmptyModel).toBe(true);
+      expect(dataChild.props.notesModel.get('pretend')).toBe(true);
       expect(dataChild.props.notesModel instanceof NotesModel).toBe(true);
 
       unmountAndClearModelCache();
