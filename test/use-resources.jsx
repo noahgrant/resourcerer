@@ -1189,32 +1189,22 @@ describe('useResources', () => {
     expect(requestSpy.calls.count()).toEqual(4);
   });
 
-  it('still puts cached resource into a loading state before re-fetching, to keep in sync ' +
-      'with model', async(done) => {
-    var zorahModel = new UserModel(),
-        ok;
+  it('cached resources are initialized into a loaded state and not re-fetched', async(done) => {
+    var zorahModel = new UserModel();
 
     ModelCache.put('userfraudLevel=high_userId=zorah', zorahModel);
     dataChild = findDataChild(renderUseResources());
 
     await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.calls.count()).toEqual(3);
 
-    // just leave it hanging for a bit so that we can actually make our loading state assertion
-    requestSpy.and.callFake(() => new Promise((res) => {
-      var interval = window.setInterval(() => {
-        if (ok) {
-          window.clearInterval(interval);
-          res([zorahModel]);
-        }
-      }, 100);
-    }));
     dataChild = findDataChild(renderUseResources({userId: 'zorah'}));
 
-    await waitsFor(() => dataChild.props.userLoadingState === LoadingStates.LOADING);
-    expect(dataChild.props.hasLoaded).toBe(false);
-    ok = true;
+    // just wait a small amount to make sure things don't change
+    await new Promise((res) => window.setTimeout(res, 0));
 
-    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(dataChild.props.userId).toEqual('zorah');
+    expect(requestSpy.calls.count()).toEqual(3);
     expect(dataChild.props.userLoadingState).toEqual(LoadingStates.LOADED);
     expect(dataChild.props.hasLoaded).toBe(true);
 
