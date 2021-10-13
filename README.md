@@ -18,7 +18,7 @@ Additional features include:
 * updating a component when a resource updates
 * ...and more
 
-It employs a View-less, jQuery-less, Promise-interfaced fork of Backbone called [Schmackbone](https://github.com/noahgrant/schmackbone) for Model/Collection semantics (as well as its [Events module](https://backbonejs.org/#Events)). Getting started is easy:
+Getting started is easy:
 
 1. Define a model in your application:
 
@@ -152,7 +152,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 `$ npm i resourcerer`
 
-`resourcerer` depends on React >= 16 and Schmackbone (which itself lightly depends on [Underscore](https://github.com/jashkenas/underscore) and [qs](https://github.com/ljharb/qs)).
+`resourcerer` depends on React >= 16 and [Schmackbone](https://github.com/noahgrant/schmackbone) (a View-less, jQuery-less, Promise-interfaced, slimmed-down fork of Backbone) for Model/Collection semantics and pub/sub.
 
 Note that Resourcerer uses ES2015 in its source and does no transpiling&mdash;including import/export (Local babel configuration is for testing, only).
 This means that if you're not babelifying your `node_modules` folder, you'll need to make an exception for this package, ie:
@@ -921,9 +921,9 @@ ResourcesConfig.set(configObj);
 
 * Can `resourcerer` do anything other than `GET` requests?
 
-    `resourcerer` only handles resource _fetching_ (i.e. calling [Schmackbone.Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
+    `resourcerer` only handles resource _fetching_ (i.e. calling [Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
     
-    For write operations, use Schmackbone Models' [`save`](https://backbonejs.org/#Model-savehttps://backbonejs.org/#Model-save) and [`destroy`](https://backbonejs.org/#Model-destroy) methods directly:
+    For write operations, use Models' [`save`](https://backbonejs.org/#Model-savehttps://backbonejs.org/#Model-save) and [`destroy`](https://backbonejs.org/#Model-destroy) methods directly:
     
     ```js
     onClickSaveButton() {
