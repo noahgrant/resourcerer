@@ -330,17 +330,14 @@ describe('withResources', () => {
   });
 
   it('listens to all resources', async(done) => {
-    var modelsSubscribed;
-
     ({resources, dataCarrier, dataChild} = getRenderedResourceComponents(renderWithResources()));
 
     await waitsFor(() => dataChild.props.hasLoaded);
-    modelsSubscribed = dataCarrier._getBackboneModels();
 
-    expect(modelsSubscribed.length).toEqual(3);
-    expect(modelsSubscribed[0].key).toEqual('analysts');
-    expect(modelsSubscribed[1].key).toEqual('decisions');
-    expect(modelsSubscribed[2].key).toEqual('user');
+    expect(dataCarrier._attachedModels.length).toEqual(3);
+    expect(dataCarrier._attachedModels[0].key).toEqual('analysts');
+    expect(dataCarrier._attachedModels[1].key).toEqual('decisions');
+    expect(dataCarrier._attachedModels[2].key).toEqual('user');
     done();
   });
 
@@ -407,7 +404,7 @@ describe('withResources', () => {
       await waitsFor(() => nextTick);
 
       // this returns 0 because no model has been put in the cache since nothing has returned
-      expect(dataCarrier._getBackboneModels().length).toEqual(0);
+      expect(dataCarrier._attachedModels).toBe(null);
       expect(attachListenersSpy).not.toHaveBeenCalled();
       expect(dataCarrier.state.decisionsLoadingState).toEqual(LoadingStates.LOADING);
       expect(dataCarrier.state.analystsLoadingState).toEqual(LoadingStates.LOADING);
