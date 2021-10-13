@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "0.11.4",
+  "version": "0.11.5",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
@@ -44,7 +44,7 @@
     "webpack": "^4.29.6"
   },
   "dependencies": {
-    "schmackbone": "^2.0.0"
+    "schmackbone": "^3.0.0"
   },
   "peerDependencies": {
     "react": "^16.8.6 || ^17.0.0 || ^18.0.0",
