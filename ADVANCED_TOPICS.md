@@ -212,7 +212,7 @@ export default function UserTodos(props) {
 }
 ```
 
-## isOrWillBeLoading
+## isOrWillBeLoading (`useResources` only)
 
 Taking the previous example of [Loading Overlays](#loading-overlays) just a bit further, what if the todosCollection was 5000 entries long? Okay, you'd probably paginate. But that's not the point! Let's say it's an `<ExpensiveComponent />`, and as it is now, when we change loading states, the parent `MyComponent` would render `<ExpensiveComponent />` on every change, which will kill your UX. So let's wrap it in a `React.memo`!
 

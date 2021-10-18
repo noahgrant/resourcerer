@@ -1352,26 +1352,6 @@ describe('withResources', () => {
 
     await waitsFor(() => dataChild.props.hasLoaded);
   });
-
-  it('isOrWillBeLoading is true for two cycles that props change and loading starts', async() => {
-    dataChild = findDataChild(renderWithResources());
-
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(false);
-
-    dataChild.props.setResourceState({userId: 'alex'});
-    // in contrast to useResources, cDU gets executed in the same stack and
-    // so we can't assert that for a frame the following two lines are true,
-    // even though they indeed are. render gets called twice before we yield
-    // back to the test script.
-    // expect(dataChild.props.hasLoaded).toBe(true);
-    // expect(dataChild.props.isLoading).toBe(false);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(false);
-  });
 });
 /* eslint-enable max-nested-callbacks */
 
