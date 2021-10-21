@@ -18,7 +18,18 @@
   "scripts": {
     "checks": "npm test && npm run lint",
     "lint": "eslint lib/*.js* test/*.js*",
-    "test": "NODE_ENV=test && karma start"
+    "test": "NODE_ENV=test && karma start",
+    "test:jest": "jest --env=jest-environment-jsdom-sixteen",
+    "test:watch": "jest --watch --env=jest-environment-jsdom-sixteen",
+    "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand --env=jest-environment-jsdom-sixteen"
+  },
+  "jest": {
+    "moduleDirectories": [
+      "node_modules"
+    ],
+    "setupFilesAfterEnv": [
+      "./test/setup"
+    ]
   },
   "module": "index.js",
   "devDependencies": {
@@ -34,17 +45,16 @@
     "eslint": "^5.16.0",
     "eslint-plugin-react": "^7.12.4",
     "eslint-plugin-sift": "^0.3.0",
-    "imports-loader": "^0.8.0",
     "jasmine-core": "^2.99.1",
+    "jest": "^27.3.1",
+    "jest-environment-jsdom-sixteen": "^2.0.0",
     "karma": "^4.0.1",
     "karma-chrome-launcher": "https://registry.npmjs.org/karma-chrome-launcher/-/karma-chrome-launcher-2.2.0.tgz",
     "karma-jasmine": "^1.1.0",
     "karma-jasmine-html-reporter": "^0.2.2",
     "karma-webpack": "^3.0.5",
-    "webpack": "^4.29.6"
-  },
-  "dependencies": {
-    "schmackbone": "^3.0.0"
+    "webpack": "^4.29.6",
+    "whatwg-fetch": "^3.6.2"
   },
   "peerDependencies": {
     "react": "^16.8.6 || ^17.0.0 || ^18.0.0",

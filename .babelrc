@@ -2,11 +2,10 @@
   "presets": [
     ["@babel/env", {
       "targets": {
-        "chrome": "67",
-        "firefox": "63",
-        "edge": "18",
-        "opera": "57",
-        "safari": "12"
+        "chrome": "93",
+        "firefox": "93",
+        "edge": "93",
+        "safari": "14"
       },
       "modules": "cjs"
     }],
