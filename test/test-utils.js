@@ -1,12 +1,12 @@
-// Save references to native timeout functions, in case they are mocked by jasmine.clock().
+// Save references to native timeout functions, in case they are mocked by mock.clock().
 const origSetTimeout = window.setTimeout;
 const origClearTimeout = window.clearTimeout;
 const origSetInterval = window.setInterval;
 const origClearInterval = window.clearInterval;
 
 /**
- * Our own version of Jasmine's waitsFor. Returns a Promise that resolves when the given condition
- * becomes true.
+ * Returns a Promise that resolves when the given condition becomes true.
+ *
  * @param {function} condition - a function that returns a value representing the condition
  *    we're waiting for. The promise resolves when this function returns a truthy value.
  * @param {number} time - the time (in milliseconds) to wait for the condition before timing out.

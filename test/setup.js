@@ -21,8 +21,6 @@ import {
 import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from '../lib/config';
 import React from 'react';
 
-window.React = React;
-
 ResourceKeys.add({
   ACCOUNT_CONFIG: 'accountConfig',
   ACTIONS: 'actions',
@@ -63,7 +61,3 @@ class Loader extends React.Component {
 }
 
 ResourcesConfig.set({Loader});
-
-let context = require.context('./', true, /.jsx?$/);
-
-context.keys().forEach(context);

@@ -1,7 +1,7 @@
 import * as Request from '../lib/request';
 import {DecisionsCollection, UserModel} from './model-mocks';
 
-import {Collection} from 'schmackbone';
+import Collection from '../lib/collection';
 import prefetch from '../lib/prefetch';
 import ReactDOM from 'react-dom';
 

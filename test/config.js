@@ -1,9 +1,9 @@
 import * as Config from '../lib/config';
-import * as Schmackbone from 'schmackbone';
+import Model from '../lib/model';
 import {noOp} from '../lib/utils';
 
-class TestModel extends Schmackbone.Model {}
-class TestModel2 extends Schmackbone.Model {}
+class TestModel extends Model {}
+class TestModel2 extends Model {}
 
 /* eslint-disable max-nested-callbacks */
 describe('Config', () => {

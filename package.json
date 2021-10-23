@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "0.11.6",
+  "version": "1.0.0-alpha-1",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
@@ -18,9 +18,9 @@
   "scripts": {
     "checks": "npm test && npm run lint",
     "lint": "eslint lib/*.js* test/*.js*",
-    "test": "jest --env=jest-environment-jsdom-sixteen",
-    "test:watch": "jest --watch --env=jest-environment-jsdom-sixteen",
-    "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand --env=jest-environment-jsdom-sixteen"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
   },
   "jest": {
     "moduleDirectories": [
@@ -34,18 +34,18 @@
   "devDependencies": {
     "@babel/cli": "^7.10.5",
     "@babel/core": "^7.10.5",
+    "@babel/eslint-parser": "^7.15.8",
     "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/plugin-proposal-decorators": "^7.10.5",
     "@babel/plugin-transform-runtime": "^7.10.5",
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-react": "^7.10.4",
-    "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.5",
-    "eslint": "^5.16.0",
-    "eslint-plugin-react": "^7.12.4",
+    "eslint": "^7.32.0",
+    "eslint-plugin-jest": "^25.2.2",
+    "eslint-plugin-react": "7.26",
     "eslint-plugin-sift": "^0.3.0",
     "jest": "^27.3.1",
-    "jest-environment-jsdom-sixteen": "^2.0.0",
     "webpack": "^4.29.6",
     "whatwg-fetch": "^3.6.2"
   },

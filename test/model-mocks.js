@@ -1,4 +1,5 @@
-import {Collection, Model} from 'schmackbone';
+import Collection from '../lib/collection';
+import Model from '../lib/model';
 
 export class UserModel extends Model {
   key = 'user'
