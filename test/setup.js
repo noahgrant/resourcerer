@@ -1,3 +1,5 @@
+import 'whatwg-fetch';
+
 /**
  * This file includes all test setup--setup mocked as it would normally be
  * mocked within a real app, adding resource keys, models, and unfetched

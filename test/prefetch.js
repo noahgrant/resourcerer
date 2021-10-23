@@ -19,15 +19,15 @@ const dummyEvt = {target: jasmineNode};
 describe('prefetch', () => {
   beforeEach(() => {
     document.body.appendChild(jasmineNode);
-    spyOn(Request, 'default').and.callFake(() => Promise.resolve(new Collection([])));
+    jest.spyOn(Request, 'default').mockImplementation(() => Promise.resolve(new Collection([])));
 
-    jasmine.clock().install();
+    jest.useFakeTimers();
   });
 
   afterEach(() => {
     ReactDOM.unmountComponentAtNode(jasmineNode);
     jasmineNode.remove();
-    jasmine.clock().uninstall();
+    jest.useRealTimers();
   });
 
   it('correctly turns the config object into cache key, data, and options', () => {
@@ -36,19 +36,19 @@ describe('prefetch', () => {
     UserModel.cacheFields = ['userId', 'source'];
 
     prefetch(getResources, expectedProps)(dummyEvt);
-    jasmine.clock().tick(100);
+    jest.advanceTimersByTime(100);
 
-    expect(Request.default.calls.argsFor(0)[0]).toEqual('usersource=hbase_userId=noah');
-    expect(Request.default.calls.argsFor(0)[1]).toEqual(UserModel);
-    expect(Request.default.calls.argsFor(0)[2]).toEqual({
+    expect(Request.default.mock.calls[0][0]).toEqual('usersource=hbase_userId=noah');
+    expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
+    expect(Request.default.mock.calls[0][2]).toEqual({
       options: {userId: 'noah'},
       data: {home: 'sf', source: 'hbase'},
       prefetch: true
     });
 
-    expect(Request.default.calls.argsFor(1)[0]).toEqual('decisions');
-    expect(Request.default.calls.argsFor(1)[1]).toEqual(DecisionsCollection);
-    expect(Request.default.calls.argsFor(1)[2]).toEqual({prefetch: true});
+    expect(Request.default.mock.calls[1][0]).toEqual('decisions');
+    expect(Request.default.mock.calls[1][1]).toEqual(DecisionsCollection);
+    expect(Request.default.mock.calls[1][2]).toEqual({prefetch: true});
 
     UserModel.cacheFields = oldFields;
   });
@@ -57,7 +57,7 @@ describe('prefetch', () => {
     var leaveEvt = new Event('mouseleave');
 
     prefetch(getResources, expectedProps)(dummyEvt);
-    jasmine.clock().tick(50);
+    jest.advanceTimersByTime(50);
     jasmineNode.dispatchEvent(leaveEvt);
     expect(Request.default).toHaveBeenCalled();
   });
@@ -66,9 +66,9 @@ describe('prefetch', () => {
     var leaveEvt = new Event('mouseleave');
 
     prefetch(getResources, expectedProps)(dummyEvt);
-    jasmine.clock().tick(25);
+    jest.advanceTimersByTime(25);
     jasmineNode.dispatchEvent(leaveEvt);
-    jasmine.clock().tick(25);
+    jest.advanceTimersByTime(25);
     expect(Request.default).not.toHaveBeenCalled();
   });
 });

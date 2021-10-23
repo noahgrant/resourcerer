@@ -13,7 +13,7 @@ describe('Request', () => {
       reject;
 
   beforeEach(() => {
-    spyOn(Schmackbone.Model.prototype, 'fetch').and.callFake(function(options) {
+    jest.spyOn(Schmackbone.Model.prototype, 'fetch').mockImplementation(function(options) {
       if (waitSuccess) {
         // use this to ensure that a model gets removed from the loadingCache
         // before other synchronous actions take place
@@ -31,8 +31,8 @@ describe('Request', () => {
       return Promise.resolve([new Schmackbone.Model(), '', {response: {status: 200}}]);
     });
 
-    spyOn(ModelCache, 'put').and.callThrough();
-    spyOn(ModelCache, 'register').and.callThrough();
+    jest.spyOn(ModelCache, 'put');
+    jest.spyOn(ModelCache, 'register');
   });
 
   afterEach(() => {
@@ -88,8 +88,8 @@ describe('Request', () => {
         // now call it again, since we already have it in the cache
         request('newModel', Schmackbone.Model, {component});
         // no new fetch, but a new register call
-        expect(Schmackbone.Model.prototype.fetch.calls.count()).toEqual(1);
-        expect(ModelCache.register.calls.count()).toEqual(2);
+        expect(Schmackbone.Model.prototype.fetch.mock.calls.length).toEqual(1);
+        expect(ModelCache.register.mock.calls.length).toEqual(2);
 
         done();
       });
@@ -114,14 +114,14 @@ describe('Request', () => {
       modelRequest = request('newModel2', Schmackbone.Model, {prefetch: true});
       expect(existsInCache('newModel2')).toBe(false);
       expect(ModelCache.get('newModel2')).not.toBeDefined();
-      expect(ModelCache.put.calls.count()).toEqual(1);
+      expect(ModelCache.put.mock.calls.length).toEqual(1);
 
       await modelRequest;
       expect(existsInCache('newModel2')).toBe(true);
       expect(ModelCache.get('newModel2')).toBeDefined();
-      expect(ModelCache.put.calls.count()).toEqual(2);
+      expect(ModelCache.put.mock.calls.length).toEqual(2);
       // haven't called register since no component was passed
-      expect(ModelCache.register.calls.count()).toEqual(1);
+      expect(ModelCache.register.mock.calls.length).toEqual(1);
 
       done();
     });
@@ -164,8 +164,8 @@ describe('Request', () => {
 
       beforeEach(() => {
         waitSuccess = true;
-        thenSpy1 = jasmine.createSpy('thenSpy1');
-        thenSpy2 = jasmine.createSpy('thenSpy2');
+        thenSpy1 = jest.fn();
+        thenSpy2 = jest.fn();
 
         promise = request('foo', Schmackbone.Model);
         // call it again
@@ -199,7 +199,7 @@ describe('Request', () => {
         promise.then(thenSpy1);
         promise2.then(thenSpy2);
 
-        await waitsFor(() => !!thenSpy1.calls.count());
+        await waitsFor(() => !!thenSpy1.mock.calls.length);
 
         expect(thenSpy1).toHaveBeenCalled();
         expect(thenSpy2).toHaveBeenCalled();
@@ -326,9 +326,9 @@ describe('Request', () => {
  * mocked). We refactor the unregister mocking logic here.
  */
 function unregisterComponent(comp) {
-  jasmine.clock().install();
+  jest.useFakeTimers();
   ModelCache.unregister(comp);
-  jasmine.clock().tick(CACHE_WAIT);
-  jasmine.clock().uninstall();
+  jest.advanceTimersByTime(CACHE_WAIT);
+  jest.useRealTimers();
 }
 /* eslint-enable max-nested-callbacks */

@@ -80,9 +80,9 @@ describe('Config', () => {
 
   describe('#setConfig', () => {
     it('adds a setting to the configs, overriding defaults', () => {
-      var logSpy = jasmine.createSpy('log'),
-          trackSpy = jasmine.createSpy('track'),
-          prefilterSpy = jasmine.createSpy('prefilter');
+      var logSpy = jest.fn(),
+          trackSpy = jest.fn(),
+          prefilterSpy = jest.fn();
 
       expect(Config.ResourcesConfig.cacheGracePeriod).toEqual(120000);
       expect(Config.ResourcesConfig.log).toEqual(noOp);

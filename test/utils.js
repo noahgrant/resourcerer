@@ -114,7 +114,7 @@ describe('Utils', () => {
 
   describe('once', () => {
     it('invokes a function maximum once', () => {
-      var testFn = jasmine.createSpy('once'),
+      var testFn = jest.fn(),
           testFnOnce = once(testFn);
 
       testFnOnce();
@@ -124,7 +124,7 @@ describe('Utils', () => {
       testFnOnce();
       testFnOnce();
 
-      expect(testFn.calls.count()).toEqual(1);
+      expect(testFn.mock.calls.length).toEqual(1);
     });
   });
 
