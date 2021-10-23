@@ -1,24 +1,18 @@
-var ModelCache;
+import ModelCache from '../lib/model-cache';
 
 const CACHE_WAIT = 150000,
       testModel = {};
 
-/* eslint-disable max-nested-callbacks */
 describe('ModelCache', () => {
   beforeEach(() => {
     jest.useFakeTimers();
-    // ensure we have fresh caches for each test
-    ModelCache = require('../lib/model-cache').default;
-
     jest.spyOn(ModelCache, 'register');
   });
 
   afterEach(() => {
+    ModelCache.__removeAll__();
     jest.useRealTimers();
-    ModelCache.remove('foo');
-    ModelCache.remove('bar');
-    ModelCache.remove('baz');
-    delete require.cache[require.resolve('../lib/model-cache')];
+    ModelCache.register.mockRestore();
   });
 
   it('gets a model from its cache via a unique key', () => {
@@ -136,6 +130,7 @@ describe('ModelCache', () => {
       // only baz will get removed, since the others have other components
       // still attached
       expect(ModelCache.get('baz')).not.toBeDefined();
+      ModelCache.unregister({});
     });
   });
 
@@ -162,4 +157,3 @@ describe('ModelCache', () => {
     expect(ModelCache.get('foo')).not.toBeDefined();
   });
 });
-/* eslint-enable max-nested-callbacks */

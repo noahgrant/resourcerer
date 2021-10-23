@@ -12,6 +12,7 @@
 **/logs/**
 **/tmp/**
 
+coverage
 node_modules
 !lib/*.js
 !test/*.js

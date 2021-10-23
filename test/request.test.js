@@ -1,5 +1,6 @@
-import request, {existsInCache, getFromCache} from '../lib/request';
+import request, {existsInCache, getFirstArgPropertyName, getFromCache} from '../lib/request';
 
+import Collection from '../lib/collection';
 import Model from '../lib/model';
 import ModelCache from '../lib/model-cache';
 import {waitsFor} from './test-utils';
@@ -20,9 +21,9 @@ describe('Request', () => {
         return new Promise((res, rej) => {
           window.requestAnimationFrame(() => {
             if (reject) {
-              rej([this, {status: 404}]);
+              rej({status: 404});
             } else {
-              res([this, {}, {response: {status: 200}}]);
+              res([this, {status: 200}]);
             }
           });
         });
@@ -36,7 +37,9 @@ describe('Request', () => {
   });
 
   afterEach(() => {
-    Model.prototype.fetch.calls.reset();
+    ModelCache.put.mockRestore();
+    ModelCache.register.mockRestore();
+    Model.prototype.fetch.mockRestore();
     waitSuccess = null;
     reject = null;
     unregisterComponent(component);
@@ -49,7 +52,7 @@ describe('Request', () => {
   });
 
   describe('when using the default exported function', () => {
-    it('returns a promise if the model does not exist', async(done) => {
+    it('returns a promise if the model does not exist', async() => {
       var model,
           promise = request('foo', Model, {component}).then(([_model]) => {
             model = _model;
@@ -60,11 +63,10 @@ describe('Request', () => {
       expect(promise instanceof Promise).toBe(true);
       // in this instance we're resolving immediately, so model should be Model
       expect(model instanceof Model).toBe(true);
-      done();
     });
 
     describe('if the model does exist', () => {
-      it('calls the resolve immediately', async(done) => {
+      it('calls the resolve immediately', async() => {
         var model;
 
         // put it in the cache
@@ -75,10 +77,9 @@ describe('Request', () => {
         await waitsFor(() => model instanceof Model);
 
         expect(model instanceof Model).toBe(true);
-        done();
       });
 
-      it('registers the component if passed one', async(done) => {
+      it('registers the component if passed one', async() => {
         waitSuccess = true;
         // put it in the cache
         await request('newModel', Model, {component});
@@ -90,12 +91,10 @@ describe('Request', () => {
         // no new fetch, but a new register call
         expect(Model.prototype.fetch.mock.calls.length).toEqual(1);
         expect(ModelCache.register.mock.calls.length).toEqual(2);
-
-        done();
       });
     });
 
-    it('puts a model in the ModelCache', async(done) => {
+    it('puts a model in the ModelCache', async() => {
       var modelRequest;
 
       waitSuccess = true;
@@ -122,12 +121,10 @@ describe('Request', () => {
       expect(ModelCache.put.mock.calls.length).toEqual(2);
       // haven't called register since no component was passed
       expect(ModelCache.register.mock.calls.length).toEqual(1);
-
-      done();
     });
 
     describe('if the \'fetch\' option is false', () => {
-      it('calls the resolve immediately', async(done) => {
+      it('calls the resolve immediately', async() => {
         var model;
 
         request('nofetch', Model, {component, fetch: false})
@@ -136,10 +133,9 @@ describe('Request', () => {
         await waitsFor(() => model instanceof Model);
 
         expect(Model.prototype.fetch).not.toHaveBeenCalled();
-        done();
       });
 
-      it('puts a model in the ModelCache', async(done) => {
+      it('puts a model in the ModelCache', async() => {
         var model;
 
         expect(ModelCache.get('nofetch')).not.toBeDefined();
@@ -152,7 +148,6 @@ describe('Request', () => {
         expect(ModelCache.put).toHaveBeenCalled();
 
         expect(Model.prototype.fetch).not.toHaveBeenCalled();
-        done();
       });
     });
 
@@ -173,13 +168,11 @@ describe('Request', () => {
       });
 
       afterEach(() => {
-        thenSpy1.calls.reset();
-        thenSpy2.calls.reset();
         promise = null;
         promise2 = null;
       });
 
-      it('returns the unfulfilled promise', async(done) => {
+      it('returns the unfulfilled promise', async() => {
         var m1,
             m2;
 
@@ -192,10 +185,9 @@ describe('Request', () => {
         expect(m1).toEqual(m2);
         // this is kind of a hack; we might not really need it
         expect(Reflect.ownKeys(promise)[0]).toEqual(Reflect.ownKeys(promise2)[0]);
-        done();
       });
 
-      it('executes both resolve handlers', async(done) => {
+      it('executes both resolve handlers', async() => {
         promise.then(thenSpy1);
         promise2.then(thenSpy2);
 
@@ -203,12 +195,11 @@ describe('Request', () => {
 
         expect(thenSpy1).toHaveBeenCalled();
         expect(thenSpy2).toHaveBeenCalled();
-        done();
       });
 
       describe('and the first call was a prefetch call', () => {
         it('registers the component of the second call with the model cache', () => {
-          ModelCache.register.calls.reset();
+          ModelCache.register.mockClear();
           // prefetch call, no component
           request('prefetch', Model);
           expect(ModelCache.register).not.toHaveBeenCalled();
@@ -220,7 +211,7 @@ describe('Request', () => {
       });
     });
 
-    it('adds status to resolved promise', async(done) => {
+    it('resolves request with model and request status', async() => {
       var resultingModel = null,
           resultingStatus = null;
 
@@ -234,45 +225,40 @@ describe('Request', () => {
       await waitsFor(() => resultingModel instanceof Model);
 
       expect(resultingStatus).toBe(200);
-      done();
     });
 
-    it('adds status to rejected promise', async(done) => {
-      var resultingModel = null,
-          resultingStatus = null;
+    it('rejects request with response status', async() => {
+      var resultingStatus = null;
 
       waitSuccess = true;
       reject = true;
 
-      request('newModel', Model, {component}).catch(([model, status]) => {
-        resultingModel = model;
+      request('newModel', Model, {component}).catch((status) => {
         resultingStatus = status;
       });
 
-      await waitsFor(() => resultingModel instanceof Model);
+      await waitsFor(() => !!resultingStatus);
 
       expect(resultingStatus).toBe(404);
-      done();
     });
 
     describe('and the request errors', () => {
-      it('does not cache the model', async(done) => {
-        var resultingModel,
+      it('does not cache the model', async() => {
+        var resultingStatus,
             CACHE_KEY = 'errorModel';
 
         waitSuccess = true;
         reject = true;
 
-        request(CACHE_KEY, Model, {component}).catch(([model]) => {
-          resultingModel = model;
+        request(CACHE_KEY, Model, {component}).catch((status) => {
+          resultingStatus = status;
         });
 
-        await waitsFor(() => resultingModel instanceof Model);
+        await waitsFor(() => !!resultingStatus);
         expect(ModelCache.get(CACHE_KEY)).not.toBeDefined();
 
         waitSuccess = false;
         reject = false;
-        done();
       });
     });
 
@@ -280,14 +266,13 @@ describe('Request', () => {
       var startModel,
           finalModel;
 
-      beforeEach(async(done) => {
+      beforeEach(async() => {
         waitSuccess = true;
 
         startModel = await request('bar', Model, {component});
-        Model.prototype.fetch.calls.reset();
+        Model.prototype.fetch.mockClear();
 
         finalModel = await request('bar', Model, {component, forceFetch: true});
-        done();
       });
 
       afterEach(() => {
@@ -316,6 +301,15 @@ describe('Request', () => {
       expect(existsInCache('foo')).toBe(true);
       expect(getFromCache('foo')).toEqual(model);
       expect(getFromCache('bar')).not.toBeDefined();
+    });
+  });
+
+  describe('getFirstArgPropertyName', () => {
+    it('returns \'models\' for a collection, \'attributes\' for a model', () => {
+      class _Collection extends Collection {}
+      class _Model extends Model {}
+      expect(getFirstArgPropertyName(_Collection)).toEqual('models');
+      expect(getFirstArgPropertyName(_Model)).toEqual('attributes');
     });
   });
 });

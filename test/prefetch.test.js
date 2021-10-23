@@ -5,7 +5,7 @@ import Collection from '../lib/collection';
 import prefetch from '../lib/prefetch';
 import ReactDOM from 'react-dom';
 
-const jasmineNode = document.createElement('div');
+const renderNode = document.createElement('div');
 const getResources = (props, {DECISIONS, USER}) => ({
   [USER]: {
     data: {home: props.home, source: props.source},
@@ -14,19 +14,19 @@ const getResources = (props, {DECISIONS, USER}) => ({
   [DECISIONS]: {}
 });
 const expectedProps = {userId: 'noah', home: 'sf', source: 'hbase'};
-const dummyEvt = {target: jasmineNode};
+const dummyEvt = {target: renderNode};
 
 describe('prefetch', () => {
   beforeEach(() => {
-    document.body.appendChild(jasmineNode);
-    jest.spyOn(Request, 'default').mockImplementation(() => Promise.resolve(new Collection([])));
-
+    document.body.appendChild(renderNode);
+    jest.spyOn(Request, 'default').mockResolvedValue(new Collection([]));
     jest.useFakeTimers();
   });
 
   afterEach(() => {
-    ReactDOM.unmountComponentAtNode(jasmineNode);
-    jasmineNode.remove();
+    ReactDOM.unmountComponentAtNode(renderNode);
+    Request.default.mockRestore();
+    renderNode.remove();
     jest.useRealTimers();
   });
 
@@ -50,6 +50,7 @@ describe('prefetch', () => {
     expect(Request.default.mock.calls[1][1]).toEqual(DecisionsCollection);
     expect(Request.default.mock.calls[1][2]).toEqual({prefetch: true});
 
+    expect(() => prefetch(() => false)({})).not.toThrow();
     UserModel.cacheFields = oldFields;
   });
 
@@ -58,7 +59,7 @@ describe('prefetch', () => {
 
     prefetch(getResources, expectedProps)(dummyEvt);
     jest.advanceTimersByTime(50);
-    jasmineNode.dispatchEvent(leaveEvt);
+    renderNode.dispatchEvent(leaveEvt);
     expect(Request.default).toHaveBeenCalled();
   });
 
@@ -67,7 +68,7 @@ describe('prefetch', () => {
 
     prefetch(getResources, expectedProps)(dummyEvt);
     jest.advanceTimersByTime(25);
-    jasmineNode.dispatchEvent(leaveEvt);
+    renderNode.dispatchEvent(leaveEvt);
     jest.advanceTimersByTime(25);
     expect(Request.default).not.toHaveBeenCalled();
   });
