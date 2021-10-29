@@ -5,7 +5,6 @@
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
     "declarative data-fetching framework",
-    "backbone",
     "react"
   ],
   "files": [

@@ -948,7 +948,7 @@ ResourcesConfig.set(configObj);
 
 * How big is the `resourcerer` package?  
 
-    5kB gzipped (excluding its Schmackbone, Underscore, and qs dependencies, which are an additional 17kB gzipped).
+    13kB gzipped. It has no dependencies.
 
 * Semver?  
 
