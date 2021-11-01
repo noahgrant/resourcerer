@@ -2,7 +2,6 @@ import sync, {setRequestPrefilter} from '../lib/sync';
 
 import Collection from '../lib/collection';
 import Model from '../lib/model';
-import {ResourcesConfig} from '../lib/config';
 
 class Library extends Collection {
   url() {

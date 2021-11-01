@@ -427,21 +427,22 @@ describe('withResources', () => {
       jest.useRealTimers();
     });
 
-  it('prioritizes critical resource requests before noncritical requests before prefetch', async() => {
-    dataChild = findDataChild(renderWithResources({prefetch: true}));
+  it('prioritizes critical resource requests before noncritical requests before prefetch',
+    async() => {
+      dataChild = findDataChild(renderWithResources({prefetch: true}));
 
-    await waitsFor(() => requestSpy.mock.calls.length === 5);
-    expect(requestSpy.mock.calls[0][0]).toEqual('decisions');
-    expect(requestSpy.mock.calls[1][0]).toEqual('userfraudLevel=high_userId=noah');
-    expect(requestSpy.mock.calls[2][0]).toEqual('searchQuery');
-    expect(requestSpy.mock.calls[2][2].prefetch).not.toBeDefined();
-    // noncritical call is second-to-last
-    expect(requestSpy.mock.calls[3][0]).toEqual('analysts');
-    // prefetch call is last
-    expect(requestSpy.mock.calls[4][0]).toEqual('searchQueryfrom=10');
-    expect(requestSpy.mock.calls[4][2].prefetch).toBeDefined();
-    await waitsFor(() => dataChild.props.hasLoaded);
-  });
+      await waitsFor(() => requestSpy.mock.calls.length === 5);
+      expect(requestSpy.mock.calls[0][0]).toEqual('decisions');
+      expect(requestSpy.mock.calls[1][0]).toEqual('userfraudLevel=high_userId=noah');
+      expect(requestSpy.mock.calls[2][0]).toEqual('searchQuery');
+      expect(requestSpy.mock.calls[2][2].prefetch).not.toBeDefined();
+      // noncritical call is second-to-last
+      expect(requestSpy.mock.calls[3][0]).toEqual('analysts');
+      // prefetch call is last
+      expect(requestSpy.mock.calls[4][0]).toEqual('searchQueryfrom=10');
+      expect(requestSpy.mock.calls[4][2].prefetch).toBeDefined();
+      await waitsFor(() => dataChild.props.hasLoaded);
+    });
 
   it('passes a false \'fetch\' option if the model key is of an unfetched model', async() => {
     requestSpy.mockResolvedValue([]);

@@ -16,11 +16,12 @@ Additional features include:
 * smart client-side caching
 * refetching
 * updating a component when a resource updates
+* zero dependencies
 * ...and more
 
 Getting started is easy:
 
-1. Define a model in your application:
+1. Define a model in your application (these are classes descending from [Model](/docs/model.md) or [Collection](/docs/collection.md)):
 
 ```js
 // js/models/todos-collection.js
@@ -57,7 +58,7 @@ import 'js/core/resourcerer-config;
         import React from 'react';
         import {useResources} from 'resourcerer';
 
-        const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+        const getResources = ({TODOS}, props) => ({[TODOS]: {}});
         
         function MyComponent(props) {
           var {
@@ -77,8 +78,8 @@ import 'js/core/resourcerer-config;
        
               {hasLoaded ? (
                 <ul>
-                  {todosCollection.map((todoModel) => (
-                    <li key={todoModel.id}>{todoModel.get('name')}</li>
+                  {todosCollection.toJSON().map(({id, name}) => (
+                    <li key={id}>{name}</li>
                   ))}
                 </ul>
               ) : null}
@@ -152,7 +153,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 `$ npm i resourcerer`
 
-`resourcerer` depends on React >= 16 and [Schmackbone](https://github.com/noahgrant/schmackbone) (a View-less, jQuery-less, Promise-interfaced, slimmed-down fork of Backbone) for Model/Collection semantics and pub/sub.
+`resourcerer` requires on React >= 16 but has no external dependencies.
 
 Note that Resourcerer uses ES2015 in its source and does no transpiling&mdash;including import/export (Local babel configuration is for testing, only).
 This means that if you're not babelifying your `node_modules` folder, you'll need to make an exception for this package, ie:
@@ -184,16 +185,16 @@ Also note that it also uses [legacy, Stage-1 decorators](https://github.com/tc39
   
 1. **ResourceKeys**. These are the keys added to the `ModelMap` in the introduction that link to your model constructors. They are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
-1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. It accepts `props` and `ResourceKeys` as arguments and may look like, as we'll explore in an example later:
+1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
 
     ```js
-    const getResources = (props, {USER}) => ({[USER]: {options: {userId: props.id}}});
+    const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}});
     ```
 
     or
 
     ```js
-    const getResources = (props, {USER_TODOS}) => {
+    const getResources = ({USER_TODOS}, props) => {
       const now = Date.now();
       
       return {
@@ -219,8 +220,8 @@ Okay, back to the initial example. Let's take a look at our `useResources` usage
 
 ```js
 // Note: in these docs, you will see a combination of `ResourceKeys` in the executor function as well as
-// its more common destructured version, ie `@withResources((props, {TODOS}) => ({[TODOS]: {}}))`
-const getResources = (props, ResourceKeys) => ({[ResourceKeys.TODOS]: {}});
+// its more common destructured version, ie `@withResources(({TODOS}, props) => ({[TODOS]: {}}))`
+const getResources = (ResourceKeys, props) => ({[ResourceKeys.TODOS]: {}});
 
 export default function MyComponent(props) {
   var resources = useResources(getResources, props);
@@ -263,7 +264,7 @@ Of course, in our initial example, the todos collection won’t get passed down 
 `isLoading` , `hasLoaded` , and `hasErrored` are not based on individual loading states, but are rather a collective loading state for the aforementioned-critical component resources. In the previous example, the todos resource is the only critical resource, so `isLoading` / `hasLoaded` / `hasErrored` are solely based on `todosLoadingState`. But we can also add a non-critical `users` resource, responsible, say, for only display users' names alongside their TODOs&mdash;a small piece of the overall component and not worth delaying render over. Here’s how we do that:
 
 ```js
-const getResources = (props, {TODOS, USER}) => ({
+const getResources = ({TODOS, USER}, props) => ({
   [TODOS]: {},
   [USERS]: {noncritical: true}
 });
@@ -286,7 +287,7 @@ In this case, `isLoading` , et al, are only representative of `todosLoadingState
 Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 
 ```jsx
-import * as resourcerer from 'resourcerer';
+import {haveAllLoaded} from 'resourcerer';
 
 function MyClassWithTodosAndAUsers(props) {
   var {
@@ -320,7 +321,7 @@ function MyClassWithTodosAndAUsers(props) {
           {todosCollection.map((todoModel) => (
             <li key={todoModel.id}>
               // pure function that accepts loading states as arguments
-              {resourcerer.hasLoaded(usersLoadingState) ?
+              {haveAllLoaded(usersLoadingState) ?
                 getUserName(todoModel.get('userId')) :
                 // if you're anti-loader, you could opt to render nothing and have the
                 // user name simply appear in place after loading
@@ -344,7 +345,7 @@ And here's what it looks like when the stats endpoint returns:
 
 ![Noncritical Resource Returned](https://user-images.githubusercontent.com/1355779/57596646-9a425900-7500-11e9-8121-5ced72c0fcba.png)
 
-There’s one other loading prop offered from the hook/HOC: `hasInitiallyLoaded`. This can be useful for showing a different UI for components that have already fetched the resource. An example might be a component with filters: as the initial resource is fetched, we may want to show a generic loader, but upon changing a filter (and re-fetching the resource), we may want to show a loader with an overlay over the previous version of the component. See the [Advanced Topics docs](/ADVANCED_TOPICS.md#loading-overlays) for more.
+There’s one other loading prop offered from the hook/HOC: `hasInitiallyLoaded`. This can be useful for showing a different UI for components that have already fetched the resource. An example might be a component with filters: as the initial resource is fetched, we may want to show a generic loader, but upon changing a filter (and re-fetching the resource), we may want to show a loader with an overlay over the previous version of the component. See the [Advanced Topics docs](/docs/advanced_topics.md#loading-overlays) for more.
 
 
 ## Requesting Prop-driven Data
@@ -391,7 +392,7 @@ The `cacheFields` static property is important here, as we'll see in a second; i
 All three of these come from what's returned from our executor function; it might look like this:
 
 ```jsx
-const getResources = (props, {USER}) => ({[USER]: {options: {userId: props.id}}}) 
+const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}}) 
 
 // hook
 function MyComponent(props) {
@@ -447,12 +448,12 @@ In this simplified example, only `props.itemId` is initially present at the url 
 
 So, in this case, `getUserIdFromItem` is the transform function, which takes the `queueItemModel` as an argument and returns the userId that will be assigned to `props.userId` (or, more accurately, will be set as state for the HOC wrapper’s state wrapper as described in the previous section). When the QueueItemModel resource returns, the transform function is invoked; at that point, `props.userId` exists, and the UserModel will be fetched. And we have serially requested our resources!
 
-One thing to note here is that while the `QUEUE_ITEM` resource is being fetched, the user resource is in a `PENDING` state, which is a special state that does not contribute to overall component `isLoading`/`hasErrored` states (though it will keep the component from being `hasLoaded`). At this point, the `QueueItemPage` in the example above is in a `LOADING` state (`isLoading === true`) because `QUEUE_ITEM` is loading. When it returns with the user id, the `USER` resource is put into a `LOADING` state, and the component then remains `isLoading === true` until it returns, after which the component has successfully loaded. If the `QUEUE_ITEM` resource happened to error, for some reason, the `USER` resource would never get out of its `PENDING` state, and the component would then take on the `ERROR` state (`hasErrored === true`) of `QUEUE_ITEM`. For more on `PENDING`, see [Thoughts on the PENDING State](/ADVANCED_TOPICS.md#thoughts-on-the-pending-resource) in the [Advanced Topics document](/ADVANCED_TOPICS.md).  
+One thing to note here is that while the `QUEUE_ITEM` resource is being fetched, the user resource is in a `PENDING` state, which is a special state that does not contribute to overall component `isLoading`/`hasErrored` states (though it will keep the component from being `hasLoaded`). At this point, the `QueueItemPage` in the example above is in a `LOADING` state (`isLoading === true`) because `QUEUE_ITEM` is loading. When it returns with the user id, the `USER` resource is put into a `LOADING` state, and the component then remains `isLoading === true` until it returns, after which the component has successfully loaded. If the `QUEUE_ITEM` resource happened to error, for some reason, the `USER` resource would never get out of its `PENDING` state, and the component would then take on the `ERROR` state (`hasErrored === true`) of `QUEUE_ITEM`. For more on `PENDING`, see [Thoughts on the PENDING State](/docs/advanced_topics.md#thoughts-on-the-pending-resource) in the [Advanced Topics document](/docs/advanced_topics.md).  
 
 Finally, if a model is to provide more than a single prop, use an underscore instead of the prop name in the `provides` object. Instead of the transform function returning the prop value, it should then return an object of prop keys and values, which will get spread to the component:
 
 ```js
-const getResources = (props, {QUEUE_ITEM, USER}) => ({
+const getResources = ({QUEUE_ITEM, USER}, props) => ({
   [USER]: {
     options: {state: props.activeState, userId: props.userId},
     // userModel depends on multiple props from queueItemModel
@@ -485,7 +486,7 @@ function getUserDataFromItem(queueItemModel) {
 
 ### data
 
-The `data` option is passed directly to Schmackbone and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
+The `data` option is passed directly to the [sync](/docs/model.md#sync) module and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
 
 ```js
   @withResources((props, ResourceKeys) => {
@@ -514,7 +515,7 @@ Now, as the prop fields change, the data sent with the request changes as well (
 [As referenced previously](#requesting-prop-driven-data), an `options` hash on a resource config will be passed directly as the second parameter to a model's `constructor` method. It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
 
 ```js
-const getResources = (props, ResourceKeys) => {
+const getResources = (ResourceKeys, props) => {
   const now = Date.now();
       
   return {
@@ -535,7 +536,7 @@ Here, the UserTodos collection will be instantiated with an options hash includi
 
 ### attributes
 
-Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the model's [`constructor` method](https://backbonejs.org/#Model-constructor) along with the [`options`](#options) property, and is typically less useful than providing the properties directly to the [`data`](#data) property. Like `data` and `options`, the `attributes` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more).
+Pass in an attributes hash to initialize a Model instance with a body before initially fetching. This is passed directly to the [model](/docs/model.md#constructor) or [collection's](/docs/collection.md#constructor) `constructor` method along with the [`options`](#options) property, and is typically less useful than providing the properties directly to the [`data`](#data) property. Like `data` and `options`, the `attributes` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more).
 
   
 ### noncritical
@@ -544,7 +545,7 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
 
 - De-prioritize fetching the resource until after all critical resources have been fetched
 - Remove the resource from consideration within the component-wide loading states (`hasLoaded`, `isLoading`, `hasErrored`), giving us the ability to render without waiting on those resources
-- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `hasLoaded`, `hasErrored`, and `isLoading` from `resourcerer`.
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `haveAllLoaded`, `haveAnyErrored`, and `areAnyLoading` from `resourcerer`.
   
   
 
@@ -562,7 +563,7 @@ Sometimes you want the latest of a resource, bypassing whatever model has alread
 Passing a `modelKey: <ResourceKeys>` option allows you to pass a custom name as the `withResources` key, which will become the base name for component-related props passed down to the component. For example, this configuration:
 
 ```js
-const getResources = (props, ResourceKeys) => ({myRadTodos: {modelKey: ResourceKeys.TODOS});
+const getResources = (ResourceKeys, props) => ({myRadTodos: {modelKey: ResourceKeys.TODOS});
 
 export default function MyComponentWithTodos {
   var {
@@ -583,7 +584,7 @@ This option is an array of props objects that represent what is _different_ from
 A great example of this is for pagination. Let's take our previous example and add a `from` property to go with our `limit` that is based on the value of a `page` prop ([tracked either by url parameter or by `setResourceState`](#changing-props)). We want to request the first page but also prefetch the following page because we think the user is likely to click on it:
 
 ```js
-const getResources = (props, ResourceKeys) => {
+const getResources = (ResourceKeys, props) => {
   const now = Date.now();
   const REQUESTS_PER_PAGE = 20;
       
@@ -649,7 +650,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
 
     ```js
     function MyComponent({start_time, ...props}) {
-      var {todosCollection} = useResources((_props, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
+      var {todosCollection} = useResources(({TODOS}, _props) => ({[TODOS]: {data: {start_time}}}), props);
       
       // ...
     ```
@@ -658,7 +659,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
     
     ```js
     function MyComponent(props) {
-      var {todosCollection} = useResources(({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
+      var {todosCollection} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {data: {start_time}}}), props);
       
       // ...
     ```
@@ -666,7 +667,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
      or define your executor function outside of the component scope, as we've done throughout this tutorial (now you know why!):
      
      ```js
-     const getResources = ({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}});
+     const getResources = ({TODOS}, {start_time}) => ({[TODOS]: {data: {start_time}}});
      
      function MyComponent(props) {
        var {todosCollection} = useResources(getResources, props);
@@ -693,7 +694,7 @@ As alluded to previously, `resourcerer` relies on the model classes themselves t
 Let's take a look at the USER_TODOS resource from above, where we want to request some top number of todos for a user sorted by some value over some time range. The resource declaration might look like this:
 
 ```js
-const getResources = (props, ResourceKeys) => {
+const getResources = (ResourceKeys, props) => {
   const now = Date.now();
       
   return {
@@ -732,7 +733,7 @@ export class UserTodosCollection extends Collection {
 };
 ```
 
-We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that Schmackbone transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
+We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `data` object that `resourcerer` transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `data` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
 
 The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash; it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `cacheFields`, which takes the `data` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
 
@@ -786,7 +787,7 @@ It takes a function that is passed `ResourceKeys` and should return a list of `R
 
 ```js
 function MyComponent(props) {
-  var {todosCollection, refetch} = useResources(({start_time}, {TODOS}) => ({[TODOS]: {data: {start_time}}}), props);
+  var {todosCollection, refetch} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {data: {start_time}}}), props);
       
   // ...
   
@@ -831,15 +832,50 @@ ResourcesConfig.set(configObj);
 
 * `errorBoundaryChild` (JSX/React.Element): the element or component that should be rendered in the ErrorBoundary included in every `withResources` wrapping. By default, a caught error renders this child:
 
-```jsx
-<div className='caught-error'>
-  <p>An error occurred.</p>
-</div>
-```
+    ```jsx
+    <div className='caught-error'>
+      <p>An error occurred.</p>
+    </div>
+    ```
 
 * `log` (function): method invoked when an error is caught by the ErrorBoundary. Takes the caught error as an argument. Use this hook to send caught errors to your error monitoring system. **Default:** noop.
 
-* `prefilter` (function): proxy for Schmackbone's [ajaxPrefilter](https://github.com/noahgrant/schmackbone#backboneajaxprefilter) method, which is a great place to add custom request headers (like auth headers) or do custom error response handling. See Schmackbone's documentation for more. **Default:** the identity function.
+* `prefilter` (function): this function takes in the options object passed to the request and should return any new options you want to add. this is a great place to add custom request headers (like auth headers) or do custom error response handling. For example:
+
+    ```js
+    prefilter: (options) => ({
+      error: (response) => {
+        if (response.status === 401) {
+          // refresh auth token logic
+        } else if (response.status === 429) {
+          // do some rate-limiting retry logic
+        }
+
+        // catch callbacks still get called after this, so always default to rejecting
+        return Promise.reject(response);
+      },
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${localStorage.getItem('super-secret-auth-token')}`
+      }
+    })
+    ```
+
+    **Default:** the identity function.
+
+* `stringify` (function): Use this to pass in a custom or more powerful way to stringify your GET parameters. The default is to use [URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams), but that won't url-encode nested objects or arrays. Override this method if you need support for that, ie:
+
+    ```js
+    import {stringify} from 'qs';
+
+    ResourcesConfig.set({
+      stringify(data, options) {
+        // data is the data object to be stringified into query parameters
+        // options is the request options object
+        return stringify(data);
+      }
+    });
+    ```
 
 * `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, and `useResources` will return `end_time` and `start_time` for ease of use in your executor function. **Default:** `'urlParams'`.
 
@@ -858,24 +894,69 @@ ResourcesConfig.set(configObj);
 
 * Why?
 
-    Yeah...isn't [GraphQL](https://graphql.org/) the thing to use now? Why bother with a library for REST APIs&mdash;especially one that is based on a _Backbone_ fork. It feels so...._2012_.
+    Yeah...isn't [GraphQL](https://graphql.org/) the thing to use now? Why bother with a library for REST APIs?
     
     GraphQL is awesome, but there are many reasons why you might not want to use it. Maybe you don't have the resources to ensure that all of your data can be accessed performantly; in that case, your single `/graphql` endpoint will only ever be as fast as your slowest data source. Maybe your existing REST API is working well and your eng org isn't going to prioritize any time to move away from it. Etc, etc, etc. `resourcerer` offers a way for your front-end team to quickly get up and running with declarative data fetching, request flows, and model caching.
 
+* How is this different from React Query?
+
+  React Query is an awesome popular library that shares some of the same features as resourcerer. But because `resourcerer` is _explicitly_ for REST APIs and React Query is backend agnostic, we get to abstract out even more. For example, in React Query, you'll need to imperatively fetch your resource in each component:
+
+  ```js
+  // React Query, assuming a made-up category dependency
+  // component 1
+  function MyComponent({category, ...props}) {
+    // define your fetch key and imperatively fetch your resource
+    const {data} = useQuery(['somekey', {category}], () => {
+      return fetch('/todos', (res) => res.json())
+    }
+  }
+
+  // component 2
+  function MySecondComponent({category, ...props}) {
+    // same thing. you'll probably want to abstract these out so that changing it one place changes it everywhere
+    const {data} = useQuery(['somekey', {category}], () => {
+      return fetch('/todos', (res) => res.json())
+    }
+  }
+  ```
+
+  With resourcerer, this abstraction is done once in a model--both defining its url as well as how its properties should affect its cache key:
+
+  ```js
+  // resourcerer, with the same category dependency. dependencies are resource-specific,
+  // not component-specific, so they should be defined on the model instead of the component
+  // todos-collection.js
+  export default class TodosCollection extends Collection {
+    static cacheFields = ['category']
+
+    url() {
+      return '/todos';
+    }
+  }
+
+
+  // component1
+  function MyComponent({category, ...props}) {
+    var {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+  }
+
+  // component2--identical to the first
+  function MyComponent({category, ...props}) {
+    var {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+  }
+  ```
+
+  Also note that the `todosCollection` in both components are the same objects.
+
+
 * Does `resourcerer` support SSR?  
   
-    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/TESTING_COMPONENTS.md#testing-components-that-use-resourcerer), it is likely that `resourcerer` can work nicely with an SSR setup that:  
+    There is no official documentation for its use in server-side rendering at this point. However, because passing models as props directly to a component [bypasses fetching](/docs/testing_components.md#testing-components-that-use-resourcerer), it is likely that `resourcerer` can work nicely with an SSR setup that:  
     
     1. passes instantiated models directly through the app before calling `renderToString`  
     2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
 
-* Does it support async rendering?  
-  
-    Yes! `withResources` used to depend on `componentWillReceiveProps`, but as of v0.9 it has been updated to use `componentDidUpdate` instead.
-    The upside is that it now supports async rendering; the downside, however, is that it requires an extra render before updating a resource
-    (since `componentDidUpdate` gets called after `render`, setting any loading states will cause an additional subsequent render).
-
-    `useResources` has always supported async rendering.
         
 * Can the `withResources` HOC be used with both function components and class components?
 
@@ -921,9 +1002,9 @@ ResourcesConfig.set(configObj);
 
 * Can `resourcerer` do anything other than `GET` requests?
 
-    `resourcerer` only handles resource _fetching_ (i.e. calling [Model.prototype.fetch](https://backbonejs.org/#Model-fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
+    `resourcerer` only handles resource _fetching_ (i.e. calling [Model.prototype.fetch](/docs/model.md#fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `data` property into a POST body, for example, when making a search request.
     
-    For write operations, use Models' [`save`](https://backbonejs.org/#Model-savehttps://backbonejs.org/#Model-save) and [`destroy`](https://backbonejs.org/#Model-destroy) methods directly:
+    For write operations, use Models' [`save`](/docs/model.md#save) and [`destroy`](/docs/model.md#destroy) methods directly:
     
     ```js
     onClickSaveButton() {
@@ -944,7 +1025,7 @@ ResourcesConfig.set(configObj);
 
 * How can we test components that use `resourcerer`?  
   
-    See the [doc on testing components](/TESTING_COMPONENTS.md) for more on that.
+    See the [doc on testing components](/docs/testing_components.md) for more on that.
 
 * How big is the `resourcerer` package?  
 
