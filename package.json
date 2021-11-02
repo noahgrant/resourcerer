@@ -1,11 +1,10 @@
 {
   "name": "resourcerer",
-  "version": "0.11.6",
+  "version": "1.0.0-alpha-2",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
     "declarative data-fetching framework",
-    "backbone",
     "react"
   ],
   "files": [
@@ -18,36 +17,44 @@
   "scripts": {
     "checks": "npm test && npm run lint",
     "lint": "eslint lib/*.js* test/*.js*",
-    "test": "NODE_ENV=test && karma start"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
+  },
+  "jest": {
+    "collectCoverageFrom": [
+      "lib/*.{js,jsx}",
+      "!lib/constants.js"
+    ],
+    "moduleDirectories": [
+      "node_modules"
+    ],
+    "setupFilesAfterEnv": [
+      "./test/setup"
+    ],
+    "testEnvironment": "jsdom"
   },
   "module": "index.js",
   "devDependencies": {
     "@babel/cli": "^7.10.5",
     "@babel/core": "^7.10.5",
+    "@babel/eslint-parser": "^7.15.8",
     "@babel/plugin-proposal-class-properties": "^7.12.1",
     "@babel/plugin-proposal-decorators": "^7.10.5",
     "@babel/plugin-transform-runtime": "^7.10.5",
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-react": "^7.10.4",
-    "babel-eslint": "^10.0.1",
     "babel-loader": "^8.0.5",
-    "eslint": "^5.16.0",
-    "eslint-plugin-react": "^7.12.4",
+    "eslint": "^7.32.0",
+    "eslint-plugin-jest": "^25.2.2",
+    "eslint-plugin-react": "7.26",
     "eslint-plugin-sift": "^0.3.0",
-    "imports-loader": "^0.8.0",
-    "jasmine-core": "^2.99.1",
-    "karma": "^4.0.1",
-    "karma-chrome-launcher": "https://registry.npmjs.org/karma-chrome-launcher/-/karma-chrome-launcher-2.2.0.tgz",
-    "karma-jasmine": "^1.1.0",
-    "karma-jasmine-html-reporter": "^0.2.2",
-    "karma-webpack": "^3.0.5",
-    "webpack": "^4.29.6"
-  },
-  "dependencies": {
-    "schmackbone": "^3.0.0"
+    "jest": "^27.3.1",
+    "webpack": "^4.29.6",
+    "whatwg-fetch": "^3.6.2"
   },
   "peerDependencies": {
-    "react": "^16.8.6 || ^17.0.0 || ^18.0.0",
-    "react-dom": "^16.8.6 || ^17.0.0 || ^18.0.0"
+    "react": "^16.14.0 || ^17.0.0",
+    "react-dom": "^16.14.0 || ^17.0.0"
   }
 }

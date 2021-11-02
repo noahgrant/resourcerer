@@ -1,9 +1,12 @@
-import {Collection, Model} from 'schmackbone';
+import Collection from '../lib/collection';
+import Model from '../lib/model';
 
 export class UserModel extends Model {
   key = 'user'
 
-  initialize(attrs, options={}) {
+  constructor(attrs, options={}) {
+    super(attrs, options);
+
     this.userId = options.userId;
     this.fraudLevel = options.fraudLevel;
   }
@@ -36,7 +39,9 @@ export class DecisionsCollection extends Collection {
 export class NotesModel extends Model {
   key = 'notes'
 
-  initialize(attributes, options={}) {
+  constructor(attributes, options={}) {
+    super(attributes, options);
+
     this.userId = options.userId;
   }
 
@@ -50,7 +55,9 @@ export class NotesModel extends Model {
 export class SearchQueryModel extends Model {
   key = 'search'
 
-  initialize(attributes, options={}) {
+  constructor(attributes, options={}) {
+    super(attributes, options);
+
     this.userId = options.userId;
   }
 
@@ -110,7 +117,9 @@ export class LabelInstanceModel extends Model {
 export class AccountConfigModel extends Model {
   key = 'accountConfig'
 
-  initialize(attrs, options={}) {
+  constructor(attrs, options={}) {
+    super(attrs, options);
+
     this.accountId = options.accountId;
   }
 

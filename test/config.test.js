@@ -1,9 +1,9 @@
 import * as Config from '../lib/config';
-import * as Schmackbone from 'schmackbone';
+import Model from '../lib/model';
 import {noOp} from '../lib/utils';
 
-class TestModel extends Schmackbone.Model {}
-class TestModel2 extends Schmackbone.Model {}
+class TestModel extends Model {}
+class TestModel2 extends Model {}
 
 /* eslint-disable max-nested-callbacks */
 describe('Config', () => {
@@ -80,9 +80,9 @@ describe('Config', () => {
 
   describe('#setConfig', () => {
     it('adds a setting to the configs, overriding defaults', () => {
-      var logSpy = jasmine.createSpy('log'),
-          trackSpy = jasmine.createSpy('track'),
-          prefilterSpy = jasmine.createSpy('prefilter');
+      var logSpy = jest.fn(),
+          trackSpy = jest.fn(),
+          prefilterSpy = jest.fn();
 
       expect(Config.ResourcesConfig.cacheGracePeriod).toEqual(120000);
       expect(Config.ResourcesConfig.log).toEqual(noOp);

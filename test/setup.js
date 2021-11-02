@@ -1,3 +1,5 @@
+import 'whatwg-fetch';
+
 /**
  * This file includes all test setup--setup mocked as it would normally be
  * mocked within a real app, adding resource keys, models, and unfetched
@@ -18,8 +20,6 @@ import {
 } from './model-mocks';
 import {ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources} from '../lib/config';
 import React from 'react';
-
-window.React = React;
 
 ResourceKeys.add({
   ACCOUNT_CONFIG: 'accountConfig',
@@ -61,7 +61,3 @@ class Loader extends React.Component {
 }
 
 ResourcesConfig.set({Loader});
-
-let context = require.context('./', true, /.jsx?$/);
-
-context.keys().forEach(context);

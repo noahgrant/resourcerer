@@ -12,7 +12,8 @@
     "browser": true,
     "commonjs": true,
     "es6": true,
-    "jasmine": true,
+    "jest/globals": true,
+    "jest": true,
     "node": true
   },
   "rules": {
@@ -221,8 +222,9 @@
     "olark": false
   },
   "plugins": [
+    "jest",
     "react",
     "sift"
   ],
-  "parser": "babel-eslint"
+  "parser": "@babel/eslint-parser"
 }

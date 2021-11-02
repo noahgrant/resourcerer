@@ -67,7 +67,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 Another way to effectively have a dependent resource is to use a conditional in your `getResources` method:
     
 ```js
-const getResources = (props, ResourceKeys) => ({
+const getResources = (ResourceKeys, props) => ({
   [ResourceKeys.TODOS]: {},
   ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {attributes: {id: props.todoId}} : {})
 });
@@ -85,7 +85,7 @@ In general, using `dependsOn` is much more preferable, both in terms of semantic
 That doesn’t mean that the conditional can’t be useful&mdash;it’s just that its use should be relegated to components that have two discrete forms&mdash;one in which the dependent prop is always present, and one in which the dependent prop is never present. If you’re unsure whether a prop might exist, notably because it comes from a providing resource, you should use `dependsOn`. A good example of when to use a conditional is in this fake component that sometimes fetches a user model and sometimes fetches an order model depending on the presence of an `orderId` prop:
 
 ```js
-const getResources = ({userId, orderId}, ResourceKeys) => ({
+const getResources = (ResourceKeys, {userId, orderId}) => ({
   ...userId ? {[ResourceKeys.USER]: {options: {userId}} : {},
   ...!userId && orderId ? {
     [ResourceKeys.ORDER]: {
@@ -188,7 +188,7 @@ Use it like:
 ```jsx
 import {useResources} from 'resourcerer';
 
-const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+const getResources = ({TODOS}, props) => ({[TODOS]: {}});
 
 export default function UserTodos(props) {
   var {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
@@ -237,7 +237,7 @@ import ExpensiveComponent from 'components/expensive_component/expensive_compone
 import {memo} from 'react';
 import {useResources} from 'resourcerer';
 
-const getResources = (props, {TODOS}) => ({[TODOS]: {}});
+const getResources = ({TODOS}, props) => ({[TODOS]: {}});
 const MemoizedExpensiveComponent = memo(ExpensiveComponent, (prevProps, nextProps) => nextProps.isOrWillBeLoading());
 
 export default function UserTodos(props) {
@@ -265,7 +265,7 @@ this:
 ```jsx
 import {useResources} from 'resourcerer';
 
-const getResources = (props, {TODO}) => ({
+const getResources = ({TODO}, props) => ({
   [TODO]: {
     attributes: {id: props.id},
     fetch: !!props.id

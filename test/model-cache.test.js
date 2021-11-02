@@ -1,24 +1,18 @@
-var ModelCache;
+import ModelCache from '../lib/model-cache';
 
 const CACHE_WAIT = 150000,
       testModel = {};
 
-/* eslint-disable max-nested-callbacks */
 describe('ModelCache', () => {
   beforeEach(() => {
-    jasmine.clock().install();
-    // ensure we have fresh caches for each test
-    ModelCache = require('../lib/model-cache').default;
-
-    spyOn(ModelCache, 'register').and.callThrough();
+    jest.useFakeTimers();
+    jest.spyOn(ModelCache, 'register');
   });
 
   afterEach(() => {
-    jasmine.clock().uninstall();
-    ModelCache.remove('foo');
-    ModelCache.remove('bar');
-    ModelCache.remove('baz');
-    delete require.cache[require.resolve('../lib/model-cache')];
+    ModelCache.__removeAll__();
+    jest.useRealTimers();
+    ModelCache.register.mockRestore();
   });
 
   it('gets a model from its cache via a unique key', () => {
@@ -54,7 +48,7 @@ describe('ModelCache', () => {
       it('schedules the model for removal', () => {
         // model should be removed after CACHE_WAIT time
         expect(ModelCache.get(PUT_KEY)).toBeDefined();
-        jasmine.clock().tick(CACHE_WAIT);
+        jest.advanceTimersByTime(CACHE_WAIT);
         expect(ModelCache.get(PUT_KEY)).not.toBeDefined();
       });
     });
@@ -71,7 +65,7 @@ describe('ModelCache', () => {
     it('clears any current cache removal timeouts', () => {
       // if we unregister, we'll see it removed from the cache
       ModelCache.unregister(component);
-      jasmine.clock().tick(CACHE_WAIT);
+      jest.advanceTimersByTime(CACHE_WAIT);
       expect(ModelCache.get('foo')).not.toBeDefined();
 
       // but if we re-register beforehand, we won't
@@ -79,7 +73,7 @@ describe('ModelCache', () => {
       expect(ModelCache.get('foo')).toBeDefined();
       ModelCache.unregister(component);
       ModelCache.put('foo', {}, component);
-      jasmine.clock().tick(CACHE_WAIT);
+      jest.advanceTimersByTime(CACHE_WAIT);
       expect(ModelCache.get('foo')).toBeDefined();
     });
 
@@ -91,7 +85,7 @@ describe('ModelCache', () => {
       // add new entry
       ModelCache.put('foo', {}, component2);
       ModelCache.unregister(component2);
-      jasmine.clock().tick(CACHE_WAIT);
+      jest.advanceTimersByTime(CACHE_WAIT);
       // even though the first component didn't add the model, the model should
       // still exist after component2 was unregistered
       expect(ModelCache.get('foo')).toBeDefined();
@@ -109,7 +103,7 @@ describe('ModelCache', () => {
 
     it('removes the component from the componentManifest for the given cache keys', () => {
       ModelCache.unregister(component, 'foo', 'bar');
-      jasmine.clock().tick(CACHE_WAIT);
+      jest.advanceTimersByTime(CACHE_WAIT);
       expect(ModelCache.get('foo')).not.toBeDefined();
       expect(ModelCache.get('bar')).not.toBeDefined();
       expect(ModelCache.get('baz')).toBeDefined();
@@ -117,7 +111,7 @@ describe('ModelCache', () => {
 
     it('removes the component from the entire componentManifest if no cache keys passed', () => {
       ModelCache.unregister(component);
-      jasmine.clock().tick(CACHE_WAIT);
+      jest.advanceTimersByTime(CACHE_WAIT);
       expect(ModelCache.get('foo')).not.toBeDefined();
       expect(ModelCache.get('bar')).not.toBeDefined();
       expect(ModelCache.get('baz')).not.toBeDefined();
@@ -129,13 +123,14 @@ describe('ModelCache', () => {
       ModelCache.put('bar', {}, {});
 
       ModelCache.unregister(component);
-      jasmine.clock().tick(CACHE_WAIT);
+      jest.advanceTimersByTime(CACHE_WAIT);
 
       expect(ModelCache.get('foo')).toBeDefined();
       expect(ModelCache.get('bar')).toBeDefined();
       // only baz will get removed, since the others have other components
       // still attached
       expect(ModelCache.get('baz')).not.toBeDefined();
+      ModelCache.unregister({});
     });
   });
 
@@ -162,4 +157,3 @@ describe('ModelCache', () => {
     expect(ModelCache.get('foo')).not.toBeDefined();
   });
 });
-/* eslint-enable max-nested-callbacks */
