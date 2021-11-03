@@ -87,6 +87,8 @@ create: Promise<[Model, Response]> (models: (Object|Model)|Array<Object|Model>, 
 
 Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
 
+***All .create() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
+
 ### fetch
 ```js
 fetch: Promise<[Collection, Response]> (options: Object)
@@ -101,6 +103,8 @@ get: Model? (identifier: string|number)
 ```
 
 Collections index their Model instances by either the Model's [`idAttribute`]() or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
+
+***All .fetch() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 
 ### has  
 ```js
