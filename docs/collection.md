@@ -96,6 +96,8 @@ fetch: Promise<[Collection, Response]> (options: Object)
 
 This is the method that `resourcerer` uses internally to get server data and set its parsed response as models on the collection. This should rarely need to be used in your application. Subscribed components will update when the request returns.
 
+***All .fetch() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
+
 
 ### get
 ```js
@@ -103,8 +105,6 @@ get: Model? (identifier: string|number)
 ```
 
 Collections index their Model instances by either the Model's [`idAttribute`]() or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
-
-***All .fetch() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 
 ### has  
 ```js
