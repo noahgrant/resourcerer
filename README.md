@@ -47,7 +47,7 @@ ModelMap.add({TODOS: TodosCollection});
 
 ```js
 // in your top level js file
-import 'js/core/resourcerer-config;
+import 'js/core/resourcerer-config';
 ```
 
 3. Use your preferred abstraction (`useResources` hook or `withResources` HOC) to request your models in any component:
