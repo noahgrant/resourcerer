@@ -64,7 +64,20 @@ add: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
 Add a new entry or list of entries into the collection. Each entry can be an object of attributes or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse]() method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
 
 ### create
+```js
+create: Promise<[Model, Response]> (models: (Object|Model)|Array<Object|Model>, options: Object)
+```
+
+Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
+
 ### fetch
+```js
+fetch: Promise<[Collection, Response]> (options: Object)
+```
+
+This is the method that `resourcerer` uses internally to get server data and set its parsed response as models on the collection. This should rarely need to be used in your application. Subscribed components will update when the request returns.
+
+
 ### get
 ```js
 get: Model? (identifier: string|number)
@@ -120,7 +133,7 @@ parse(response) {
 toJSON: Array<Object> ()
 ```
 
-Returns a list of each model's data attributes.
+Returns each model's data attributes in a new list.
 
 ### Utility methods
 
