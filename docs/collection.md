@@ -19,13 +19,13 @@ class MyTodos extends Collection {
 }
 ```
 
-A collection instance of the class created and registered in your [resourcerer config]() will be returned by every `useResources` call that uses its model key from the [ModelMap](). You can read simply from it
+A collection instance of the class created and registered in your [resourcerer config](https://github.com/noahgrant/resourcerer#configuring-resourcerer) will be returned by every `useResources` call that uses its model key from the [ModelMap](https://github.com/noahgrant/resourcerer#tutorial). You can read simply from it
 by using `Collection#toJSON` (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
 that you might find useful in rendering your data-hydrated components.
 
 ## Properties
 
-### static comparator
+### `static` comparator
 
 Add this on your Collection definition to tell it how it should sort its models. It can take three forms:
 
@@ -37,11 +37,11 @@ Add this on your Collection definition to tell it how it should sort its models.
 
 This is an instance property that represents the number of models in the collection.  
 
-### static Model
+### `static` Model
 
 Set this property if you want a collection's models to be an instance of a class other than the default Model
 
-### static cacheFields
+### `static` cacheFields
 
 This property tells resourcerer how to determine whether to make a new request or to take a collection out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
 
