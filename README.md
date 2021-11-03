@@ -947,7 +947,10 @@ ResourcesConfig.set(configObj);
   }
   ```
 
-  Also note that the `todosCollection` in both components are the same objects.
+  The other big difference you might note is the data object in the hook's response. With React Query, you get exactly the JSON returned by the server. With resourcerer, you get [Model](/docs/model.md) or [Collection](/docs/collection.md) instances, which are enriched data representations from which you can also perform write operations that will propagate throughout all other subscribed components&mdash;regardless of their location in your application. Need to update a model? Call [`model.set()`](/docs/model.md#set)&mdash;any other component that uses that model (or its collection) will automatically update. Need to persist to the server? Call [`model.save()`](/docs/model.md#save) or [`collection.add()`](/docs/collection.md#add). Need to remove the model? [`model.destroy()`](/docs/model.md#destroy). Ez-pz.
+  
+  
+  Also note that the `todosCollection` in both components 1 and 2 in the last example are the same objects.
 
 
 * Does `resourcerer` support SSR?  
