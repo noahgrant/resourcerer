@@ -141,9 +141,37 @@ parse(response) {
 ```
 
 ### remove
+```js
+remove: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
+```
+
+Use this to remove a model or models from the collection, which should not often be needed. You can pass in anything or a list of anything that can be accepted via [.get()](#get). Pass in `silent: true` for subscribed components _not_ to get rerendered.
+
 ### reset
+```js
+reset: Collection (models: Array<Object|Model>, options: Object)
+```
+
+Removes all models and their references from a collection and replaces them with the models passed in. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data attributes get parsed before being set on their respective models.
+
 ### set
+```js
+set: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
+```
+
+This is the method that many other write methods (`add`, `remove`, `save`, `reset`, etc) use under the hood, and it should _rarely if ever_ need to be used directly in your application. Sets new attributes as models and merges existing attributes with their models, and sorts as necessary. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data attributes get parsed before being set on their respective models.  
+
 ### sync
+This is just a proxy for the [sync](/lib/sync.js) module. Its behavior shouldn't be overridden, but it may be useful to wrap it for custom behavior, ie:
+
+```js
+Collection.sync = Model.sync = function(model, options) {
+  // custom logic...
+  
+  // defer again to the sync module
+  return sync(this, options);
+}
+```
 
 ### toJSON
 ```js
