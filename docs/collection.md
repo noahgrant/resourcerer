@@ -121,7 +121,7 @@ Use this as a shortcut when you don't want to define a custom Model class just b
 modelId(attrs) {
   return attrs.name
 }
-```. 
+``` 
 
 ### parse
 ```js
@@ -150,7 +150,7 @@ parse(response) {
 toJSON: Array<Object> ()
 ```
 
-Returns each model's data attributes in a new list.
+Returns each model's data attributes in a new array.
 
 ### Utility methods
 
