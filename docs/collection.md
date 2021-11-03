@@ -119,7 +119,7 @@ Use this as a shortcut when you don't want to define a custom Model class just b
 ```js
 // the collection will index its models based on the `name` property instead of the default `id` property
 modelId(attrs) {
-  return attrs.name
+  return attrs.name;
 }
 ``` 
 
