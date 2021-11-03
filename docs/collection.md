@@ -25,10 +25,26 @@ that you might find useful in rendering your data-hydrated components.
 
 ## Properties
 
-### comparator
+### static comparator
+
+Add this on your Collection definition to tell it how it should sort its models. It can take three forms:
+
+1. A string. In this case, it represents the model property to sort by.
+2. A function with a single argument. In this case, it takes a model's attributes as an argument and returns the value by which it should sort.
+3. A function with two arguments. This is used to sort the collection's models via the native [Array.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) method.  
+
 ### length
+
+This is an instance property that represents the number of models in the collection.  
+
 ### static Model
+
+Set this property if you want a collection's models to be an instance of a class other than the default Model
+
 ### static cacheFields
+
+This property tells resourcerer how to determine whether to make a new request or to take a collection out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
+
 
 ## Methods
 
@@ -53,7 +69,8 @@ class MyCollection extends Collection {
   }
 }
 ```
-  
+
+Passing in a `model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor.
 
 
 ### add
