@@ -184,13 +184,60 @@ toJSON: Array<Object> ()
 
 Returns each model's data attributes in a new array.
 
-### Utility methods
+## Utility instance methods
 
-#### at
-#### filter
-#### find
-#### findWhere
-#### map
-#### pluck
-#### slice
-#### where
+### at
+```js
+at: Model (index: number)
+```
+
+Returns the model at a given index in the collection. Index can be negative to count backwards from the end.
+
+### filter
+```js
+filter: Array<Model> (predicate: function)
+```
+
+Same signature as Array.prototype.filter across a collection's models.  
+
+### find
+```js
+find: Model? (predicate: function)
+```
+
+Same signature as Array.prototype.find across a collection's models.  
+
+### findWhere
+```js
+findWhere: Model? (attrs: object)
+```
+
+Returns the model matching the attributes passed in, or undefined if no match is found. Like `.find` but a shorthand that uses matching attribute values instead of a predicate function.
+
+### map
+```js
+map: Array<any> (predicate: function)
+```
+
+Same signature as Array.prototype.map across a collection's models.
+
+### pluck
+```js
+pluck: Array<any> (attribute: string)
+```
+
+Returns a list of the specified attribute value for all models.
+
+### slice
+```js
+slice: Array<Model> (startIndex:number[, endIndex: number])
+```
+
+Same signature as Array.prototype.slice across a collection's models.
+
+### where
+```js
+where: Array<Model> (attrs: object)
+```
+
+Returns a list of models matching the attribute values passed in. Like `.filter` but a shorthand that uses matching attribute values instead of a predicate function.
