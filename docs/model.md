@@ -40,13 +40,57 @@ that you might find useful in rendering your data-hydrated components.
 
 ## Properties
 
-### static cacheFields
-### static idAttribute
-### static defaults
+### `static` cacheFields
+`Array<string|function>`
+
+This property tells resourcerer how to determine whether to make a new request or to take a model out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
+
+### `static` idAttribute
+`string`. Default: `'id'`.  
+
+Override this to be the property name of the Model's unique identifier if it something other than `'id'`. Each model instance will get an `id` instance property that will be equal to that value. i.e. if the Model class has `static idAttribute = 'email'` and the Model is instantiated with `{email: 'noah@gmail.com'}`, then `model.id === 'noah@gmail.com'`.
+
+### `static` defaults
+`object|function`
+
+An object or function that returns object with attribute keys and their default values. If set, then when the model is instantiated, any missing attributes get set to these values.
+
+
 
 ## Methods
 
+### constructor
+
+```js
+constructor: void (attributes: Object, options: object)
+```
+
+The Model's constructor gets passed any initial attributes, as well as the options from the executor function. Override this to set some instance variables for the model, which is really useful for url path parameters. Just be sure to pass the arguments to its `.super()` call, as well:
+
+```js
+class MyModel extends Model {
+  constructor(attributes, options={}) {
+    super(attributes, options);
+    
+    this.category = options.category;
+  }
+  
+  url() {
+    return `/todos/${this.category}/${this.id}`;
+  }
+}
+```
+
+Note that `this.id` is automatically set to whichever value is passed in at the `idAttribute` key (default: 'id'). Pass the `parse: true` option to have the attributes get run through the Model's `parse` method before getting set.
+
+
 ### toJSON
+```js
+toJSON: Object ()
+```
+
+Returns the model's data attributes in a new object.
+
 ### get
 ### has
 ### set
