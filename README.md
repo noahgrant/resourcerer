@@ -231,7 +231,7 @@ export default function MyComponent(props) {
 ```
 
 You see that `useResources` takes an executor function that returns an object. The executor function
-takes two arguments: the current props, and an object of `ResourceKeys`. Where does `ResourceKeys` come
+takes two arguments: an object of `ResourceKeys` and the current props. Where does `ResourceKeys` come
 from? From the ModelMap in the config file we added to earlier!
 
 ```js
