@@ -78,14 +78,14 @@ Passing in a `model` option or a `comparator` option to an instance's constructo
 add: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
 ```
 
-Add a new entry or list of entries into the collection. Each entry can be an object of attributes or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse]() method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
+Add a new entry or list of entries into the collection. Each entry can be an object of attributes or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse](/docs/model.md#parse) method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
 
 ### create
 ```js
-create: Promise<[Model, Response]> (models: (Object|Model)|Array<Object|Model>, options: Object)
+create: Promise<[Model, Response]> (model: (Object|Model), options: Object)
 ```
 
-Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
+Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
 
 ***All .create() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 
@@ -104,7 +104,7 @@ This is the method that `resourcerer` uses internally to get server data and set
 get: Model? (identifier: string|number)
 ```
 
-Collections index their Model instances by either the Model's [`idAttribute`]() or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
+Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
 
 ### has  
 ```js
@@ -184,13 +184,60 @@ toJSON: Array<Object> ()
 
 Returns each model's data attributes in a new array.
 
-### Utility methods
+## Utility instance methods
 
-#### at
-#### filter
-#### find
-#### findWhere
-#### map
-#### pluck
-#### slice
-#### where
+### at
+```js
+at: Model (index: number)
+```
+
+Returns the model at a given index in the collection. Index can be negative to count backwards from the end.
+
+### filter
+```js
+filter: Array<Model> (predicate: function)
+```
+
+Same signature as Array.prototype.filter across a collection's models.  
+
+### find
+```js
+find: Model? (predicate: function)
+```
+
+Same signature as Array.prototype.find across a collection's models.  
+
+### findWhere
+```js
+findWhere: Model? (attrs: object)
+```
+
+Returns the model matching the attributes passed in, or undefined if no match is found. Like `.find` but a shorthand that uses matching attribute values instead of a predicate function.
+
+### map
+```js
+map: Array<any> (predicate: function)
+```
+
+Same signature as Array.prototype.map across a collection's models.
+
+### pluck
+```js
+pluck: Array<any> (attribute: string)
+```
+
+Returns a list of the specified attribute value for all models.
+
+### slice
+```js
+slice: Array<Model> (startIndex:number[, endIndex: number])
+```
+
+Same signature as Array.prototype.slice across a collection's models.
+
+### where
+```js
+where: Array<Model> (attrs: object)
+```
+
+Returns a list of models matching the attribute values passed in. Like `.filter` but a shorthand that uses matching attribute values instead of a predicate function.
