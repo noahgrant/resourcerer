@@ -165,8 +165,29 @@ pick: object (...attributes: Array<string>)
 
 Handy helper method to only return a subset of a model's attributes, as opposed to the whole thing like [`.toJSON()`](#tojson) does.
 
-### fetch
 ### save
+```js
+save: Promise<[Model, Response]> (attributes: object, options: object)
+```
+
+Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is true, the request will be sent as a POST. Otherwise, it will be sent as a PUT with the whole resource, or a PATCH with only `attributes` sent over if the `patch: true` option is passed. When the request returns, the server data is passed through the [`.parse()`](#parse) method before being set on the model. Pass the `wait: true` option to wait to add the data until after the server responds. Subscribed components will update when the new entry is added as well as when the request returns. If the request errors, all changes will be reverted and components updated.
+
+***All .save() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
+
 ### destroy
+```js
+destroy: Promise<[Model, Response]> (options: object)
+```
 
+Use this to remove the send a DELETE request at this model's url (`/base/path/${model.id}`) to the server. The model is removed from its collection if it belongs to one. If [`.isNew()`](#isnew) is false (signifying that the model was never persisted in the first place), a request is not sent, but the model is still removed from its collection. Pass the `wait: true` option to wait to remove the model until after the server responds. Subscribed components will update when the model is removed. If the request errors, the model will get added back to its collection and components will get updated.
 
+***All .destroy() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.*** 
+
+### fetch
+```js
+fetch: Promise<[Model, Response]> (options: Object)
+```
+
+This is the method that `resourcerer` uses internally to get server data and set its parsed response as models on the collection. This should rarely need to be used in your application. Subscribed components will update when the request returns.
+
+***All .fetch() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
