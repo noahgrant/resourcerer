@@ -179,7 +179,7 @@ Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is tru
 destroy: Promise<[Model, Response]> (options: object)
 ```
 
-Use this to remove the send a DELETE request at this model's url (`/base/path/${model.id}`) to the server. The model is removed from its collection if it belongs to one. If [`.isNew()`](#isnew) is false (signifying that the model was never persisted in the first place), a request is not sent, but the model is still removed from its collection. Pass the `wait: true` option to wait to remove the model until after the server responds. Subscribed components will update when the model is removed. If the request errors, the model will get added back to its collection and components will get updated.
+Use this to remove the send a DELETE request at this model's url to the server. The model is removed from its collection if it belongs to one. If [`.isNew()`](#isnew) is false (signifying that the model was never persisted in the first place), a request is not sent, but the model is still removed from its collection. Pass the `wait: true` option to wait to remove the model until after the server responds. Subscribed components will update when the model is removed. If the request errors, the model will get added back to its collection and components will get updated.
 
 ***All .destroy() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.*** 
 
