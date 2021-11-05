@@ -47,7 +47,7 @@ ModelMap.add({TODOS: TodosCollection});
 
 ```js
 // in your top level js file
-import 'js/core/resourcerer-config;
+import 'js/core/resourcerer-config';
 ```
 
 3. Use your preferred abstraction (`useResources` hook or `withResources` HOC) to request your models in any component:
@@ -139,6 +139,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [Custom Resource Names](#custom-resource-names)
         1. [prefetches](#prefetches)
         1. [status](#status)
+    1. [Data mutations](#data-mutations)
     1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     1. [Declarative Cache Keys](#declarative-cache-keys)
@@ -231,7 +232,7 @@ export default function MyComponent(props) {
 ```
 
 You see that `useResources` takes an executor function that returns an object. The executor function
-takes two arguments: the current props, and an object of `ResourceKeys`. Where does `ResourceKeys` come
+takes two arguments: an object of `ResourceKeys` and the current props. Where does `ResourceKeys` come
 from? From the ModelMap in the config file we added to earlier!
 
 ```js
@@ -629,6 +630,80 @@ class MyComponentWithTodos extends React.Component {}
 
 Note that in the `useResources` hook, which does not pollute any `props` object, statuses are returned by default; you can choose which ones you want to use in your component and ignore the rest.
 
+
+# Data Mutations
+
+So far we've only discussed fetching data. But `resourcerer` also makes it very easy to make write requests via the [Model](/docs/model.md) and [Collection](/docs/collection.md) instances that are returned. These classes are enriched data structures that hold our API server data as well as several utilities that help manage the server data in our application. There are three main write operations via these classes:
+
+1. [Model#save](/docs/model.md#save)
+
+    Use this to create a new resource object (POST) or update an existing one (PUT). Uses the return value of the [`isNew()`](/docs/model.md#isNew) method to determine which method to use. If updating, pass a `{patch: true}` option to use PATCH instead of PUT, which will also send over only the changed attributes instead of the entire resource.
+
+    ```js
+    function MyComponent(props) {
+      var {myModel} = useResources(getResources, props),
+          onSave = () => myModel.save({foo: 'bar'})
+            .then([model]) => // ...)
+            .catch(() => alert('request failed'));
+        
+      return <button onClick={onSave}>Persist model</button>;
+    }
+    ```
+
+1. [Model#destroy](/docs/model.md#destroy)
+
+    Use this to make a DELETE request at a url with this model's id. Will also remove the model from any collection it is a part of.
+
+    ```js
+    myModel.destroy().catch(() => alert('Model could not be destroyed));
+    ```
+
+1. [Collection#create](/docs/collection.md#create)
+
+    If working with a collection instead of a model, `.create()` adds a new model to the collection and then persists it to the server (via `model.save()`). This is pretty convenient:
+
+    ```js
+    function TodoDetails(props) {
+      var {hasLoaded, todosCollection} = useResources(getResources, props),
+          todoModel = todosCollection.get(props.id),
+      
+          onSaveTodo = {
+            // set some loading state...
+        
+            if (!props.id) {
+              // create new todo!
+              return todosCollection.create(attrs)
+                .then(([model]) => // ...)
+                .catch(() => alert('create failed'));
+                .then(() => // remove loading state);
+            }
+        
+            // update existing
+            todoModel.save(attrs).then(([model]) => ...).catch(() => alert('update failed'));
+          };
+      
+       if (hasLoaded && props.id && !todoModel) {
+         return <p>Todo not found.</p>;
+       }
+  
+       return (
+         // ...
+         <button onClick={onSaveTodo}>Save</button>
+       );
+    }
+    ```
+
+Each one of these methods exhibit the following behaviors:
+
+1. They automatically fire off the appropriate request with the right data and at the right url
+1. They will cause every component registered to that resource to re-render with the updated data, keeping the application in sync
+1. On error, they undo the changes that were done (and their registered components render again).
+
+**Note:**
+1. All calls resolve an array, which is a tuple of [model, response]. All reject with just the response.
+1. All write calls must have a `.catch` attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.
+
+
 # Differences between useResources and withResources
 
 The hook and HOC largely operate interchangeably, but do note a couple critical differences:
@@ -947,7 +1022,10 @@ ResourcesConfig.set(configObj);
   }
   ```
 
-  Also note that the `todosCollection` in both components are the same objects.
+  The other big difference you might note is the data object in the hook's response. With React Query, you get exactly the JSON returned by the server. With resourcerer, you get [Model](/docs/model.md) or [Collection](/docs/collection.md) instances, which are enriched data representations from which you can also perform write operations that will propagate throughout all other subscribed components&mdash;regardless of their location in your application. Need to update a model? Call [`model.set()`](/docs/model.md#set)&mdash;any other component that uses that model (or its collection) will automatically update. Need to persist to the server? Call [`model.save()`](/docs/model.md#save) or [`collection.add()`](/docs/collection.md#add). Need to remove the model? [`model.destroy()`](/docs/model.md#destroy). Ez-pz.
+  
+  
+  Also note that the `todosCollection` in both components 1 and 2 in the last example are the same objects.
 
 
 * Does `resourcerer` support SSR?  
