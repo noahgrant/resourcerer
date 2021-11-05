@@ -82,7 +82,7 @@ Add a new entry or list of entries into the collection. Each entry can be an obj
 
 ### create
 ```js
-create: Promise<[Model, Response]> (models: (Object|Model)|Array<Object|Model>, options: Object)
+create: Promise<[Model, Response]> (model: (Object|Model), options: Object)
 ```
 
 Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
