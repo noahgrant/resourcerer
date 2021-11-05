@@ -104,7 +104,7 @@ This is the method that `resourcerer` uses internally to get server data and set
 get: Model? (identifier: string|number)
 ```
 
-Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.id#static-idattribute) or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
+Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
 
 ### has  
 ```js
