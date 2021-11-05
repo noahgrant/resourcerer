@@ -92,13 +92,81 @@ toJSON: Object ()
 Returns the model's data attributes in a new object.
 
 ### get
+```js
+get: any (attribute: string)
+```
+
+Returns the value at the given attribute key.
+
 ### has
+```js
+has: boolean (attribute: string)
+```
+
+Returns true if the model has a defined value at the given attribute key
+
+### isNew
+```js
+isNew: boolean ()
+```
+
+By default, a model is considered 'new' if it does not have an id (or a value at the [`idAttribute`](#static-idattribute) proeprty. It is used to determine:
+
+1. Whether to send a POST (new) or a PUT (not new) request when calling [`.save()`](#save)
+2. Whether to send a request at all when calling [`.destroy()`](#destroy)
+
+Use this to your advantage when you inevitably come across some orphan endpoints that are not super REST-y. Override your Model class to force all `.save` calls to POST by, for example:
+
+```js
+isNew() {
+  // will always POST
+  return true;
+}
+```
+
+### parse
+```js
+parse: object (response: any)
+```
+
+This method takes in the raw server data response and should return the data in the form that should be set on the Model. It defaults to the identity function, which might suffice for many endpoints. Override this for your custom needs. For example, maybe your server overly-nests the resource in a `schema` property:
+
+```js
+parse(response) {
+  return response.data.schema;
+}
+```
+
 ### set
+```js
+set: Model (attributes: object, options: object)
+```
+
+This is the main avenue by which a model's properties get values assigned. It's called internally by several public methods, including `save`, `unset`, and `clear`. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
+
 ### unset
+```js
+unset: Model (attribute: string, options: object)
+```
+
+Removes the attribute from the model's data. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
+
 ### clear
+```js
+clear: Model (options: object)
+```
+
+Removes all attributes from the model. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
+
+### pick
+```js
+pick: object (...attributes: Array<string>)
+```
+
+Handy helper method to only return a subset of a model's attributes, as opposed to the whole thing like [`.toJSON()`](#tojson) does.
+
 ### fetch
 ### save
 ### destroy
-### parse
-### pick
-### isNew
+
+
