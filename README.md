@@ -420,7 +420,7 @@ In general, there are two ways to change `props.id` as in the previous example:
 
 1. Change internal application state. For these cases, `useResources`/`withResources` make available another handy prop: `setResourceState`. `setResourceState` is a function that has the same method signature as the `setState` we all know and love. It sets internal hook/HOC state, which is then returned/passed down, respectively, overriding any initial prop, ie `setResourceState({id: 'fredsadaghiani'})`. This is _not_ indexable.
 
-    Note that `setResourceState` has some subtle discrepancies between the hook and the HOC; see [Differences between useResources and withResources](#differences-between-useresources-and-withresources) for more.
+    Note that `setResourceState` is very useful for the `withResources` HOC because it allows you to 'lift' state above the fetching component that otherwise would not be possible. For `useResources`, it is a nice-to-have in some cases, but because you can always define your own `useState` above the `useResources` invocation, you may find that you use it less often. Related, `setResourceState` has some subtle discrepancies between the hook and the HOC; see [Differences between useResources and withResources](#differences-between-useresources-and-withresources) for more.
 
 
 ## Serial Requests
