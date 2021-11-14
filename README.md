@@ -17,6 +17,7 @@ Additional features include:
 * refetching
 * updating a component when a resource updates
 * zero dependencies
+* < 10kB!
 * ...and more
 
 Getting started is easy:
