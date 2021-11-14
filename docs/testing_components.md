@@ -31,15 +31,15 @@ import * as resourcerer from 'resourcerer';
 
 // ...
 it('shows a loader when in a loading state', () => {
-   jest.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
-     ...props,
-     hasLoaded: false,
-     isLoading: true
-   ));
+  jest.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
+    ...props,
+    hasLoaded: false,
+    isLoading: true
+  ));
 
-   const {container} = render(<MyComponent />);
+  const {container} = render(<MyComponent />);
    
-   expect(container.querySelector('.Loader')).toBeInTheDocument();
+  expect(container.querySelector('.Loader')).toBeInTheDocument();
 });
 ```
 
