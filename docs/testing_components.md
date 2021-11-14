@@ -3,8 +3,10 @@
 When writing tests for components that use either the `useResources` hook or the `withResources` HOC, we want to be able to easily avoid any kind of async behavior with the data fetching&mdash;and ideally we don’t even need to stub out the `fetch` requests. One way to get around this is to pass all resources to your test component as props. When this happens, the fetching is bypassed, and the component will render synchronously with the resources present, no stubbing necessary! Here’s an example for a component called `UserTodosList` that requires both a usersCollection and a todosCollection:
 
 ```js
+import {Collection} from 'resourcerer';
+
 // ...
-defaultProps = () => ({
+const defaultProps = () => ({
   todosCollection: new Collection(mockTodos),
   usersCollection: new Collection(mockUsers),
   userId: 'noah'
