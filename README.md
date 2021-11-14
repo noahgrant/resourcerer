@@ -1,6 +1,6 @@
 <img src="https://user-images.githubusercontent.com/1355779/61337603-f9fffd80-a7ea-11e9-9cb3-fa82e044c86e.png" alt="Resourcerer Icon" height="200" width="200" />
 
-# resourcerer
+# resourcerer (now in 1.0-beta!)
 
 `resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful [`useResources`](#useresources) React hook or [`withResources`](#withresources) higher-order React component (HOC) allows you to easily construct a component's data flow, including:
 
@@ -94,7 +94,7 @@ import 'js/core/resourcerer-config';
         import React from 'react';
         import {withResources} from 'resourcerer';
 
-        @withResources((props, {TODOS}) => ({[TODOS]: {}}))
+        @withResources(({TODOS}, props) => ({[TODOS]: {}}))
         class MyComponent extends React.Component {
           render() {
             // when MyComponent is mounted, the todosCollection is fetched and available
@@ -138,7 +138,6 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [forceFetch](#forcefetch)
         1. [Custom Resource Names](#custom-resource-names)
         1. [prefetches](#prefetches)
-        1. [status](#status)
     1. [Data mutations](#data-mutations)
     1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
@@ -168,16 +167,6 @@ module: {
     use: {loader: 'babel-loader?cacheDirectory=true'}
   }]
 }
-```
-
-Also note that it also uses [legacy, Stage-1 decorators](https://github.com/tc39/proposal-decorators/blob/master/previous/METAPROGRAMMING.md), so you'll need to use the [babel decorators plugin](https://babeljs.io/docs/en/babel-plugin-proposal-decorators) with the `{legacy: true}` option:
-
-```
-// .babelrc
-  "plugins": [
-    ["@babel/proposal-decorators", {"legacy": true}],
-    // ...
-  ]
 ```
 
 # Nomenclature
@@ -418,9 +407,9 @@ In general, there are two ways to change `props.id` as in the previous example:
 
 1. Change the url, which is the top-most state-carrying entity of any application. The url can be changed either by path parameter or query paramter, i.e. `example.com/users/noahgrant` -> `example.com/users/fredsadaghiani`, or `example.com/users?id=noahgrant` -> `example.com/users?id=fredsadaghiani`. In this case, each prop change is _indexable_, which is sometimes desirable, sometimes not.
 
-1. Change internal application state. For these cases, `useResources`/`withResources` make available another handy prop: `setResourceState`. `setResourceState` is a function that has the same method signature as the `setState` we all know and love. It sets internal hook/HOC state, which is then returned/passed down, respectively, overriding any initial prop, ie `setResourceState({id: 'fredsadaghiani'})`. This is _not_ indexable.
+1. Change internal application state. For these cases, `useResources`/`withResources` make available another handy prop: `setResourceState`. `setResourceState` is a function that has the same method signature as the `useState` we all know and love. It sets internal hook/HOC state, which is then returned/passed down, respectively, overriding any initial prop, ie `setResourceState((state) => ({...state, id: 'fredsadaghiani'}))`. This is _not_ indexable.
 
-    Note that `setResourceState` has some subtle discrepancies between the hook and the HOC; see [Differences between useResources and withResources](#differences-between-useresources-and-withresources) for more.
+    Note that `setResourceState` is very useful for the `withResources` HOC because it allows you to 'lift' state above the fetching component that otherwise would not be possible. For `useResources`, it is a nice-to-have in some cases, but because you can always define your own `useState` above the `useResources` invocation, you may find that you use it less often.
 
 
 ## Serial Requests
@@ -428,7 +417,7 @@ In general, there are two ways to change `props.id` as in the previous example:
 In most situations, all resource requests should be parallelized; but that’s not always possible. Every so often, there may be a situation where one request depends on the result of another. For these cases, we have the `dependsOn` resource option and the `provides` resource option. These are probably best explained by example, so here is a simplified instance from the [Sift](https://sift.com) Console, where we load a queue item that has info about a user, but we can't get further user information until we know what user id belongs to this queue item.
 
 ```js
-@withResources((props, {QUEUE_ITEM, USER}) => ({
+@withResources(({QUEUE_ITEM, USER}, props) => ({
   [USER]: {
     options: {userId: props.userId},
     dependsOn: ['userId']
@@ -490,7 +479,7 @@ function getUserDataFromItem(queueItemModel) {
 The `data` option is passed directly to the [sync](/docs/model.md#sync) module and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `data` property:
 
 ```js
-  @withResources((props, ResourceKeys) => {
+  @withResources((ResourceKeys, props) => {
     const now = Date.now();
       
     return {
@@ -555,7 +544,7 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
 Sometimes you want the latest of a resource, bypassing whatever model has already been cached in your application. To accomplish this, simply pass a `forceFetch: true` in a resource's config. The force-fetched response will replace any prior model in the cache, but may itself get replaced by a subsequent `forceFetch: true` request for the resource.
 
 ```js
-  @withResources((props, ResourceKeys) => ({[ResourceKeys.LATEST_STATS]: {forceFetch: true}}))
+  @withResources((ResourceKeys, props) => ({[ResourceKeys.LATEST_STATS]: {forceFetch: true}}))
   class MyComponentWithLatestStats extends React.Component {}
 ```
 
@@ -615,21 +604,6 @@ When the user clicks on a 'next' arrow that updates page state, the collection w
 1. The prefetched model does not get components registered to it; therefore, it is immediately scheduled for removal after the specified [cacheGracePeriod](#configuring). If the user clicks the next arrow, it then becomes the 'active' model and the `UserTodos` component will get registered to it, clearing the removal timer (see the [caching](caching-resources-with-modelcache) section).
 
 If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
-
-### status
-##### *(`withResources` only)*
-
-Passing a `status: true` config option will pass props down to the component reflecting the resource’s status code. For example, if you pass the option to a `TODOS` resource that 404s, the wrapped component will have a prop called `todosStatus` that will be equal to `404`.
-
-```js
-@withResources((props, ResourceKeys) => ({
-  [ResourceKeys.TODOS]: {measure: true, status: true}
-}))
-class MyComponentWithTodos extends React.Component {}
-```
-
-Note that in the `useResources` hook, which does not pollute any `props` object, statuses are returned by default; you can choose which ones you want to use in your component and ignore the rest.
-
 
 # Data Mutations
 
@@ -709,17 +683,6 @@ Each one of these methods exhibit the following behaviors:
 The hook and HOC largely operate interchangeably, but do note a couple critical differences:
 
 1. The `withResources` HOC conveniently contains an [ErrorBoundary](https://reactjs.org/docs/error-boundaries.html) with every instance, but such functionality [does not yet exist in hooks](https://reactjs.org/docs/hooks-faq.html#do-hooks-cover-all-use-cases-for-classes). This is a definite advantage for the HOC right now, since, if we're already setting `hasErrored` clauses in our components to prepare for request errors, we can naturally gracefully degrade when an unexpected exception occurs. You'll need to manage this yourself with hooks until the equivalent functionality is released.
-
-1. The hooks's `setResourceState` function utilizes React's [useState](https://reactjs.org/docs/hooks-reference.html#usestate) hook, which does **not auto-merge updates like `setState` does**. Be sure to manually merge all resource state!
-
-    ```jsx
-    setResourceState((existingState) => ({
-      ...existingState,
-      timeRange: newTimeRange
-    }));
-    ```
-
-1. The hook does not accept a [`{status: true}`](#status) option like the HOC does because it returns all statuses by default.
 
 1. With the executor function now inlined in your component, be extra careful to avoid this anti-pattern:
 
@@ -1059,7 +1022,7 @@ ResourcesConfig.set(configObj);
       </div>
     );
     
-    export withResources((props, ResourceKeys) => {
+    export withResources((ResourceKeys, props) => {
       const now = Date.now();
       
       return {
@@ -1107,7 +1070,7 @@ ResourcesConfig.set(configObj);
 
 * How big is the `resourcerer` package?  
 
-    13kB gzipped. It has no dependencies.
+    Under 10kB gzipped. It has no dependencies.
 
 * Semver?  
 

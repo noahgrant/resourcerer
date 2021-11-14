@@ -18,13 +18,13 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 1. When a `PENDING` resource request is not in flight, its model prop will still be the empty model instance whose properties are frozen (as happens when the resource is in the other three possible loading states). This is to more predictably handle our resources in our components. We don’t need to be defensive with syntax like:
 
    ```js
-   this.props.todosCollection && this.props.todosCollection.toJSON(); // unnecessary
+   todosCollection && todosCollection.toJSON(); // unnecessary
    ```
 
    Furthermore, if you've defined additional instance methods on your model, they will be present without being defensive:
 
    ```js
-   this.props.todosCollection.myInstanceMethod(); // guaranteed not to error regardless of loading state
+   todosCollection.myInstanceMethod(); // guaranteed not to error regardless of loading state
    ```
         
 1. When a previously-`PENDING` but currently `LOADED` resource has its dependent prop removed, it goes back to a `PENDING` state (recall that if the dependent prop is changed, it gets put back into a `LOADING` state while the new resource is fetched). This puts us in an interesting state:
@@ -144,7 +144,7 @@ The `providesModels` property is a function that takes the parent model and the 
 
 ```js
 // child_component.jsx, rendered only after the account model is known to return
-@withResources((props}, ResourceKeys) => ({[ResourceKeys.ACCOUNT_CONFIG]: {}}))
+@withResources((ResourceKeys, props) => ({[ResourceKeys.ACCOUNT_CONFIG]: {}}))
 class ChildComponent extends React.Component {
   // component has this.props.accountConfigModel from the cache!
   onClickSomething() {
