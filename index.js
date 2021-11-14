@@ -12,9 +12,3 @@ export {
 } from './lib/utils.js';
 export {ModelMap, ResourceKeys, ResourcesConfig} from './lib/config.js';
 export {useResources, withResources} from './lib/resourcerer.js';
-export {
-  findDataCarrier,
-  findDataChild,
-  getRenderedResourceComponents,
-  waitsFor
-} from './test/test-utils.js';
