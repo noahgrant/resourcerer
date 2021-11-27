@@ -34,7 +34,7 @@ class MyModel extends Model {
 }
 ```
 
-A model instance of the class created and registered in your [resourcerer config]() will be returned by every `useResources` call that uses its model key. You can read simply from it
+A model instance of the class created and registered in your [resourcerer config](https://github.com/noahgrant/resourcerer#nomenclature) will be returned by every `useResources` call that uses its model key. You can read simply from it
 by using `Model#toJSON` (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
 that you might find useful in rendering your data-hydrated components.
 
@@ -54,6 +54,11 @@ Override this to be the property name of the Model's unique identifier if it som
 `object|function`
 
 An object or function that returns object with attribute keys and their default values. If set, then when the model is instantiated, any missing attributes get set to these values.
+
+### `static` measure
+`boolean|function`
+
+A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this model's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
 
 

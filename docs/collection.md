@@ -19,7 +19,7 @@ class MyTodos extends Collection {
 }
 ```
 
-A collection instance of the class created and registered in your [resourcerer config](https://github.com/noahgrant/resourcerer#configuring-resourcerer) will be returned by every `useResources` call that uses its model key from the [ModelMap](https://github.com/noahgrant/resourcerer#tutorial). You can read simply from it
+A collection instance of the class created and registered in your [resourcerer config](https://github.com/noahgrant/resourcerer#nomenclature) will be returned by every `useResources` call that uses its model key from the [ModelMap](https://github.com/noahgrant/resourcerer#tutorial). You can read simply from it
 by using `Collection#toJSON` (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
 that you might find useful in rendering your data-hydrated components.
 
@@ -44,6 +44,11 @@ Set this property if you want a collection's models to be an instance of a class
 ### `static` cacheFields
 
 This property tells resourcerer how to determine whether to make a new request or to take a collection out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
+
+### `static` measure
+`boolean|function`
+
+A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this collection's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
 
 ## Methods
