@@ -6,7 +6,7 @@ import prefetch from '../lib/prefetch';
 import ReactDOM from 'react-dom';
 
 const renderNode = document.createElement('div');
-const getResources = (props, {DECISIONS, USER}) => ({
+const getResources = ({DECISIONS, USER}, props) => ({
   [USER]: {
     data: {home: props.home, source: props.source},
     options: {userId: props.userId}
