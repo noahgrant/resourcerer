@@ -53,7 +53,7 @@ Override this to be the property name of the Model's unique identifier if it som
 ### `static` defaults
 `object|function`
 
-An object or function that returns object with attribute keys and their default values. If set, then when the model is instantiated, any missing attributes get set to these values.
+An object or function that returns object with attribute keys and their default values. If set, then when the model is instantiated, any missing data get set to these values.
 
 ### `static` measure
 `boolean|function`
@@ -67,15 +67,15 @@ A boolean or function that accepts a [resource configuration object](https://git
 ### constructor
 
 ```js
-constructor: void (attributes: Object, options: object)
+constructor: void (initialData: Object, options: object)
 ```
 
-The Model's constructor gets passed any initial attributes, as well as the options from the executor function. Override this to set some instance variables for the model, which is really useful for url path parameters. Just be sure to pass the arguments to its `.super()` call, as well:
+The Model's constructor gets passed any initial data, as well as the options from the executor function. Override this to set some instance variables for the model, which is really useful for url path parameters. Just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyModel extends Model {
-  constructor(attributes, options={}) {
-    super(attributes, options);
+  constructor(initialData, options={}) {
+    super(initialData, options);
     
     this.category = options.category;
   }
@@ -86,7 +86,7 @@ class MyModel extends Model {
 }
 ```
 
-Note that `this.id` is automatically set to whichever value is passed in at the `idAttribute` key (default: 'id'). Pass the `parse: true` option to have the attributes get run through the Model's `parse` method before getting set.
+Note that `this.id` is automatically set to whichever value is passed in at the `idAttribute` key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set.
 
 
 ### toJSON
@@ -94,7 +94,7 @@ Note that `this.id` is automatically set to whichever value is passed in at the 
 toJSON: Object ()
 ```
 
-Returns the model's data attributes in a new object.
+Returns the model's data in a new object.
 
 ### get
 ```js
@@ -144,7 +144,7 @@ parse(response) {
 
 ### set
 ```js
-set: Model (attributes: object, options: object)
+set: Model (data: object, options: object)
 ```
 
 This is the main avenue by which a model's properties get values assigned. It's called internally by several public methods, including `save`, `unset`, and `clear`. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
@@ -161,21 +161,21 @@ Removes the attribute from the model's data. Pass a `silent: true` option for th
 clear: Model (options: object)
 ```
 
-Removes all attributes from the model. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
+Removes all data from the model. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
 
 ### pick
 ```js
-pick: object (...attributes: Array<string>)
+pick: object (...data: Array<string>)
 ```
 
-Handy helper method to only return a subset of a model's attributes, as opposed to the whole thing like [`.toJSON()`](#tojson) does.
+Handy helper method to only return a subset of a model's data, as opposed to the whole thing like [`.toJSON()`](#tojson) does.
 
 ### save
 ```js
-save: Promise<[Model, Response]> (attributes: object, options: object)
+save: Promise<[Model, Response]> (data: object, options: object)
 ```
 
-Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is true, the request will be sent as a POST. Otherwise, it will be sent as a PUT with the whole resource, or a PATCH with only `attributes` sent over if the `patch: true` option is passed. When the request returns, the server data is passed through the [`.parse()`](#parse) method before being set on the model. Pass the `wait: true` option to wait to add the data until after the server responds. Subscribed components will update when the new entry is added as well as when the request returns. If the request errors, all changes will be reverted and components updated.
+Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is true, the request will be sent as a POST. Otherwise, it will be sent as a PUT with the whole resource, or a PATCH with only `data` sent over if the `patch: true` option is passed. When the request returns, the server data is passed through the [`.parse()`](#parse) method before being set on the model. Pass the `wait: true` option to wait to add the data until after the server responds. Subscribed components will update when the new entry is added as well as when the request returns. If the request errors, all changes will be reverted and components updated.
 
 ***All .save() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 

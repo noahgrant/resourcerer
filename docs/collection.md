@@ -30,7 +30,7 @@ that you might find useful in rendering your data-hydrated components.
 Add this on your Collection definition to tell it how it should sort its models. It can take three forms:
 
 1. A string. In this case, it represents the model property to sort by.
-2. A function with a single argument. In this case, it takes a model's attributes as an argument and returns the value by which it should sort.
+2. A function with a single argument. In this case, it takes a model's data as an argument and returns the value by which it should sort.
 3. A function with two arguments. This is used to sort the collection's models via the native [Array.sort](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort) method.  
 
 ### length
@@ -83,7 +83,7 @@ Passing in a `model` option or a `comparator` option to an instance's constructo
 add: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
 ```
 
-Add a new entry or list of entries into the collection. Each entry can be an object of attributes or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse](/docs/model.md#parse) method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
+Add a new entry or list of entries into the collection. Each entry can be an object of data or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse](/docs/model.md#parse) method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
 
 ### create
 ```js
@@ -116,7 +116,7 @@ Collections index their Model instances by either the Model's [`idAttribute`](/d
 has: boolean (identifier: string|number|Model|object)
 ```
 
-Returns whether or not a model exists in a collection. You can pass the model instance itself, a model's attributes, or a model's id.
+Returns whether or not a model exists in a collection. You can pass the model instance itself, a model's data, or a model's id.
 
 ### modelId
 ```js
@@ -161,14 +161,14 @@ Use this to remove a model or models from the collection, which should not often
 reset: Collection (models: Array<Object|Model>, options: Object)
 ```
 
-Removes all models and their references from a collection and replaces them with the models passed in. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data attributes get parsed before being set on their respective models.
+Removes all models and their references from a collection and replaces them with the models passed in. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data get parsed before being set on their respective models.
 
 ### set
 ```js
 set: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
 ```
 
-This is the method that many other write methods (`add`, `remove`, `save`, `reset`, etc) use under the hood, and it should _rarely if ever_ need to be used directly in your application. Sets new attributes as models and merges existing attributes with their models, and sorts as necessary. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data attributes get parsed before being set on their respective models.  
+This is the method that many other write methods (`add`, `remove`, `save`, `reset`, etc) use under the hood, and it should _rarely if ever_ need to be used directly in your application. Sets new data as models and merges existing data with their models, and sorts as necessary. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data get parsed before being set on their respective models.  
 
 ### sync
 This is just a proxy for the [sync](/lib/sync.js) module. Its behavior shouldn't be overridden, but it may be useful to wrap it for custom behavior, ie:
@@ -187,7 +187,7 @@ Collection.sync = Model.sync = function(model, options) {
 toJSON: Array<Object> ()
 ```
 
-Returns each model's data attributes in a new array.
+Returns each model's data objects in a new array.
 
 ## Utility instance methods
 
@@ -245,4 +245,4 @@ Same signature as Array.prototype.slice across a collection's models.
 where: Array<Model> (attrs: object)
 ```
 
-Returns a list of models matching the attribute values passed in. Like `.filter` but a shorthand that uses matching attribute values instead of a predicate function.
+Returns a list of models matching the data values passed in. Like `.filter` but a shorthand that uses matching data values instead of a predicate function.

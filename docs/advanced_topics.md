@@ -69,7 +69,7 @@ Another way to effectively have a dependent resource is to use a conditional in 
 ```js
 const getResources = (ResourceKeys, props) => ({
   [ResourceKeys.TODOS]: {},
-  ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {attributes: {id: props.todoId}} : {})
+  ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {data: {id: props.todoId}} : {})
 });
 ```
 
@@ -90,7 +90,7 @@ const getResources = (ResourceKeys, {userId, orderId}) => ({
   ...!userId && orderId ? {
     [ResourceKeys.ORDER]: {
       noncritical: true,
-      attributes: {id: orderId}
+      data: {id: orderId}
     }
   } : {}
 });
@@ -133,7 +133,7 @@ export default class AccountModel extends Model {
   static cacheFields = ['accountId']
   
   static providesModels = (accountModel, ResourceKeys) => [{
-    attributes: accountModel.get('config'),
+    data: accountModel.get('config'),
     modelKey: ResourceKeys.ACCOUNT_CONFIG,
     options: {accountModel}
   }]
@@ -154,7 +154,7 @@ class ChildComponent extends React.Component {
 }
 ```
 
-In general, this should be used in cases where you can ascertain that the parent model has returned before trying to access the child model. However, if by chance it has not, and the child is not found in the cache, `resourcerer` will still not attempt to fetch it, because it is listed within the `UnfetchedResources` set. In that case, the model will get instantiated with no seed attributes and passed as a prop.
+In general, this should be used in cases where you can ascertain that the parent model has returned before trying to access the child model. However, if by chance it has not, and the child is not found in the cache, `resourcerer` will still not attempt to fetch it, because it is listed within the `UnfetchedResources` set. In that case, the model will get instantiated with no seed data and passed as a prop.
 
 Also, note that the `modelKey` property is required here instead of optionally being inferred from the resource config's object property, as is the case in our general `useResources`/`withResources` declarations. This is because here, in contrast, the models are simply placed in the cache and not actually used as props for any component, so they don't need to be named. Accordingly, resource configs are also returned as a list here instead of an object.
 
@@ -167,7 +167,7 @@ export default class AccountModel extends Model {
   static cacheFields: ['accountId']
   
   static providesModels = (accountModel, ResourceKeys) => [{
-    attributes: accountModel.get('config'),
+    data: accountModel.get('config'),
     modelKey: ResourceKeys.ACCOUNT_CONFIG,
     options: {accountModel},
     // if this returns false, account config won't get instantiated and placed in the ModelCache
@@ -267,7 +267,7 @@ import {useResources} from 'resourcerer';
 
 const getResources = ({TODO}, props) => ({
   [TODO]: {
-    attributes: {id: props.id},
+    data: {id: props.id},
     fetch: !!props.id
   }
 });
