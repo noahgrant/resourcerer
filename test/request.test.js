@@ -1,6 +1,5 @@
-import request, {existsInCache, getFirstArgPropertyName, getFromCache} from '../lib/request';
+import request, {existsInCache, getFromCache} from '../lib/request';
 
-import Collection from '../lib/collection';
 import Model from '../lib/model';
 import ModelCache from '../lib/model-cache';
 import {waitsFor} from './test-utils';
@@ -301,15 +300,6 @@ describe('Request', () => {
       expect(existsInCache('foo')).toBe(true);
       expect(getFromCache('foo')).toEqual(model);
       expect(getFromCache('bar')).not.toBeDefined();
-    });
-  });
-
-  describe('getFirstArgPropertyName', () => {
-    it('returns \'models\' for a collection, \'attributes\' for a model', () => {
-      class _Collection extends Collection {}
-      class _Model extends Model {}
-      expect(getFirstArgPropertyName(_Collection)).toEqual('models');
-      expect(getFirstArgPropertyName(_Model)).toEqual('attributes');
     });
   });
 });

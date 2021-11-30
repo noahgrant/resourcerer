@@ -65,7 +65,7 @@ export class SearchQueryModel extends Model {
     options = {
       ...options,
       contentType: 'application/json',
-      data: JSON.stringify(options.data),
+      params: JSON.stringify(options.params),
       type: 'POST'
     };
 

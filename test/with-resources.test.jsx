@@ -50,16 +50,16 @@ class DefaultTestChildren extends React.Component {
 }, props) => ({
   [ANALYSTS]: {
     noncritical: true,
-    data: {shouldError: props.analystsError}
+    params: {shouldError: props.analystsError}
   },
   [DECISIONS]: {
-    ...(props.includeDeleted ? {data: {include_deleted: true}} : {}),
+    ...(props.includeDeleted ? {params: {include_deleted: true}} : {}),
     measure
   },
-  [NOTES]: {attributes: {pretend: true}, noncritical: true, dependsOn: ['noah']},
+  [NOTES]: {data: {pretend: true}, noncritical: true, dependsOn: ['noah']},
   [USER]: {
-    attributes: {id: props.withId ? props.userId : null},
-    data: {
+    data: {id: props.withId ? props.userId : null},
+    params: {
       ...(props.shouldError ? {shouldError: true} : {}),
       ...(props.delay ? {delay: props.delay} : {})
     },
@@ -67,7 +67,7 @@ class DefaultTestChildren extends React.Component {
   },
   ...(props.prefetch ? {
     [SEARCH_QUERY]: {
-      data: {from: props.page},
+      params: {from: props.page},
       prefetches: [{page: props.page + 10}]
     }
   } : {}),
@@ -131,23 +131,23 @@ describe('withResources', () => {
     var fetchMock = function(options) {
       return new Promise((res, rej) => {
         // do this just to help identify and differentiate our models
-        if (options.data) {
-          this.data = options.data;
+        if (options.params) {
+          this.params = options.params;
         }
 
-        if ((options.data || {}).delay) {
+        if ((options.params || {}).delay) {
           return window.setTimeout(() => {
             delayedResourceComplete = true;
 
             rej({status: 404});
-          }, options.data.delay);
+          }, options.params.delay);
         }
 
         // just wait a frame to keep the promise callbacks from getting invoked
         // in the same JS frame
         window.requestAnimationFrame(() => {
           window.requestAnimationFrame(() => {
-            if (shouldResourcesError || (options.data || {}).shouldError) {
+            if (shouldResourcesError || (options.params || {}).shouldError) {
               rej({status: 404});
             }
 
@@ -311,7 +311,7 @@ describe('withResources', () => {
           .toEqual('decisionsinclude_deleted=true');
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1])
           .toEqual(ModelMap[ResourceKeys.DECISIONS]);
-      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][2].data)
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][2].params)
           .toEqual({include_deleted: true});
 
       await waitsFor(() => findDataChild(resources).props.hasLoaded);
@@ -517,10 +517,10 @@ describe('withResources', () => {
   describe('creates a cache key', () => {
     describe('when a model has a cacheFields property', () => {
       it('with the ResourceKey as the base, keys from the cacheFields, ' +
-          'and values from \'data\'', () => {
+          'and values from \'params\'', () => {
         expect(getCacheKey({
           modelKey: ResourceKeys.USER,
-          data: {
+          params: {
             userId: 'noah',
             fraudLevel: 'high',
             lastName: 'grant'
@@ -529,7 +529,7 @@ describe('withResources', () => {
 
         expect(getCacheKey({
           modelKey: ResourceKeys.USER,
-          data: {
+          params: {
             userId: 'alex',
             fraudLevel: 'low',
             lastName: 'lopatron'
@@ -537,9 +537,9 @@ describe('withResources', () => {
         })).toEqual('userfraudLevel=low_userId=alex');
       });
 
-      it('prioritizes cacheFields in \'options\' or \'attributes\' config properties', () => {
+      it('prioritizes cacheFields in \'options\' or \'data\' config properties', () => {
         expect(getCacheKey({
-          attributes: {fraudLevel: 'miniscule'},
+          data: {fraudLevel: 'miniscule'},
           modelKey: ResourceKeys.USER,
           options: {userId: 'theboogieman'}
         })).toEqual('userfraudLevel=miniscule_userId=theboogieman');
@@ -553,9 +553,9 @@ describe('withResources', () => {
           })];
 
         expect(getCacheKey({
-          attributes: {userId: 'noah'},
+          data: {userId: 'noah'},
           modelKey: ResourceKeys.USER,
-          data: {
+          params: {
             fraudLevel: 'high',
             lastName: 'grant'
           }
@@ -669,7 +669,7 @@ describe('withResources', () => {
 
     beforeEach(() => {
       newProvides = [{
-        attributes: {content_abuse: {id: 'content_decision'}},
+        data: {content_abuse: {id: 'content_decision'}},
         shouldCache: () => true,
         modelKey: ResourceKeys.DECISION_INSTANCE,
         options: {entityId: 'noah', entityType: 'content'}
@@ -831,7 +831,7 @@ describe('withResources', () => {
         expect(measureName).toEqual(ResourceKeys.DECISIONS);
         expect(ResourcesConfig.track).toHaveBeenCalledWith('API Fetch', {
           Resource: ResourceKeys.DECISIONS,
-          data: undefined,
+          params: undefined,
           options: undefined,
           duration: 5
         });
@@ -840,7 +840,7 @@ describe('withResources', () => {
       });
 
       it('can be a function that returns a boolean', async() => {
-        DecisionsCollection.measure = ({data={}}) => data.include_deleted;
+        DecisionsCollection.measure = ({params={}}) => params.include_deleted;
 
         // no include_deleted here, so it shouldn't measure
         dataChild = findDataChild(renderWithResources());
@@ -860,7 +860,7 @@ describe('withResources', () => {
         expect(measureName).toEqual(ResourceKeys.DECISIONS);
         expect(ResourcesConfig.track).toHaveBeenCalledWith('API Fetch', {
           Resource: ResourceKeys.DECISIONS,
-          data: {include_deleted: true},
+          params: {include_deleted: true},
           options: undefined,
           duration: 5
         });
@@ -977,7 +977,7 @@ describe('withResources', () => {
 
       // first entry has data: {from: 0}
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
+      expect(dataChild.props.searchQueryModel.params).toEqual('{"from":0}');
     });
 
     describe('that prefetches the other entries', () => {
@@ -994,7 +994,7 @@ describe('withResources', () => {
         ).toEqual(['searchQuery', 'searchQueryfrom=10']);
 
         await waitsFor(() => dataChild.props.hasLoaded);
-        expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
+        expect(dataChild.props.searchQueryModel.params).toEqual('{"from":0}');
 
         // move to the next page
         dataChild.props.setResourceState({page: 10});
@@ -1005,7 +1005,7 @@ describe('withResources', () => {
               .map((call) => call[0])
         ).toEqual(['searchQuery', 'searchQueryfrom=10', 'searchQueryfrom=20']);
 
-        expect(dataChild.props.searchQueryModel.data).toEqual('{"from":10}');
+        expect(dataChild.props.searchQueryModel.params).toEqual('{"from":10}');
       });
 
       it('that are not taken into account for component loading states', async() => {
@@ -1017,7 +1017,7 @@ describe('withResources', () => {
 
         requestSpy.mockImplementation((key, _Model, options={}) => new Promise((res, rej) => {
           window.requestAnimationFrame(() => {
-            var model = new _Model({key, ...(options.data || {})});
+            var model = new _Model({key, ...(options.params || {})});
 
             if (options.prefetch) {
               haveCalledPrefetch = true;
