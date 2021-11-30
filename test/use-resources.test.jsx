@@ -786,35 +786,6 @@ describe('useResources', () => {
       expect(ResourcesConfig.track).not.toHaveBeenCalled();
     });
 
-    describe('that when set to true', () => {
-      beforeEach(async() => {
-        measure = true;
-        jest.spyOn(ModelCache, 'get').mockReturnValue();
-        dataChild = findDataChild(renderUseResources());
-        await waitsFor(() => dataChild.props.hasLoaded);
-      });
-
-      afterEach(() => {
-        ModelCache.get.mockRestore();
-        measure = false;
-      });
-
-      it('measures the request time', () => {
-        expect(markName).toEqual(ResourceKeys.DECISIONS);
-        expect(measureCount).toEqual(1);
-        expect(measureName).toEqual(ResourceKeys.DECISIONS);
-      });
-
-      it('tracks the request', () => {
-        expect(ResourcesConfig.track).toHaveBeenCalledWith('API Fetch', {
-          Resource: ResourceKeys.DECISIONS,
-          data: undefined,
-          options: undefined,
-          duration: 5
-        });
-      });
-    });
-
     describe('as a static property', () => {
       beforeEach(() => {
         jest.spyOn(ModelCache, 'get').mockReturnValue();
