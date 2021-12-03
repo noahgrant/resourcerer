@@ -43,6 +43,13 @@ describe('Collection', () => {
     expect(collection.Model).toEqual(__Model);
   });
 
+  it('unreserved option items are assigned to a `urlOptions` instance property', () => {
+    collection = new Collection([], {one: 1, two: 2, comparator: 'foo', parse: true});
+
+    expect(collection.urlOptions).toEqual({one: 1, two: 2});
+    expect(collection.toJSON()).toEqual([]);
+  });
+
   it('adds any models passed to its models list', () => {
     var model1 = new Model,
         model2 = new Model;

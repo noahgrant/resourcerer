@@ -8,7 +8,7 @@ import ReactDOM from 'react-dom';
 const renderNode = document.createElement('div');
 const getResources = ({DECISIONS, USER}, props) => ({
   [USER]: {
-    data: {home: props.home, source: props.source},
+    params: {home: props.home, source: props.source},
     options: {userId: props.userId}
   },
   [DECISIONS]: {}
@@ -30,7 +30,7 @@ describe('prefetch', () => {
     jest.useRealTimers();
   });
 
-  it('correctly turns the config object into cache key, data, and options', () => {
+  it('correctly turns the config object into cache key, params, and options', () => {
     var oldFields = UserModel.cacheFields;
 
     UserModel.cacheFields = ['userId', 'source'];
@@ -42,7 +42,7 @@ describe('prefetch', () => {
     expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
     expect(Request.default.mock.calls[0][2]).toEqual({
       options: {userId: 'noah'},
-      data: {home: 'sf', source: 'hbase'},
+      params: {home: 'sf', source: 'hbase'},
       prefetch: true
     });
 

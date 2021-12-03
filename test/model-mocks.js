@@ -4,11 +4,10 @@ import Model from '../lib/model';
 export class UserModel extends Model {
   key = 'user'
 
-  constructor(attrs, options={}) {
-    super(attrs, options);
+  constructor(attributes, options={}) {
+    super(attributes, options);
 
     this.userId = options.userId;
-    this.fraudLevel = options.fraudLevel;
   }
 
   url() {
@@ -39,14 +38,8 @@ export class DecisionsCollection extends Collection {
 export class NotesModel extends Model {
   key = 'notes'
 
-  constructor(attributes, options={}) {
-    super(attributes, options);
-
-    this.userId = options.userId;
-  }
-
-  url() {
-    return `/root/${this.userId}/notes`;
+  url({userId}) {
+    return `/root/${userId}/notes`;
   }
 
   static cacheFields = ['userId']
@@ -55,17 +48,11 @@ export class NotesModel extends Model {
 export class SearchQueryModel extends Model {
   key = 'search'
 
-  constructor(attributes, options={}) {
-    super(attributes, options);
-
-    this.userId = options.userId;
-  }
-
   fetch(options={}) {
     options = {
       ...options,
       contentType: 'application/json',
-      data: JSON.stringify(options.data),
+      params: JSON.stringify(options.params),
       type: 'POST'
     };
 
@@ -117,13 +104,7 @@ export class LabelInstanceModel extends Model {
 export class AccountConfigModel extends Model {
   key = 'accountConfig'
 
-  constructor(attrs, options={}) {
-    super(attrs, options);
-
-    this.accountId = options.accountId;
-  }
-
-  url() {
-    return `/root/accounts/${this.accountId}/config`;
+  url({accountId}) {
+    return `/root/accounts/${accountId}/config`;
   }
 }

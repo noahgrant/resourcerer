@@ -35,52 +35,86 @@ describe('sync', () => {
 
     expect(window.fetch.mock.calls[0][0]).toEqual('/library');
     expect(window.fetch.mock.calls[0][1].method).toEqual('GET');
-    expect(window.fetch.mock.calls[0][1].data).not.toBeDefined();
+    expect(window.fetch.mock.calls[0][1].params).not.toBeDefined();
     window.fetch.mockClear();
 
-    await library.fetch({data: {one: 'two'}});
+    await library.fetch({params: {one: 'two'}});
     expect(window.fetch.mock.calls[0][0]).toEqual('/library?one=two');
     expect(window.fetch.mock.calls[0][1].method).toEqual('GET');
-    expect(window.fetch.mock.calls[0][1].data).toEqual({one: 'two'});
+    expect(window.fetch.mock.calls[0][1].params).toEqual({one: 'two'});
     window.fetch.mockClear();
 
-    await library.fetch({url: '/library?one=two', data: {two: 'three'}});
+    await library.fetch({url: '/library?one=two', params: {two: 'three'}});
     expect(window.fetch.mock.calls[0][0]).toEqual('/library?one=two&two=three');
     expect(window.fetch.mock.calls[0][1].method).toEqual('GET');
-    expect(window.fetch.mock.calls[0][1].data).toEqual({two: 'three'});
+    expect(window.fetch.mock.calls[0][1].params).toEqual({two: 'three'});
     window.fetch.mockClear();
 
     // safe call with no options, even though this won't work
     expect(async() => sync(library)).not.toThrow();
     expect(window.fetch.mock.calls[0][0]).toEqual('/library');
     expect(window.fetch.mock.calls[0][1].method).not.toBeDefined();
-    expect(window.fetch.mock.calls[0][1].data).not.toBeDefined();
+    expect(window.fetch.mock.calls[0][1].params).not.toBeDefined();
   });
 
-  it('passing data', async() => {
+  it('passing params', async() => {
     // GET
-    await library.fetch({data: {a: 'a', one: 1}});
+    await library.fetch({params: {a: 'a', one: 1}});
 
     expect(window.fetch.mock.calls[0][0]).toEqual('/library?a=a&one=1');
     window.fetch.mockClear();
 
     // with body content: already stringified
-    await library.add(attrs).at(0).save(null, {data: 'somestring'});
+    await library.add(attrs).at(0).save(null, {params: 'somestring'});
 
     expect(window.fetch.mock.calls[0][0]).toEqual('/library');
     expect(window.fetch.mock.calls[0][1].body).toEqual('somestring');
     window.fetch.mockClear();
 
     // with body content: as JSON
-    await library.at(0).save(null, {data: {a: 'a', one: 1}});
+    await library.at(0).save(null, {params: {a: 'a', one: 1}});
     expect(window.fetch.mock.calls[0][0]).toEqual('/library');
     expect(window.fetch.mock.calls[0][1].body).toEqual(JSON.stringify({a: 'a', one: 1}));
     window.fetch.mockClear();
 
     // with body content: not as json
-    await library.at(0).save(null, {data: {a: 'a', one: 1}, contentType: 'resourcerer/json'});
+    await library.at(0).save(null, {params: {a: 'a', one: 1}, contentType: 'resourcerer/json'});
     expect(window.fetch.mock.calls[0][0]).toEqual('/library');
     expect(window.fetch.mock.calls[0][1].body).toEqual('a=a&one=1');
+  });
+
+  it('passes urlOptions to the model to formulate the url path', async() => {
+    var librarySectionBook;
+
+    class LibrarySection extends Collection {
+      url({section}) {
+        return `/library/${section}`;
+      }
+    }
+
+    class LibrarySectionBook extends Model {
+      url({section, bookId}) {
+        return `/library/${section}/${bookId}`;
+      }
+    }
+
+    library = new LibrarySection([], {section: 'nature'});
+    await library.fetch({params: {a: 'a', one: 1}});
+
+    expect(window.fetch.mock.calls[0][0]).toEqual('/library/nature?a=a&one=1');
+    // safe
+    library = new LibrarySection();
+    await library.fetch({params: {a: 'a', one: 1}});
+    expect(window.fetch.mock.calls[1][0]).toEqual('/library/undefined?a=a&one=1');
+
+    librarySectionBook = new LibrarySectionBook({}, {section: 'nature', bookId: 'all-about-frogs'});
+    await librarySectionBook.fetch({params: {a: 'a', one: 1}});
+    expect(window.fetch.mock.calls[2][0]).toEqual('/library/nature/all-about-frogs?a=a&one=1');
+
+    // safe
+    librarySectionBook = new LibrarySectionBook();
+    await librarySectionBook.fetch({params: {a: 'a', one: 1}});
+    expect(window.fetch.mock.calls[3][0]).toEqual('/library/undefined/undefined?a=a&one=1');
   });
 
   it('create', async() => {
@@ -88,7 +122,7 @@ describe('sync', () => {
 
     expect(window.fetch.mock.calls[0][0]).toEqual('/library');
     expect(window.fetch.mock.calls[0][1].method).toEqual('POST');
-    expect(window.fetch.mock.calls[0][1].data).toEqual({
+    expect(window.fetch.mock.calls[0][1].params).toEqual({
       title: 'The Tempest',
       author: 'Bill Shakespeare',
       length: 123
@@ -101,7 +135,7 @@ describe('sync', () => {
 
     expect(window.fetch.mock.calls[0][0]).toEqual('/library/1-the-tempest');
     expect(window.fetch.mock.calls[0][1].method).toEqual('PUT');
-    expect(window.fetch.mock.calls[0][1].data).toEqual({
+    expect(window.fetch.mock.calls[0][1].params).toEqual({
       id: '1-the-tempest',
       title: 'The Tempest',
       author: 'William Shakespeare',
@@ -116,7 +150,7 @@ describe('sync', () => {
 
     expect(window.fetch.mock.calls[1][0]).toEqual('/library/2-the-tempest');
     expect(window.fetch.mock.calls[1][1].method).toEqual('GET');
-    expect(window.fetch.mock.calls[1][1].data).not.toBeDefined();
+    expect(window.fetch.mock.calls[1][1].params).not.toBeDefined();
   });
 
   it('destroy', async() => {
@@ -126,7 +160,7 @@ describe('sync', () => {
 
     expect(window.fetch.mock.calls[1][0]).toEqual('/library/2-the-tempest');
     expect(window.fetch.mock.calls[1][1].method).toEqual('DELETE');
-    expect(window.fetch.mock.calls[1][1].data).not.toBeDefined();
+    expect(window.fetch.mock.calls[1][1].params).not.toBeDefined();
   });
 
   it('rejects non-2xx', async() => {
