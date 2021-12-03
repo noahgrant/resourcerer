@@ -962,12 +962,24 @@ describe('useResources', () => {
 
         // should have two search query calls, but the props on searchQueryModel
         // should have from = 0
-        expect(requestSpy.mock.calls
-            .map((call) => call[0])
-            .filter((key) => /^searchQuery/.test(key)).length).toEqual(2);
+        expect(
+          requestSpy.mock.calls.filter((call) => /^searchQuery/.test(call[0]))
+              .map((call) => call[0])
+        ).toEqual(['searchQuery', 'searchQueryfrom=10']);
 
         await waitsFor(() => dataChild.props.hasLoaded);
         expect(dataChild.props.searchQueryModel.data).toEqual('{"from":0}');
+
+        // move to the next page
+        dataChild.props.setResourceState({page: 10});
+
+        await waitsFor(() => requestSpy.mock.calls.length === 6);
+        expect(
+          requestSpy.mock.calls.filter((call) => /^searchQuery/.test(call[0]))
+              .map((call) => call[0])
+        ).toEqual(['searchQuery', 'searchQueryfrom=10', 'searchQueryfrom=20']);
+
+        expect(dataChild.props.searchQueryModel.data).toEqual('{"from":10}');
       });
 
       it('that are not taken into account for component loading states', async() => {
