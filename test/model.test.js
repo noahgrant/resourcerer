@@ -64,6 +64,12 @@ describe('Model', () => {
     expect(model.toJSON()).toEqual({});
   });
 
+  it('unreserved option items are assigned to a `urlOptions` instance property', () => {
+    model = new Model({}, {one: 1, two: 2, parse: true, silent: true});
+
+    expect(model.urlOptions).toEqual({one: 1, two: 2});
+  });
+
   it('can optionally have defaults that are a function', () => {
     class _Model extends Model {
       static defaults = {one: 1, two: 2}
@@ -469,6 +475,22 @@ describe('Model', () => {
       collection.url = () => '/library';
       model = new _Model({name: 'noah?grant'}, {collection});
       expect(model.url()).toEqual('/library/noah%3Fgrant');
+    });
+
+    it('is called by default with its urlOptions', () => {
+      class _Model extends Model {
+        urlRoot({section}) {
+          return `/library/${section}`;
+        }
+      }
+
+      model = new _Model({}, {section: 'nature'});
+      expect(model.url()).toEqual('/library/nature');
+
+      collection = new Collection();
+      collection.url = ({section}) => `/library/${section}`;
+      model = new Model({}, {collection, section: 'history'});
+      expect(model.url()).toEqual('/library/history');
     });
   });
 

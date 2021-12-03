@@ -120,12 +120,6 @@ UnfetchedResources.add(ResourceKeys.ACCOUNT_CONFIG);
 
 // account_model.js
 export default class AccountModel extends Model {
-  constructor(attrs, options) {
-    super();
-    
-    this.accountId = options.accountId;
-  }
-  
   url() {
     return `/accounts/${this.accountId}`;
   }

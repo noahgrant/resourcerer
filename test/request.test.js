@@ -28,7 +28,7 @@ describe('Request', () => {
         });
       }
 
-      return Promise.resolve([new Model(), '', {response: {status: 200}}]);
+      return Promise.resolve([this, {status: 200}]);
     });
 
     jest.spyOn(ModelCache, 'put');
@@ -53,7 +53,7 @@ describe('Request', () => {
   describe('when using the default exported function', () => {
     it('returns a promise if the model does not exist', async() => {
       var model,
-          promise = request('foo', Model, {component}).then(([_model]) => {
+          promise = request('foo', Model, {options: {one: 1}, component}).then(([_model]) => {
             model = _model;
           });
 
@@ -62,6 +62,8 @@ describe('Request', () => {
       expect(promise instanceof Promise).toBe(true);
       // in this instance we're resolving immediately, so model should be Model
       expect(model instanceof Model).toBe(true);
+      // this tests that it properly passes along the options object to the model constructor
+      expect(model.urlOptions).toEqual({one: 1});
     });
 
     describe('if the model does exist', () => {

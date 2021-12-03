@@ -70,23 +70,23 @@ A boolean or function that accepts a [resource configuration object](https://git
 constructor: void (initialData: Object, options: object)
 ```
 
-The Model's constructor gets passed any initial data, as well as the options from the executor function. Override this to set some instance variables for the model, which is really useful for url path parameters. Just be sure to pass the arguments to its `.super()` call, as well:
+The Model's constructor gets passed any initial data, as well as the options from the executor function. Override this to add some custom logic or instance variables for the model&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyModel extends Model {
   constructor(initialData, options={}) {
     super(initialData, options);
     
-    this.category = options.category;
+    // custom logic
   }
   
-  url() {
-    return `/todos/${this.category}/${this.id}`;
+  url({category}) {
+    return `/todos/${category}/${this.id}`;
   }
 }
 ```
 
-Note that `this.id` is automatically set to whichever value is passed in at the `idAttribute` key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set.
+Note that `this.id` is automatically set to whichever value is passed in at the `idAttribute` key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set. Other `options` fields (from the executor function) are passed to the `url` as shown in the example above.
 
 
 ### toJSON

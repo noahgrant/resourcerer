@@ -190,6 +190,7 @@ describe('Utils', () => {
   describe('result', () => {
     it('returns the correct value if a function', () => {
       expect(result({foo: () => 'bar'}, 'foo')).toEqual('bar');
+      expect(result({foo: (x, y) => x + y + 5}, 'foo', 10, 5)).toEqual(20);
     });
 
     it('returns the correct value if not a function', () => {

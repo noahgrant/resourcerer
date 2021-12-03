@@ -83,6 +83,40 @@ describe('sync', () => {
     expect(window.fetch.mock.calls[0][1].body).toEqual('a=a&one=1');
   });
 
+  it('passes urlOptions to the model to formulate the url path', async() => {
+    var librarySectionBook;
+
+    class LibrarySection extends Collection {
+      url({section}) {
+        return `/library/${section}`;
+      }
+    }
+
+    class LibrarySectionBook extends Model {
+      url({section, bookId}) {
+        return `/library/${section}/${bookId}`;
+      }
+    }
+
+    library = new LibrarySection([], {section: 'nature'});
+    await library.fetch({params: {a: 'a', one: 1}});
+
+    expect(window.fetch.mock.calls[0][0]).toEqual('/library/nature?a=a&one=1');
+    // safe
+    library = new LibrarySection();
+    await library.fetch({params: {a: 'a', one: 1}});
+    expect(window.fetch.mock.calls[1][0]).toEqual('/library/undefined?a=a&one=1');
+
+    librarySectionBook = new LibrarySectionBook({}, {section: 'nature', bookId: 'all-about-frogs'});
+    await librarySectionBook.fetch({params: {a: 'a', one: 1}});
+    expect(window.fetch.mock.calls[2][0]).toEqual('/library/nature/all-about-frogs?a=a&one=1');
+
+    // safe
+    librarySectionBook = new LibrarySectionBook();
+    await librarySectionBook.fetch({params: {a: 'a', one: 1}});
+    expect(window.fetch.mock.calls[3][0]).toEqual('/library/undefined/undefined?a=a&one=1');
+  });
+
   it('create', async() => {
     await library.create(attrs, {wait: false});
 

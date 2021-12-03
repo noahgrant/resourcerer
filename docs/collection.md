@@ -9,12 +9,8 @@ class MyTodos extends Collection {
 }
 
 class MyTodos extends Collection {
-  constructor(models, options={}) {
-    this.subtype = options.subtype;
-  }
-
-  url() {
-    return `/todos/${this.subtype}`;
+  url({subtype}) {
+    return `/todos/${subtype}`;
   }
 }
 ```
@@ -59,23 +55,24 @@ A boolean or function that accepts a [resource configuration object](https://git
 constructor: void (models: Array<Object|Model>, options: object)
 ```
 
-The Collection's constructor gets passed any initial models, as well as the options from the executor function. Override this to set some instance variables for the collection, which is really useful for url path parameters. Just be sure to pass the arguments to its `.super()` call, as well:
+The Collection's constructor gets passed any initial models, as well as the options from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyCollection extends Collection {
   constructor(models, options={}) {
     super(models, options);
     
-    this.category = options.category;
+    // initializing some variable to be used later
+    this.categoriesList = [];
   }
   
-  url() {
-    return `/todos/${this.category}`;
+  url({category}) {
+    return `/todos/${category}`;
   }
 }
 ```
 
-Passing in a `model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor.
+Passing in a `model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `options` fields (from the executor function) are passed to the `url` as shown in the example above.
 
 
 ### add
