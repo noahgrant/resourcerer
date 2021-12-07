@@ -127,7 +127,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 1. [Nomenclature](#nomenclature)
 1. [Tutorial](#tutorial)
     1. [Intro](#tutorial)
-    1. [Other Props Returned from the Hook/Passed from the HOC (Loading States)](other-props-returned-from-the-hookpassed-from-the-hoc-loading-states)
+    1. [Other Props Returned from the Hook/Passed from the HOC (Loading States)](r#other-props-returned-from-the-hookpassed-from-the-hoc-loading-states)
     1. [Requesting Prop-driven Data](#requesting-prop-driven-data)
     1. [Changing Props](#changing-props)
     1. [Common Resource Config Options](#common-resource-config-options)
