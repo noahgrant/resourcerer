@@ -55,7 +55,7 @@ A boolean or function that accepts a [resource configuration object](https://git
 constructor: void (models: Array<Object|Model>, options: object)
 ```
 
-The Collection's constructor gets passed any initial models, as well as the [options](/#options) from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
+The Collection's constructor gets passed any initial models, as well as the [options](https://github.com/noahgrant/resourcerer#options) from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyCollection extends Collection {
@@ -72,7 +72,7 @@ class MyCollection extends Collection {
 }
 ```
 
-Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `options` fields (the ones passed from the executor function [options](/#options) property) are passed to the `url` as shown in the example above.
+Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `options` fields (the ones passed from the executor function [options](https://github.com/noahgrant/resourcerer#options) property) are passed to the `url` as shown in the example above.
 
 
 ### add
