@@ -120,7 +120,7 @@ Returns whether or not a model exists in a collection. You can pass the model in
 modelId: number|string (attrs: Object)
 ```
 
-Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`). By default this is equal to the `idAttribute` set on the collection's Model class. But if you don't want to add that, you can use this method, ie:
+Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`). By default this is equal to the [`idAttribute`](/docs/model.md#static-idattribute) set on the collection's Model class. But if you don't want to add that, you can use this method, ie:
 
 ```js
 // the collection will index its models based on the `name` property instead of the default `id` property
