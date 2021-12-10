@@ -87,7 +87,7 @@ Add a new entry or list of entries into the collection. Each entry can be an obj
 create: Promise<[Model, Response]> (model: (Object|Model), options: Object)
 ```
 
-Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
+Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. Because it also instantiates the new model, be sure to pass any path params you need in your url as the options argument (the same [options](https://github.com/noahgrant/resourcerer#options) in the resource config object). The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
 
 ***All .create() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 
