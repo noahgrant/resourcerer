@@ -617,21 +617,39 @@ describe('Collection', () => {
     });
   });
 
-  describe('modelId', () => {
-    it('returns the value at the id attribute of a set of attributes', () => {
+  describe('setting a model id attribute', () => {
+    it('on the model sets the id attributes for all models', () => {
       class _Model extends Model {
         static idAttribute = 'name'
       }
 
+      // default is just id
+      collection = new Collection();
+      collection.add({id: 'noahgrant', name: 'Noah Grant'});
+      expect(collection.get('noahgrant')).toBeDefined();
+      expect(collection.get('Noah Grant')).not.toBeDefined();
+      expect(collection.get('noahgrant').id).toEqual('noahgrant');
+      expect(collection.Model.idAttribute).toEqual('id');
+
+      collection = new Collection([], {Model: _Model});
+      collection.add({id: 'noahgrant', name: 'Noah Grant'});
+      expect(collection.get('noahgrant')).not.toBeDefined();
+      expect(collection.get('Noah Grant')).toBeDefined();
+      expect(collection.get('Noah Grant').id).toEqual('Noah Grant');
+      expect(collection.Model.idAttribute).toEqual('name');
+    });
+
+    it('on the collection sets the id attribute for its models', () => {
       class _Collection extends Collection {
-        static Model = _Model
+        static modelIdAttribute = 'name'
       }
 
-      collection = new Collection();
-      expect(collection.modelId({id: 'noahgrant', name: 'Noah Grant'})).toEqual('noahgrant');
-
       collection = new _Collection();
-      expect(collection.modelId({id: 'noahgrant', name: 'Noah Grant'})).toEqual('Noah Grant');
+      collection.add({id: 'noahgrant', name: 'Noah Grant'});
+      expect(collection.get('noahgrant')).not.toBeDefined();
+      expect(collection.get('Noah Grant')).toBeDefined();
+      expect(collection.get('Noah Grant').id).toEqual('Noah Grant');
+      expect(collection.Model.idAttribute).toEqual('name');
     });
   });
 
