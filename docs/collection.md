@@ -16,7 +16,7 @@ class MyTodos extends Collection {
 ```
 
 A collection instance of the class created and registered in your [resourcerer config](https://github.com/noahgrant/resourcerer#nomenclature) will be returned by every `useResources` call that uses its model key from the [ModelMap](https://github.com/noahgrant/resourcerer#tutorial). You can read simply from it
-by using `Collection#toJSON` (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
+by using [`Collection#toJSON`](#tojson) (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
 that you might find useful in rendering your data-hydrated components.
 
 ## Properties
@@ -55,7 +55,7 @@ A boolean or function that accepts a [resource configuration object](https://git
 constructor: void (models: Array<Object|Model>, options: object)
 ```
 
-The Collection's constructor gets passed any initial models, as well as the options from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
+The Collection's constructor gets passed any initial models, as well as the [options](https://github.com/noahgrant/resourcerer#options) from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyCollection extends Collection {
@@ -72,7 +72,7 @@ class MyCollection extends Collection {
 }
 ```
 
-Passing in a `model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `options` fields (from the executor function) are passed to the `url` as shown in the example above.
+Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `options` fields (the ones passed from the executor function [options](https://github.com/noahgrant/resourcerer#options) property) are passed to the `url` as shown in the example above.
 
 
 ### add
@@ -87,7 +87,7 @@ Add a new entry or list of entries into the collection. Each entry can be an obj
 create: Promise<[Model, Response]> (model: (Object|Model), options: Object)
 ```
 
-Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
+Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. Because it also instantiates the new model, be sure to pass any path params you need in your url as the options argument (the same [options](https://github.com/noahgrant/resourcerer#options) in the resource config object). The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
 
 ***All .create() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 
@@ -120,7 +120,7 @@ Returns whether or not a model exists in a collection. You can pass the model in
 modelId: number|string (attrs: Object)
 ```
 
-Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`). By default this is equal to the `idAttribute` set on the collection's Model class. But if you don't want to add that, you can use this method, ie:
+Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`). By default this is equal to the [`idAttribute`](/docs/model.md#static-idattribute) set on the collection's Model class. But if you don't want to add that, you can use this method, ie:
 
 ```js
 // the collection will index its models based on the `name` property instead of the default `id` property

@@ -16,18 +16,19 @@ renderUserTodosList = (props={}) => render(<UserTodosList {...defaultProps()} {.
 
         
 it('runs a test', () => {
-  // both resources are passed as props, so no fetching takes place, and the component
-  // is rendered synchronously!
+  // both resources are passed as props, so no fetching takes place, `hasLoaded` is always true,
+  // and the component is rendered synchronously!
   var userTodosList = renderUserTodosList();
 });
 ```
 
 ### Changing resource loading states
 
-When using `resourcerer`, we are React function components that have no backing instances (and thus whose return from `render` is `null`). Therefore, we can't assert any prop values on components and we can't navigate a DOM tree the way we can when using classes. However, we can simply mock out `useResources` itself to test functionality. Because the `withResources` HOC also uses `useResources` under the hood, this will work when testing both. Here's an example (using [jest](https://jestjs.io/)) for testing how a component that uses `useResources` looks under a loading state:
+When using `resourcerer`, you are using React function components that have no backing instances (and thus whose return from `render` is `null`). Therefore, we can't assert any prop values on components and we can't navigate a DOM tree the way we can when using classes. However, we can simply mock out `useResources` itself to test functionality. Because the `withResources` HOC also uses `useResources` under the hood, this will work when testing both. Here's an example (using [jest](https://jestjs.io/) and [react testing library](https://testing-library.com/docs/react-testing-library/intro/)) for testing how a component that uses `useResources` looks under a loading state:
 
 ```jsx
 import * as resourcerer from 'resourcerer';
+import {render} from '@testing-library/react';
 
 // ...
 it('shows a loader when in a loading state', () => {

@@ -35,7 +35,7 @@ class MyModel extends Model {
 ```
 
 A model instance of the class created and registered in your [resourcerer config](https://github.com/noahgrant/resourcerer#nomenclature) will be returned by every `useResources` call that uses its model key. You can read simply from it
-by using `Model#toJSON` (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
+by using [Model#toJSON](#tojson) (the most common usage), but there are several other methods and properties in its interface you can customize in your collection definition or
 that you might find useful in rendering your data-hydrated components.
 
 ## Properties
@@ -70,7 +70,7 @@ A boolean or function that accepts a [resource configuration object](https://git
 constructor: void (initialData: Object, options: object)
 ```
 
-The Model's constructor gets passed any initial data, as well as the options from the executor function. Override this to add some custom logic or instance variables for the model&mdash;just be sure to pass the arguments to its `.super()` call, as well:
+The Model's constructor gets passed any initial data, as well as the [options](https://github.com/noahgrant/resourcerer#options) from the executor function. Override this to add some custom logic or instance variables for the model&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyModel extends Model {
@@ -86,7 +86,7 @@ class MyModel extends Model {
 }
 ```
 
-Note that `this.id` is automatically set to whichever value is passed in at the `idAttribute` key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set. Other `options` fields (from the executor function) are passed to the `url` as shown in the example above.
+Note that `this.id` is automatically set to whichever value is passed in at the [`idAttribute`](#static-idattribute) key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set. Other [options](https://github.com/noahgrant/resourcerer#options) fields from the executor function are passed to the `url` as shown in the example above.
 
 
 ### toJSON
