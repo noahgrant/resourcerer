@@ -46,6 +46,16 @@ This property tells resourcerer how to determine whether to make a new request o
 
 A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this collection's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
+### `static` modelIdAttribute
+
+Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`), ie:
+
+```js
+// the collection will index its models based on the `name` property instead of the default `id` property
+static modelIdAttribute = 'name'
+``` 
+
+
 
 ## Methods
 
@@ -106,7 +116,7 @@ This is the method that `resourcerer` uses internally to get server data and set
 get: Model? (identifier: string|number)
 ```
 
-Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or by the return value of its [`modelId`](#modelid) method. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
+Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or, equivalently as a shortcut, by the collection's own static [`modelIdAttribute`](#static-modelidattribute) property. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
 
 ### has  
 ```js
@@ -114,20 +124,6 @@ has: boolean (identifier: string|number|Model|object)
 ```
 
 Returns whether or not a model exists in a collection. You can pass the model instance itself, a model's data, or a model's id.
-
-### modelId
-```js
-modelId: number|string (attrs: Object)
-```
-
-Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`). By default this is equal to the [`idAttribute`](/docs/model.md#static-idattribute) set on the collection's Model class. But if you don't want to add that, you can use this method, ie:
-
-```js
-// the collection will index its models based on the `name` property instead of the default `id` property
-modelId(attrs) {
-  return attrs.name;
-}
-``` 
 
 ### parse
 ```js
