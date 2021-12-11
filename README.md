@@ -12,13 +12,13 @@
 
 Additional features include:
 
+* fully declarative (no more writing any imperative Fetch API calls)
 * first-class loading and error state support
 * smart client-side caching
 * refetching
 * updating a component when a resource updates
 * zero dependencies
 * < 10kB!
-* ...and more
 
 Getting started is easy:
 
