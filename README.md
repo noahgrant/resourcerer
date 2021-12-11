@@ -656,8 +656,7 @@ Each one of these methods exhibit the following behaviors:
 **Note:**
 1. All calls resolve an array, which is a tuple of [model, response]. All reject with just the response.
 1. All write calls must have a `.catch` attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.
-2. 
-
+  
 ## Serial Requests
 
 In most situations, all resource requests should be parallelized; but that’s not always possible. Every so often, there may be a situation where one request depends on the result of another. For these cases, we have the `dependsOn` resource config option and the `provides` resource config option. These are probably best explained by example, so here is a simplified instance from the [Sift](https://sift.com) Console, where we load a queue item that has info about a user, but we can't get further user information until we know what user id belongs to this queue item.
