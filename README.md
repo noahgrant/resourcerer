@@ -178,7 +178,7 @@ module: {
   
 1. **ResourceKeys**. These are the keys added to the `ModelMap` (discussed above in the introduction) that link to your model constructors. They are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
-1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
+1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. In these docs you'll often see it assigned to a variable called `getResources`. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
 
     ```js
     const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}});
@@ -203,7 +203,7 @@ module: {
     };
     ```
 
-    It returns an object whose keys represent the resources to fetch and whose values are resource configuration objects that we'll discuss later (and is highlighted below).
+    It returns an object whose keys represent the resources to fetch and whose values are **Resource Configuration Objects** that we'll discuss later (and is highlighted below).
     
 1. **Resource Configuration Object (resource config)**. In the object returned by our executor function, each entry has a key equal to one of the `ResourceKeys` and whose value we will refer to in this document as a Resource Configuration Object. It holds the declarative instructions that `useResources` and `withResources` will use to request the resource.
 
