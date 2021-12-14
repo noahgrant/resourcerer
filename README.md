@@ -12,13 +12,13 @@
 
 Additional features include:
 
+* fully declarative (no more writing any imperative Fetch API calls)
 * first-class loading and error state support
 * smart client-side caching
 * refetching
 * updating a component when a resource updates
 * zero dependencies
 * < 10kB!
-* ...and more
 
 Getting started is easy:
 
@@ -62,7 +62,7 @@ import 'js/core/resourcerer-config';
         const getResources = ({TODOS}, props) => ({[TODOS]: {}});
         
         function MyComponent(props) {
-          var {
+          const {
             isLoading,
             hasErrored,
             hasLoaded,
@@ -178,7 +178,7 @@ module: {
   
 1. **ResourceKeys**. These are the keys added to the `ModelMap` (discussed above in the introduction) that link to your model constructors. They are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
-1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
+1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. In these docs you'll often see it assigned to a variable called `getResources`. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
 
     ```js
     const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}});
@@ -203,7 +203,7 @@ module: {
     };
     ```
 
-    It returns an object whose keys represent the resources to fetch and whose values are resource configuration objects that we'll discuss later (and is highlighted below).
+    It returns an object whose keys represent the resources to fetch and whose values are **Resource Configuration Objects** that we'll discuss later (and is highlighted below).
     
 1. **Resource Configuration Object (resource config)**. In the object returned by our executor function, each entry has a key equal to one of the `ResourceKeys` and whose value we will refer to in this document as a Resource Configuration Object. It holds the declarative instructions that `useResources` and `withResources` will use to request the resource.
 
@@ -218,7 +218,7 @@ Okay, back to the initial example. Let's take a look at our `useResources` usage
 const getResources = (ResourceKeys, props) => ({[ResourceKeys.TODOS]: {}});
 
 export default function MyComponent(props) {
-  var resources = useResources(getResources, props);
+  const resources = useResources(getResources, props);
   
   // ...
 }
@@ -264,7 +264,7 @@ const getResources = ({TODOS, USERS}, props) => ({
 });
 
 function MyClassWithTodosAndAUsers(props) {
-  var resources = useResources(getResources, props);
+  const resources = useResources(getResources, props);
 }
 ```
 
@@ -284,7 +284,7 @@ Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 import {haveAllLoaded} from 'resourcerer';
 
 function MyClassWithTodosAndAUsers(props) {
-  var {
+  const {
     isLoading,
     hasErrored,
     hasLoaded,
@@ -389,7 +389,7 @@ const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}}
 
 // hook
 function MyComponent(props) {
-  var resources = useResources(getResources, props);
+  const resources = useResources(getResources, props);
   
   // ...
 }
@@ -509,7 +509,7 @@ Passing a `modelKey: <ResourceKeys>` option allows you to pass a custom name as 
 const getResources = (ResourceKeys, props) => ({myRadTodos: {modelKey: ResourceKeys.TODOS});
 
 export default function MyComponentWithTodos {
-  var {
+  const {
     myRadTodosCollection,
     myRadTodosLoadingState,
     myRadTodosStatus,
@@ -566,7 +566,7 @@ Pass in a data hash to initialize a Model instance with data before initially fe
 getResources = ({CUSTOMER}) => ({[CUSTOMER]: {data: {id: props.customerId}}});
 
 function MyCustomerComponent(props) {
-  var {customerModel} = useResources(getResources, props);
+  const {customerModel} = useResources(getResources, props);
 
   // now you can reference the id directly on the model
   console.log(customerModel.get('id')); // or the id shorthand, customerModel.id
@@ -595,10 +595,10 @@ So far we've only discussed fetching data. But `resourcerer` also makes it very 
 
     ```js
     function MyComponent(props) {
-      var {myModel} = useResources(getResources, props),
-          onSave = () => myModel.save({foo: 'bar'})
-            .then([model]) => // ...)
-            .catch(() => alert('request failed'));
+      const {myModel} = useResources(getResources, props),
+            onSave = () => myModel.save({foo: 'bar'})
+              .then([model]) => // ...)
+              .catch(() => alert('request failed'));
         
       return <button onClick={onSave}>Persist model</button>;
     }
@@ -618,8 +618,8 @@ So far we've only discussed fetching data. But `resourcerer` also makes it very 
 
     ```js
     function TodoDetails(props) {
-      var {hasLoaded, todosCollection} = useResources(getResources, props),
-          todoModel = todosCollection.get(props.id),
+      const {hasLoaded, todosCollection} = useResources(getResources, props),
+            todoModel = todosCollection.get(props.id),
       
           onSaveTodo = {
             // set some loading state...
@@ -656,8 +656,7 @@ Each one of these methods exhibit the following behaviors:
 **Note:**
 1. All calls resolve an array, which is a tuple of [model, response]. All reject with just the response.
 1. All write calls must have a `.catch` attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.
-2. 
-
+  
 ## Serial Requests
 
 In most situations, all resource requests should be parallelized; but that’s not always possible. Every so often, there may be a situation where one request depends on the result of another. For these cases, we have the `dependsOn` resource config option and the `provides` resource config option. These are probably best explained by example, so here is a simplified instance from the [Sift](https://sift.com) Console, where we load a queue item that has info about a user, but we can't get further user information until we know what user id belongs to this queue item.
@@ -704,7 +703,7 @@ const getResources = ({QUEUE_ITEM, USER}, props) => ({
   
 export default function QueueItemPage(props) {
   // activeState and userId are internal state within `useResources` and returned
-  var {
+  const {
     activeState,
     userId,
     userModel,
@@ -728,7 +727,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
 
     ```js
     function MyComponent({start_time, ...props}) {
-      var {todosCollection} = useResources(({TODOS}, _props) => ({[TODOS]: {params: {start_time}}}), props);
+      const {todosCollection} = useResources(({TODOS}, _props) => ({[TODOS]: {params: {start_time}}}), props);
       
       // ...
     ```
@@ -737,7 +736,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
     
     ```js
     function MyComponent(props) {
-      var {todosCollection} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
+      const {todosCollection} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
       
       // ...
     ```
@@ -748,7 +747,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
      const getResources = ({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}});
      
      function MyComponent(props) {
-       var {todosCollection} = useResources(getResources, props);
+       const {todosCollection} = useResources(getResources, props);
        
        // ...
      ```
@@ -861,7 +860,7 @@ It takes a function that is passed `ResourceKeys` and should return a list of `R
 
 ```js
 function MyComponent(props) {
-  var {todosCollection, refetch} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
+  const {todosCollection, refetch} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
       
   // ...
   
@@ -1012,12 +1011,12 @@ ResourcesConfig.set(configObj);
 
   // component1
   function MyComponent({category, ...props}) {
-    var {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+    const {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
   }
 
   // component2--identical to the first
   function MyComponent({category, ...props}) {
-    var {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+    const {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
   }
   ```
 
