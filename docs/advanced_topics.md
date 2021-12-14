@@ -185,7 +185,7 @@ import {useResources} from 'resourcerer';
 const getResources = ({TODOS}, props) => ({[TODOS]: {}});
 
 export default function UserTodos(props) {
-  var {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
+  const {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
     
   return (
     <div className='MyComponent'>
@@ -235,7 +235,7 @@ const getResources = ({TODOS}, props) => ({[TODOS]: {}});
 const MemoizedExpensiveComponent = memo(ExpensiveComponent, (prevProps, nextProps) => nextProps.isOrWillBeLoading());
 
 export default function UserTodos(props) {
-  var {isLoading, isOrWillBeLoading, hasInitiallyLoaded} = useResources(getResources, props);
+  const {isLoading, isOrWillBeLoading, hasInitiallyLoaded} = useResources(getResources, props);
     
   return (
     <div className='MyComponent'>
@@ -267,11 +267,11 @@ const getResources = ({TODO}, props) => ({
 });
 
 export default function UserTodo(props) {
-  var {todoModel} = useResources(getResources, props),
-      onChange = (evt) => todoModel.set('name', evt.target.value),
-      onSubmit = todoModel.save()
-        .then(([model]) => !props.id ? navigate(`/todos/${model.id}`) : null)
-        .catch(() => notify('An error occurred');
+  const {todoModel} = useResources(getResources, props),
+        onChange = (evt) => todoModel.set('name', evt.target.value),
+        onSubmit = todoModel.save()
+          .then(([model]) => !props.id ? navigate(`/todos/${model.id}`) : null)
+          .catch(() => notify('An error occurred');
 
   return (
     <form onSubmit={onSubmit}>

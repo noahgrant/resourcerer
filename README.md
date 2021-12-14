@@ -62,7 +62,7 @@ import 'js/core/resourcerer-config';
         const getResources = ({TODOS}, props) => ({[TODOS]: {}});
         
         function MyComponent(props) {
-          var {
+          const {
             isLoading,
             hasErrored,
             hasLoaded,
@@ -218,7 +218,7 @@ Okay, back to the initial example. Let's take a look at our `useResources` usage
 const getResources = (ResourceKeys, props) => ({[ResourceKeys.TODOS]: {}});
 
 export default function MyComponent(props) {
-  var resources = useResources(getResources, props);
+  const resources = useResources(getResources, props);
   
   // ...
 }
@@ -264,7 +264,7 @@ const getResources = ({TODOS, USERS}, props) => ({
 });
 
 function MyClassWithTodosAndAUsers(props) {
-  var resources = useResources(getResources, props);
+  const resources = useResources(getResources, props);
 }
 ```
 
@@ -284,7 +284,7 @@ Here’s how might use that to our advantage in `MyClassWithTodosAndAUsers` :
 import {haveAllLoaded} from 'resourcerer';
 
 function MyClassWithTodosAndAUsers(props) {
-  var {
+  const {
     isLoading,
     hasErrored,
     hasLoaded,
@@ -389,7 +389,7 @@ const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}}
 
 // hook
 function MyComponent(props) {
-  var resources = useResources(getResources, props);
+  const resources = useResources(getResources, props);
   
   // ...
 }
@@ -509,7 +509,7 @@ Passing a `modelKey: <ResourceKeys>` option allows you to pass a custom name as 
 const getResources = (ResourceKeys, props) => ({myRadTodos: {modelKey: ResourceKeys.TODOS});
 
 export default function MyComponentWithTodos {
-  var {
+  const {
     myRadTodosCollection,
     myRadTodosLoadingState,
     myRadTodosStatus,
@@ -566,7 +566,7 @@ Pass in a data hash to initialize a Model instance with data before initially fe
 getResources = ({CUSTOMER}) => ({[CUSTOMER]: {data: {id: props.customerId}}});
 
 function MyCustomerComponent(props) {
-  var {customerModel} = useResources(getResources, props);
+  const {customerModel} = useResources(getResources, props);
 
   // now you can reference the id directly on the model
   console.log(customerModel.get('id')); // or the id shorthand, customerModel.id
@@ -595,10 +595,10 @@ So far we've only discussed fetching data. But `resourcerer` also makes it very 
 
     ```js
     function MyComponent(props) {
-      var {myModel} = useResources(getResources, props),
-          onSave = () => myModel.save({foo: 'bar'})
-            .then([model]) => // ...)
-            .catch(() => alert('request failed'));
+      const {myModel} = useResources(getResources, props),
+            onSave = () => myModel.save({foo: 'bar'})
+              .then([model]) => // ...)
+              .catch(() => alert('request failed'));
         
       return <button onClick={onSave}>Persist model</button>;
     }
@@ -618,8 +618,8 @@ So far we've only discussed fetching data. But `resourcerer` also makes it very 
 
     ```js
     function TodoDetails(props) {
-      var {hasLoaded, todosCollection} = useResources(getResources, props),
-          todoModel = todosCollection.get(props.id),
+      const {hasLoaded, todosCollection} = useResources(getResources, props),
+            todoModel = todosCollection.get(props.id),
       
           onSaveTodo = {
             // set some loading state...
@@ -703,7 +703,7 @@ const getResources = ({QUEUE_ITEM, USER}, props) => ({
   
 export default function QueueItemPage(props) {
   // activeState and userId are internal state within `useResources` and returned
-  var {
+  const {
     activeState,
     userId,
     userModel,
@@ -727,7 +727,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
 
     ```js
     function MyComponent({start_time, ...props}) {
-      var {todosCollection} = useResources(({TODOS}, _props) => ({[TODOS]: {params: {start_time}}}), props);
+      const {todosCollection} = useResources(({TODOS}, _props) => ({[TODOS]: {params: {start_time}}}), props);
       
       // ...
     ```
@@ -736,7 +736,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
     
     ```js
     function MyComponent(props) {
-      var {todosCollection} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
+      const {todosCollection} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
       
       // ...
     ```
@@ -747,7 +747,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
      const getResources = ({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}});
      
      function MyComponent(props) {
-       var {todosCollection} = useResources(getResources, props);
+       const {todosCollection} = useResources(getResources, props);
        
        // ...
      ```
@@ -860,7 +860,7 @@ It takes a function that is passed `ResourceKeys` and should return a list of `R
 
 ```js
 function MyComponent(props) {
-  var {todosCollection, refetch} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
+  const {todosCollection, refetch} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
       
   // ...
   
@@ -1011,12 +1011,12 @@ ResourcesConfig.set(configObj);
 
   // component1
   function MyComponent({category, ...props}) {
-    var {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+    const {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
   }
 
   // component2--identical to the first
   function MyComponent({category, ...props}) {
-    var {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+    const {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
   }
   ```
 
