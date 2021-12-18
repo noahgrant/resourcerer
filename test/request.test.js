@@ -263,7 +263,7 @@ describe('Request', () => {
       });
     });
 
-    describe('requested with {forceFetch: true}', () => {
+    describe('requested with {force: true}', () => {
       var startModel,
           finalModel;
 
@@ -273,7 +273,7 @@ describe('Request', () => {
         startModel = await request('bar', Model, {component});
         Model.prototype.fetch.mockClear();
 
-        finalModel = await request('bar', Model, {component, forceFetch: true});
+        finalModel = await request('bar', Model, {component, force: true});
       });
 
       afterEach(() => {

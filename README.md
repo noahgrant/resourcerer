@@ -56,7 +56,6 @@ import 'js/core/resourcerer-config';
     1. ### useResources
     
         ```jsx
-        import React from 'react';
         import {useResources} from 'resourcerer';
 
         const getResources = ({TODOS}, props) => ({[TODOS]: {}});
@@ -134,7 +133,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [params](#params)
         1. [options](#options)
         1. [noncritical](#noncritical)
-        1. [forceFetch](#forcefetch)
+        1. [force](#force)
         1. [Custom Resource Names](#custom-resource-names)
         1. [prefetches](#prefetches)
         1. [data](#data)
@@ -492,12 +491,12 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
   
   
 
-### forceFetch
+### force
 
-Sometimes you want the latest of a resource, bypassing whatever model has already been cached in your application. To accomplish this, simply pass a `forceFetch: true` in a resource's config. The force-fetched response will replace any prior model in the cache, but may itself get replaced by a subsequent `forceFetch: true` request for the resource.
+Sometimes you want the latest of a resource, bypassing whatever model has already been cached in your application. To accomplish this, simply pass a `force: true` in a resource's config. The force-fetched response will replace any prior model in the cache, but may itself get replaced by a subsequent `force: true` request for the resource.
 
 ```js
-  @withResources((ResourceKeys, props) => ({[ResourceKeys.LATEST_STATS]: {forceFetch: true}}))
+  @withResources((ResourceKeys, props) => ({[ResourceKeys.LATEST_STATS]: {force: true}}))
   class MyComponentWithLatestStats extends React.Component {}
 ```
 
