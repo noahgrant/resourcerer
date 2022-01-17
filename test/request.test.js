@@ -126,10 +126,7 @@ describe('Request', () => {
 
     describe('if the \'fetch\' option is false', () => {
       it('calls the resolve immediately', async() => {
-        var model;
-
-        request('nofetch', Model, {component, fetch: false})
-            .then(([_model]) => model = _model);
+        var [model] = await request('nofetch', Model, {component, fetch: false});
 
         await waitsFor(() => model instanceof Model);
 
@@ -140,8 +137,7 @@ describe('Request', () => {
         var model;
 
         expect(ModelCache.get('nofetch')).not.toBeDefined();
-        request('nofetch', Model, {component, fetch: false})
-            .then(([_model]) => model = _model);
+        [model] = await request('nofetch', Model, {component, fetch: false});
 
         await waitsFor(() => model instanceof Model);
 
@@ -286,6 +282,53 @@ describe('Request', () => {
 
       it('uses the same model instance if one already exists', () => {
         expect(startModel).toEqual(finalModel);
+      });
+    });
+
+    describe('with the \'lazy\' option', () => {
+      it('returns a new model without fetching', async() => {
+        await request('lazy', Model, {component, lazy: true});
+
+        expect(Model.prototype.fetch).not.toHaveBeenCalled();
+        expect(ModelCache.put).toHaveBeenCalled();
+      });
+
+      it('returns an existing model without fetching', async() => {
+        var existingModel = new Model(),
+            model;
+
+        ModelCache.put('lazy', existingModel, component);
+        [model] = await request('lazy', Model, {component, lazy: true});
+
+        expect(Model.prototype.fetch).not.toHaveBeenCalled();
+        expect(ModelCache.put).toHaveBeenCalled();
+        expect(existingModel).toEqual(model);
+      });
+
+      it('fetches when another component requests the same model without lazy option', async() => {
+        var [model] = await request('lazy', Model, {component, lazy: true});
+
+        expect(model.lazy).toBe(true);
+        expect(Model.prototype.fetch).not.toHaveBeenCalled();
+
+        [model] = await request('lazy', Model, {component});
+        expect(model.lazy).not.toBeDefined();
+        expect(Model.prototype.fetch).toHaveBeenCalled();
+
+        Model.prototype.fetch.mockClear();
+
+        // now if we ask for lazy again, followed by another non-lazy, it's already in the cache and
+        // we will not re-fetch
+        [model] = await request('lazy', Model, {component, lazy: true});
+        expect(model.lazy).not.toBeDefined();
+        [model] = await request('lazy', Model, {component});
+        expect(model.lazy).not.toBeDefined();
+        expect(Model.prototype.fetch).not.toHaveBeenCalled();
+
+        // now with two lazy requests (ie from different components), it still does not get fetched
+        await request('lazy', Model, {component, lazy: true});
+        await request('lazy', Model, {component: {}, lazy: true});
+        expect(Model.prototype.fetch).not.toHaveBeenCalled();
       });
     });
   });
