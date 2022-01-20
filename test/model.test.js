@@ -314,7 +314,7 @@ describe('Model', () => {
 
       result = model.save({three: 'three'}, {wait: true});
       expect(callback).not.toHaveBeenCalled();
-      expect(model.toJSON()).toEqual({one: 'one', three: 'three'});
+      expect(model.toJSON()).toEqual({one: 'one'});
 
       await result;
 
