@@ -1,6 +1,6 @@
 <img src="https://user-images.githubusercontent.com/1355779/61337603-f9fffd80-a7ea-11e9-9cb3-fa82e044c86e.png" alt="Resourcerer Icon" height="200" width="200" />
 
-# resourcerer (now in 1.0-beta!)
+# resourcerer
 
 `resourcerer` is a library for declaratively fetching and caching your application's data. Its powerful [`useResources`](#useresources) React hook or [`withResources`](#withresources) higher-order React component (HOC) allows you to easily construct a component's data flow, including:
 
