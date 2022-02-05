@@ -1236,6 +1236,30 @@ describe('withResources', () => {
     await waitsFor(() => dataChild.props.hasLoaded);
   });
 
+  it('fetches lazily-cached resources', async() => {
+    var decisionsCollection = new Collection(),
+        userModel = new Model();
+
+    decisionsCollection.lazy = true;
+    // lazy
+    ModelCache.put('decisions', decisionsCollection);
+    // not lazy
+    ModelCache.put('userfraudLevel=high_userId=noah', userModel);
+
+    dataChild = findDataChild(renderWithResources());
+
+    expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADING);
+    expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADED);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    // users not called, but decisions called
+    expect(requestSpy.mock.calls.map(([name]) => name)).toEqual([
+      ResourceKeys.DECISIONS,
+      ResourceKeys.ANALYSTS
+    ]);
+  });
+
   it('isOrWillBeLoading is true for two cycles that props change and loading starts', async() => {
     dataChild = findDataChild(renderWithResources());
 
