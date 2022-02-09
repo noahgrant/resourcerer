@@ -306,12 +306,17 @@ describe('Request', () => {
       });
 
       it('fetches when another component requests the same model without lazy option', async() => {
-        var [model] = await request('lazy', Model, {component, lazy: true});
+        var [model] = await request('lazy', Model, {component, lazy: true}),
+            requestPromise;
 
         expect(model.lazy).toBe(true);
         expect(Model.prototype.fetch).not.toHaveBeenCalled();
 
-        [model] = await request('lazy', Model, {component});
+        requestPromise = request('lazy', Model, {component});
+
+        expect(model.lazy).toBeDefined();
+        await requestPromise;
+
         expect(model.lazy).not.toBeDefined();
         expect(Model.prototype.fetch).toHaveBeenCalled();
 
