@@ -41,6 +41,7 @@ const getResources = ({
   },
   [DECISIONS]: {
     ...(props.includeDeleted ? {params: {include_deleted: true}} : {}),
+    lazy: props.lazy,
     measure
   },
   [NOTES]: {data: {pretend: true}, noncritical: true, dependsOn: ['noah']},
@@ -1209,6 +1210,21 @@ describe('useResources', () => {
       ResourceKeys.DECISIONS,
       ResourceKeys.ANALYSTS
     ]);
+
+    requestSpy.mockClear();
+    ModelCache.remove('decisions');
+
+    // now let's test the case where a single component changes its lazy status
+    dataChild = findDataChild(renderUseResources({lazy: true}));
+
+    expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADED);
+    expect(dataChild.props.hasLoaded).toBe(true);
+    expect(requestSpy.mock.calls.map(([name]) => name)).toEqual([]);
+
+    dataChild = findDataChild(renderUseResources({lazy: false}));
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.mock.calls.map(([name]) => name)).toEqual([ResourceKeys.DECISIONS]);
   });
 
   it('isOrWillBeLoading is true for two cycles that props change and loading starts', async() => {
