@@ -585,21 +585,29 @@ describe('withResources', () => {
     });
 
     it('for a cached resource', async() => {
+      var userModel = new UserModel({}, {userId: 'zorah'});
+
+      ModelCache.put('useruserId=zorah', userModel);
+
       // this test is just to ensure that, when a cached resource is requested
       // on an update, which means it resolves its promise immediately, that the
       // loading state is still set (because the cache key should equal the cache
       // key check in the resolve handler).
+      jest.spyOn(ModelCache, 'register');
       dataChild = findDataChild(renderWithResources({shouldError: true}));
 
       await waitsFor(() => dataChild.props.hasErrored);
       expect(dataChild.props.userLoadingState).toEqual(LoadingStates.ERROR);
 
+      ModelCache.register.mockClear();
       // rerender with a new user, but the user that's 'already cached'
       dataChild = findDataChild(renderWithResources({userId: 'zorah', fraudLevel: null}));
 
       // now assert that we turn back to a loaded state from the cached resource
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(dataChild.props.userModel.userId).toEqual('zorah');
+      expect(ModelCache.register).toHaveBeenCalledWith('useruserId=zorah', {});
+      expect(dataChild.props.userModel).toEqual(userModel);
+      ModelCache.register.mockRestore();
     });
   });
 
