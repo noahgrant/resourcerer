@@ -50,6 +50,19 @@ describe('Collection', () => {
     expect(collection.toJSON()).toEqual([]);
   });
 
+  it('urlOptions get passed down to models', async() => {
+    collection = new Collection([{id: '1'}], {one: 1, two: 2, comparator: 'foo', parse: true});
+
+    expect(collection.get('1').urlOptions).toEqual({one: 1, two: 2});
+
+    collection.add({id: '2'});
+    expect(collection.get('2').urlOptions).toEqual({one: 1, two: 2});
+
+    sync.default.mockResolvedValue([[{id: '3'}], {}]);
+    await collection.fetch();
+    expect(collection.get('3').urlOptions).toEqual({one: 1, two: 2});
+  });
+
   it('adds any models passed to its models list', () => {
     var model1 = new Model,
         model2 = new Model;
