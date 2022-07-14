@@ -600,18 +600,24 @@ describe('useResources', () => {
       expect(dataChild.props.notesModel.get('pretend')).toBe(true);
       expect(dataChild.props.notesModel instanceof NotesModel).toBe(true);
 
-      await unmountAndClearModelCache();
-
-      // the models are removed from the cache after erroring
       shouldResourcesError = true;
-      dataChild = findDataChild(renderUseResources());
+      dataChild = findDataChild(renderUseResources({userId: 'zorah'}));
 
       await waitsFor(() => dataChild.props.hasErrored);
 
-      expect(dataChild.props.decisionsCollection.isEmptyModel).toBe(true);
-      expect(dataChild.props.decisionsCollection instanceof DecisionsCollection).toBe(true);
+      expect(dataChild.props.userModel.isEmptyModel).toBe(true);
+      expect(dataChild.props.userModel instanceof UserModel).toBe(true);
+
+      shouldResourcesError = false;
+      // now request a different resource and assert that our model is still empty (because it
+      // is set as state)
+      dataChild = findDataChild(renderUseResources({userId: 'lopatron'}));
 
       expect(dataChild.props.userModel.isEmptyModel).toBe(true);
+      expect(dataChild.props.userModel instanceof UserModel).toBe(true);
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+      expect(dataChild.props.userModel.isEmptyModel).not.toBeDefined();
       expect(dataChild.props.userModel instanceof UserModel).toBe(true);
     });
 
