@@ -475,6 +475,11 @@ describe('Model', () => {
       collection.url = () => '/library';
       model = new _Model({name: 'noah?grant'}, {collection});
       expect(model.url()).toEqual('/library/noah%3Fgrant');
+
+      // now with no idAttribute, but a forced PUT
+      _Model.idAttribute = 'foo';
+      model.isNew = () => false;
+      expect(model.url()).toEqual('/library/');
     });
 
     it('is called by default with its urlOptions', () => {
