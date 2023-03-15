@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "1.0.11",
+  "version": "1.0.12",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
