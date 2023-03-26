@@ -45,6 +45,11 @@ that you might find useful in rendering your data-hydrated components.
 
 This property tells resourcerer how to determine whether to make a new request or to take a model out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
 
+### `static` cacheTimeout
+`number`
+
+The number of milliseconds to keep all models of this class in the cache after all client components stop referencing it. Note that this is on a model _class_ basis and not an _instance_ basis because the latter can introduce race conditions into your application.
+
 ### `static` idAttribute
 `string`. Default: `'id'`.  
 

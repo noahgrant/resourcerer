@@ -1,3 +1,5 @@
+import Collection from '../lib/collection';
+import Model from '../lib/model';
 import ModelCache from '../lib/model-cache';
 
 const CACHE_WAIT = 150000,
@@ -49,6 +51,31 @@ describe('ModelCache', () => {
         // model should be removed after CACHE_WAIT time
         expect(ModelCache.get(PUT_KEY)).toBeDefined();
         jest.advanceTimersByTime(CACHE_WAIT);
+        expect(ModelCache.get(PUT_KEY)).not.toBeDefined();
+      });
+
+      it('uses a model-specific timeout if available', () => {
+        class TimeoutModel extends Model {
+          static cacheTimeout = 3000;
+        }
+
+        class TimeoutCollection extends Collection {
+          static cacheTimeout = CACHE_WAIT + 2000;
+        }
+
+        jest.advanceTimersByTime(CACHE_WAIT);
+        expect(ModelCache.get(PUT_KEY)).not.toBeDefined();
+
+        ModelCache.put(PUT_KEY, new TimeoutModel());
+        jest.advanceTimersByTime(2000);
+        expect(ModelCache.get(PUT_KEY)).toBeDefined();
+        jest.advanceTimersByTime(2000);
+        expect(ModelCache.get(PUT_KEY)).not.toBeDefined();
+
+        ModelCache.put(PUT_KEY, new TimeoutCollection());
+        jest.advanceTimersByTime(CACHE_WAIT);
+        expect(ModelCache.get(PUT_KEY)).toBeDefined();
+        jest.advanceTimersByTime(2000);
         expect(ModelCache.get(PUT_KEY)).not.toBeDefined();
       });
     });
