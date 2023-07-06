@@ -15,6 +15,7 @@ Additional features include:
 * fully declarative (no more writing any imperative Fetch API calls)
 * first-class loading and error state support
 * smart client-side caching
+* lazy fetching
 * refetching
 * updating a component when a resource updates
 * zero dependencies
@@ -137,6 +138,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [Custom Resource Names](#custom-resource-names)
         1. [prefetches](#prefetches)
         1. [data](#data)
+        1. [lazy](#lazy)
         1. [dependsOn](#dependson)
         1. [provides](#provides)
     1. [Data mutations](#data-mutations)
@@ -575,6 +577,49 @@ function MyCustomerComponent(props) {
 You can also use `data` to take advantage of [re-caching](/docs/advanced_topics.md#recaching-newly-saved-models).  
 
 Like `params` and `options`, the `data` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). For [Collections](/docs/collection.md#constructor), there is an equivalent `models` property, but again, these are seldom used.
+
+### lazy
+
+Lazy fetching is one of resourcerer's most powerful features, allowing you to get a reference to a model without actually fetching it. If the model is ultimately fetched elsewhere on the page, the component that lazily fetched it will still listen for updates.
+
+A great example of when this would be useful is for search results. Search results are read-only, but if you modify the entity of a result somewhere else in the page, you'd like to see it reflected in your search results. Yet you don't want to fetch the entity details for every search result and spam your API. Enter lazy loading:
+
+```
+// todo_search.jsx
+getResources = ({TODOS_SEARCH}) => ({[TODOS_SEARCH]: {params: someSearchParams}});
+
+function TodoSearch(props) {
+  const {todoSearchModel} = useResources(getResources, props);
+
+  return (
+    <Table>
+      <thead>
+        <TableHeader>Name</TableHeader>
+        <TableHeader>Last Updated</TableHeader>
+      </thead>
+      <tbody>
+        {todoSearchModel.get('results').map((todo) => <TodoSearchItem {...todo} />)}
+      </tbody>
+    </Table>
+  );
+}
+
+// todo_search_item.jsx
+// the todoModel is never actually fetched here, it's only listened on, allowing any changes made elsewhere in the page to be reflected here.
+getResources = ({TODO}) => ({[TODO]: {id: props.id, lazy: true}});
+
+function TodoSearchItem(props) {
+  const {todoModel} = useResources(getResources, props);
+
+  return (
+    <tr>
+      <td>{todoModel.get('name') || props.name}</td>
+      <td>{todoModel.get('updated_at') || props.updated_at}</td> 
+    </tr>
+  );
+```
+
+If the todo model has been fetched already, we'll read straight from that. And if it gets updated, this component, via resourcerer, is listening for updates and will re-render to keep our entire UI in sync. Otherwise, we'll just fall back to our read-only search results. WIN!
 
 ### dependsOn
 
