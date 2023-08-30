@@ -159,7 +159,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 `resourcerer` requires on React >= 16.8 but has no external dependencies.
 
-Note that Resourcerer uses ES2015 in its source and does no transpiling&mdash;including import/export (Local babel configuration is for testing, only).
+Note that Resourcerer uses ESNext in its source and does no transpiling&mdash;including import/export (Local babel configuration is for testing, only).
 This means that if you're not babelifying your `node_modules` folder, you'll need to make an exception for this package, ie:
 
 ```js
@@ -243,7 +243,7 @@ ModelMap.add({TODOS: TodosCollection});
 
 (We can also pass custom prefixes for our prop names in a component, but [we'll get to that later](#custom-resource-names).)  
 
-Back to the executor function. In the example above, you see it returns an object of `{[ResourceKeys.TODOS]: {}}`. In general, the object it should return is of type `{string<ResourceKey>: object<Options>}`, where `Options` is a generic map of config options. It can contain as many keys as resources you would like the component to request. In our initial example, the options object was empty. Further down, we'll go over the plethora of options and how to use them. For now let's take a look at some of the resource-related props this simple configuration provides our component.
+Back to the executor function. In the example above, you see it returns an object of `{[ResourceKeys.TODOS]: {}}`. In general, the object it should return is of type `{[key: ResourceKeys]: Options}`, where `Options` is a generic map of config options. It can contain as many keys as resources you would like the component to request. In our initial example, the options object was empty. Further down, we'll go over the plethora of options and how to use them. For now let's take a look at some of the resource-related props this simple configuration provides our component.
 
 
 ## Other Props Returned from the Hook/Passed from the HOC (Loading States)
@@ -723,7 +723,7 @@ function getUserIdFromItem(queueItemModel) {
 }
 ```
 
-In this simplified example, only `props.itemId` is initially present at the url `items/<itemId>`, and since the UserModel depends on `props.userId` being present, that model won’t initially get fetched. Only the QueueItemModel gets fetched at first; it has the `provides` option, which is a map of `<string: function>`, where the string is the prop that it provides to the HOC wrapper, and the function is a private static ‘transform’ function&mdash;it takes its model as an argument and returns the value for the prop it provides.
+In this simplified example, only `props.itemId` is initially present at the url `items/<itemId>`, and since the UserModel depends on `props.userId` being present, that model won’t initially get fetched. Only the QueueItemModel gets fetched at first; it has the `provides` option, which is a map of `[key: string]: (model: Model | Collection) => any`, where the string is the prop that it provides to the HOC wrapper, and the function is a private static ‘transform’ function&mdash;it takes its model as an argument and returns the value for the prop it provides.
 
 So, in this case, `getUserIdFromItem` is the transform function, which takes the `queueItemModel` as an argument and returns the userId that will be assigned to `props.userId` (or, more accurately, will be set as state via `setResourceState` as described in the previous section). When the QueueItemModel resource returns, the transform function is invoked; at that point, `props.userId` exists, and the UserModel will be fetched. And we have serially requested our resources!
 
@@ -800,7 +800,7 @@ The hook and HOC largely operate interchangeably, but do note a couple critical 
 
 `resourcerer` handles resource storage and caching, so that when multiple components request the same resource with the same parameters or the same body, they receive the same model in response. If multiple components request a resource still in-flight, only a single request is made, and each component awaits the return of the same resource. Fetched resources are stored in the `ModelCache`. Under most circumstances, you won’t need to interact with directly; but it’s still worth knowing a little bit about what it does.
 
-The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{cacheKey<string>: model<Model|Collection>}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `resourcerer` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default (but can be changed, see [Configuring resourcerer](#configuring-resourcerer), or [overridden on a model-class basis](/docs/model.md#static-cachetimeout)), to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go back through the network.
+The `ModelCache` is a simple module that contains a couple of Maps&mdash;one that is the actual cache `{[cacheKey: string]: Model | Collection}`, and one that is a component manifest, keeping track of all component instances that are using a given resource (unique by cache key). When a component unmounts, `resourcerer` will unregister the component instance from the component manifest; if a resource no longer has any component instances attached, it gets scheduled for cache removal. The timeout period for cache removal is two minutes by default (but can be changed, see [Configuring resourcerer](#configuring-resourcerer), or [overridden on a model-class basis](/docs/model.md#static-cachetimeout)), to allow navigating back and forth between pages without requiring a refetch of all resources. After the timeout, if no other new component instances have requested the resource, it’s removed from the `ModelCache`. Any further requests for that resource then go back through the network.
 
 Again, it’s unlikely that you’ll use `ModelCache` directly while using `resourcerer`, but it’s helpful to know a bit about what’s going on behind-the-scenes.
 
