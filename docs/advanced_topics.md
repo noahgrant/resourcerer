@@ -13,7 +13,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 
 
 
-1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `this.props.hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
+1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
     
 1. When a `PENDING` resource request is not in flight, its model prop will still be the empty model instance whose properties are frozen (as happens when the resource is in the other three possible loading states). This is to more predictably handle our resources in our components. We don’t need to be defensive with syntax like:
 
@@ -40,7 +40,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
     
         So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentDidUpdate`/`useEffect` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
         
-        And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/withResourceds, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
+        And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/`withResources`, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
         ```js
         // overlay-wrapped component, where a loader will show over previously-rendered children,
