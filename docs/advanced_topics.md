@@ -33,7 +33,8 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         
     2. Recall that we can provide the dependent prop in one of two ways:
         1. We can include it in another resource’s `provides` property, in which case the dependent prop gets set as state within resourcerer.
-        2. We can modify the url in the component’s `componentDidUpdate`/`useEffect` (either url path or query parameter), which will filter the prop down.
+            1. We can also set state in our client component and pass it to the executor function, but that requires an extra render cycle.
+        1. We can modify the url in the component’s `componentDidUpdate`/`useEffect` (either url path or query parameter), which will filter the prop down.
     
         When we provide using method (a), the dependent prop can be changed but not removed. When we provide using method (b), the dependent prop can be changed or removed.
     
@@ -54,7 +55,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         // this assumes that the parent is handling the `hasErrored` state. if it is not, then
         // you may need to instead use:
         shouldComponentUpdate(nextProps) {
-          return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
+          return !(nextProps.isLoading || areAnyPending(nextProps.myDependentLoadingState));
         }
         ```
 
@@ -214,7 +215,7 @@ But how do we tell `React.memo` when to not render? This is tricky for a couple 
 
 * Because `useEffect`/`componentDidUpdate` occurs _after_ render, we actually have two renders we want to opt out of:
     * parent props change
-    * render is called (opt out!)
+    * render is called (opt out!) **See Note**
     * resourcerer changes loaded state to loading from the change in props
     * render is called (opt out!). parent shows the overlay loader
     * request returns and loading state changes back to loaded
@@ -245,6 +246,8 @@ export default function UserTodos(props) {
   );
 }
 ```
+
+**Note:** A future upgrade to this library will utilize a [render bailout](https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes) to remove this unnecessary render. The other two will still be required, though.
 
 ## Recaching newly-saved models
 
