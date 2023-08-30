@@ -584,7 +584,7 @@ Lazy fetching is one of resourcerer's most powerful features, allowing you to ge
 
 A great example of when this would be useful is for search results. Search results are read-only, but if you modify the entity of a result somewhere else in the page, you'd like to see it reflected in your search results. Yet you don't want to fetch the entity details for every search result and spam your API. Enter lazy loading:
 
-```
+```jsx
 // todo_search.jsx
 getResources = ({TODOS_SEARCH}) => ({[TODOS_SEARCH]: {params: someSearchParams}});
 
@@ -665,20 +665,20 @@ So far we've only discussed fetching data. But `resourcerer` also makes it very 
       const {hasLoaded, todosCollection} = useResources(getResources, props),
             todoModel = todosCollection.get(props.id),
       
-          onSaveTodo = {
-            // set some loading state...
+            onSaveTodo = {
+              // set some loading state...
         
-            if (!props.id) {
-              // create new todo!
-              return todosCollection.create(attrs)
-                .then(([model]) => // ...)
-                .catch(() => alert('create failed'));
-                .then(() => // remove loading state);
-            }
+              if (!props.id) {
+                // create new todo!
+                return todosCollection.create(attrs)
+                  .then(([model]) => // ...)
+                  .catch(() => alert('create failed'));
+                  .then(() => // remove loading state);
+              }
         
-            // update existing
-            todoModel.save(attrs).then(([model]) => ...).catch(() => alert('update failed'));
-          };
+              // update existing
+              todoModel.save(attrs).then(([model]) => ...).catch(() => alert('update failed'));
+            };
       
        if (hasLoaded && props.id && !todoModel) {
          return <p>Todo not found.</p>;
