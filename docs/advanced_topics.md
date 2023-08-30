@@ -13,7 +13,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 
 
 
-1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `this.props.hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
+1. `PENDING` critical resources don’t contribute to `isLoading`/`hasErrored` states, but will keep your component from reaching a `hasLoaded` state. Semantically, this makes sense, because `hasLoaded` should only be true when all critical resources have loaded, regardless of when a resource’s request is made.
     
 1. When a `PENDING` resource request is not in flight, its model prop will still be the empty model instance whose properties are frozen (as happens when the resource is in the other three possible loading states). This is to more predictably handle our resources in our components. We don’t need to be defensive with syntax like:
 
@@ -33,13 +33,14 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         
     2. Recall that we can provide the dependent prop in one of two ways:
         1. We can include it in another resource’s `provides` property, in which case the dependent prop gets set as state within resourcerer.
-        2. We can modify the url in the component’s `componentDidUpdate`/`useEffect` (either url path or query parameter), which will filter the prop down.
+            1. We can also set state in our client component and pass it to the executor function, but that requires an extra render cycle.
+        1. We can modify the url in the component’s `componentDidUpdate`/`useEffect` (either url path or query parameter), which will filter the prop down.
     
         When we provide using method (a), the dependent prop can be changed but not removed. When we provide using method (b), the dependent prop can be changed or removed.
     
         So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentDidUpdate`/`useEffect` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
         
-        And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/withResourceds, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
+        And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/`withResources`, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
         ```js
         // overlay-wrapped component, where a loader will show over previously-rendered children,
@@ -54,7 +55,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         // this assumes that the parent is handling the `hasErrored` state. if it is not, then
         // you may need to instead use:
         shouldComponentUpdate(nextProps) {
-          return !(nextProps.isLoading || isPending(nextProps.myDependentLoadingState));
+          return !(nextProps.isLoading || areAnyPending(nextProps.myDependentLoadingState));
         }
         ```
 
@@ -214,7 +215,7 @@ But how do we tell `React.memo` when to not render? This is tricky for a couple 
 
 * Because `useEffect`/`componentDidUpdate` occurs _after_ render, we actually have two renders we want to opt out of:
     * parent props change
-    * render is called (opt out!)
+    * render is called (opt out!) **See Note**
     * resourcerer changes loaded state to loading from the change in props
     * render is called (opt out!). parent shows the overlay loader
     * request returns and loading state changes back to loaded
@@ -245,6 +246,8 @@ export default function UserTodos(props) {
   );
 }
 ```
+
+**Note:** A future upgrade to this library will utilize a [render bailout](https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes) to remove this unnecessary render. The other two will still be required, though.
 
 ## Recaching newly-saved models
 
