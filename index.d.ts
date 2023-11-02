@@ -1,3 +1,12 @@
+// this will make CONST_CASE a camelCase but also leave camelCase alone
+type Camelize<T extends string> = T extends `${infer A}_${infer B}` ?
+  `${Lowercase<A>}${Camelize<Capitalize<B>>}` :
+  T extends Uppercase<T> ?
+    Capitalize<Lowercase<T>> :
+    T extends `${infer A}${Uppercase<infer B>}` ?
+      Lowercase<T> :
+      T;
+
 declare module 'resourcerer' {
   type SyncOptions = {
     attrs?: Record<string, any>;
@@ -17,11 +26,8 @@ declare module 'resourcerer' {
     silent?: boolean;
   };
 
-  // this will be filled out by users
-  interface ResourceKeys {}
-
   declare class Model<T extends Record<string, any> = {[key: string]: any}> {
-    constructor(attrs?: Record<string, any>, options?: Record<string, any> & SetOptions): Model;
+    constructor(attrs?: T, options?: Record<string, any> & SetOptions): Model;
 
     // TODO: need to reference idAttribute here
     id: T extends {id: string} ? string : string | undefined;
@@ -36,13 +42,13 @@ declare module 'resourcerer' {
 
     parse(response: Record<string, any>): T;
 
-    pick<K extends keyof T>(...attrs: K[]): Record<K, T[K]>;
+    pick<K extends keyof T>(...attrs: K[]): Pick<T, K>;
 
-    set(attrs: Record<string, any>, options?: SetOptions): Model;
+    set(attrs: Partial<T>, options?: SetOptions): Model;
 
     fetch(options?: {parse?: boolean} & SyncOptions & SetOptions): Promise<[Model, Response]>;
 
-    save(attrs: Record<string, any>, options?: {wait?: boolean} & SyncOptions & SetOptions):
+    save(attrs: Partial<T>, options?: {wait?: boolean} & SyncOptions & SetOptions):
       Promise<[Model, Response]>;
 
     destroy(options?: {wait?: boolean} & SyncOptions & SetOptions): Promise<[Model, Response]>;
@@ -140,11 +146,12 @@ declare module 'resourcerer' {
 
   type LoadingTypes = 'loading' | 'loaded' | 'errored' | 'pending';
 
-  export interface ModelMap {
-    [key: keyof ResourceKeys]: (new () => Model) | (new () => Collection);
-  }
+  // this will be filled out by users
+  export interface ModelMap {}
 
-  type test = keyof ResourceKeys;
+  type ResourceKeys = {
+    [key in keyof ModelMap]: key extends string ? Camelize<Uncapitalize<key>> : key
+  }
 
   type ModelProperty<Str extends string> = {[key: `${Str}Model`]: Model};
   type CollectionProperty<Str extends string> = {[key: `${Str}Collection`]: Collection};
@@ -178,20 +185,27 @@ declare module 'resourcerer' {
     provides?: (model: Model | Collection) => {[key: string]: any};
   };
 
+  type ResourceValues = Extract<typeof ResourceKeys[keyof typeof ResourceKeys], string>;
+  type InvertedResourceKeys = {[Key in keyof ResourceKeys as ResourceKeys[Key]]: Key};
+
   // TODO: how to only use those keys that were passed, not the whole resourcekeys obj
-  export type ExecutorFunction<K = ResourceKeys> = (
+  export type ExecutorFunction = (
     ResourceKeys_: ResourceKeys,
     props: {[key: string]: any}
-  ) => {[key: K]: ResourceConfigObj}
+  ) => Partial<Record<ResourceValues, ResourceConfigObj>>;
 
   type WithModelSuffix<K, C> = C extends Collection ? `${K}Collection` : `${K}Model`;
 
-  declare function useResources<K = ResourceKeys>(
-    getResources: ExecutorFunction<K>,
+  declare function useResources(
+    getResources: ExecutorFunction,
     props: {[key: string]: any}
   ): UseResourcesResponse & {
-    [Key in keyof K as WithModelSuffix<K[Key], InstanceType<ModelMap[Key]>>]: InstanceType<ModelMap[Key]>
+    [Key in keyof Required<ReturnType<ExecutorFunction>> as
+    WithModelSuffix<Key, InstanceType<ModelMap[InvertedResourceKeys[Key]]>>]:
+      InstanceType<ModelMap[InvertedResourceKeys[Key]]>
   };
+
+  type test = ReturnType<ExecutorFunction>;
 
   export interface ModelCache {
     get(key: string): Model | Collection | undefined;
