@@ -16,7 +16,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [14.x]
+        node-version: [18.x]
 
     steps:
     - uses: actions/checkout@v2
@@ -24,6 +24,6 @@ jobs:
       uses: actions/setup-node@v1
       with:
         node-version: ${{ matrix.node-version }}
-    - run: npm ci && npm i react@17 react-dom@17
+    - run: npm ci && npm i react@18 react-dom@18
     - run: npm run lint
     - run: npm test
