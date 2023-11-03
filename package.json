@@ -9,9 +9,11 @@
   ],
   "files": [
     "*.js",
+    "index.d.ts",
     "lib/*.js",
     "test/*.js",
-    "*.md"
+    "*.md",
+    "docs/*.md"
   ],
   "main": "index.js",
   "scripts": {
