@@ -144,6 +144,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     1. [Data mutations](#data-mutations)
     1. [Serial Requests](#serial-requests)
     3. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
+    4. [Using resourcerer with TypeScript](docs/typescript.md)
     4. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
     5. [Declarative Cache Keys](#declarative-cache-keys)
     6. [Prefetch on Hover](#prefetch-on-hover)
