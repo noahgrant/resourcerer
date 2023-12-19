@@ -182,7 +182,7 @@ declare module 'resourcerer' {
     options?: {[key: string]: any};
     params?: {[key: string]: any};
     prefetches?: {[key: string]: any}[];
-    provides?: (model: Model | Collection) => {[key: string]: any};
+    provides?: {[key: string]: (model: Model | Collection) => any};
   };
 
   type ResourceValues = Extract<typeof ResourceKeys[keyof typeof ResourceKeys], string>;
@@ -242,4 +242,5 @@ declare module 'resourcerer' {
   let ResourceKeys: ResourceKeys & {add(keys: Partial<ResourceKeys>): void;};
   let ResourcesConfig: ResourcerConfigOptions & {set: (options: ResourcerConfigOptions) => void;};
   let ModelMap: ModelMap & {add(keys: ModelMap): void;};
+  let ModelCache: ModelCache;
 }
