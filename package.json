@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": [
@@ -37,7 +37,7 @@
     ],
     "testEnvironment": "jsdom"
   },
-  "exports": "index.js",
+  "exports": "./index.js",
   "devDependencies": {
     "@babel/cli": "^7.10.5",
     "@babel/core": "^7.10.5",
