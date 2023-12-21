@@ -67,7 +67,7 @@ declare module 'resourcerer' {
 
     static idAttribute: string;
 
-    static defaults: Record<keyof T, any> | (() => Record<keyof T, any>);
+    static defaults: Partial<T> | (() => Partial<T>);
 
     static measure: boolean | (() => void);
   }
@@ -85,13 +85,13 @@ declare module 'resourcerer' {
 
     length: number;
 
-    add(models: ModelArg<T> | ModelArg<T>[], options: CSetOptions): Collection;
+    add(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection;
 
     remove(models: ModelArg<T> | ModelArg<T>[]): Collection;
 
-    set(models: ModelArg<T> | ModelArg<T>[], options: CSetOptions): Collection;
+    set(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection;
 
-    reset(models: ModelArg<T>[], options: CSetOptions): Collection;
+    reset(models: ModelArg<T>[], options?: CSetOptions): Collection;
 
     get(id?: string | ModelArg<T>): Model<T> | undefined;
 
@@ -116,7 +116,7 @@ declare module 'resourcerer' {
         Model<T> :
         Model<T>[];
 
-    pluck<K extends keyof T>(prop: K): Record<K, T[K]>[];
+    pluck<K extends keyof T>(prop: K): T[K][];
 
     slice(start: number, end?: number): ModelArg<T>[];
 
