@@ -36,22 +36,22 @@ declare module 'resourcerer' {
 
     has(key: keyof T): boolean;
 
-    clear(options?: SetOptions): Model;
+    clear(options?: SetOptions): Model<T>;
 
-    unset(attr: keyof T, options?: SetOptions): Model;
+    unset(attr: keyof T, options?: SetOptions): Model<T>;
 
     parse(response: Record<string, any>): T;
 
     pick<K extends keyof T>(...attrs: K[]): Pick<T, K>;
 
-    set(attrs: Partial<T>, options?: SetOptions): Model;
+    set(attrs: Partial<T>, options?: SetOptions): Model<T>;
 
-    fetch(options?: {parse?: boolean} & SyncOptions & SetOptions): Promise<[Model, Response]>;
+    fetch(options?: {parse?: boolean} & SyncOptions & SetOptions): Promise<[Model<T>, Response]>;
 
     save(attrs: Partial<T>, options?: {wait?: boolean} & SyncOptions & SetOptions):
-      Promise<[Model, Response]>;
+      Promise<[Model<T>, Response]>;
 
-    destroy(options?: {wait?: boolean} & SyncOptions & SetOptions): Promise<[Model, Response]>;
+    destroy(options?: {wait?: boolean} & SyncOptions & SetOptions): Promise<[Model<T>, Response]>;
 
     isNew(): boolean;
 
@@ -81,17 +81,17 @@ declare module 'resourcerer' {
     constructor(
       models?: ModelArg<T> | ModelArg<T>[],
       options?: O
-    ): Collection;
+    ): Collection<T>;
 
     length: number;
 
-    add(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection;
+    add(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection<T>;
 
-    remove(models: ModelArg<T> | ModelArg<T>[]): Collection;
+    remove(models: ModelArg<T> | ModelArg<T>[]): Collection<T>;
 
-    set(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection;
+    set(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection<T>;
 
-    reset(models: ModelArg<T>[], options?: CSetOptions): Collection;
+    reset(models: ModelArg<T>[], options?: CSetOptions): Collection<T>;
 
     get(id?: string | ModelArg<T>): Model<T> | undefined;
 
@@ -125,9 +125,9 @@ declare module 'resourcerer' {
     create(
       model: ModelArg<T>,
       options?: {wait?: boolean} & SyncOptions & CSetOptions
-    ): Promise<[Collection, Response]>;
+    ): Promise<[Model<T>, Response]>;
 
-    fetch(options?: {parse?: boolean} & SyncOptions & CSetOptions): Promise<[Collection, Response]>;
+    fetch(options?: {parse?: boolean} & SyncOptions & CSetOptions): Promise<[Collection<T>, Response]>;
 
     url(urlOptions?: O): string;
 
