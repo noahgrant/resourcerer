@@ -1,20 +1,10 @@
 {
   "name": "resourcerer",
-  "version": "1.1.4",
+  "version": "1.1.5",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": [
-    "declarative data-fetching framework",
-    "react"
-  ],
-  "files": [
-    "*.js",
-    "index.d.ts",
-    "lib/*.js",
-    "test/*.js",
-    "*.md",
-    "docs/*.md"
-  ],
+  "keywords": ["declarative data-fetching framework", "react"],
+  "files": ["*.js", "index.d.ts", "lib/*.js", "test/*.js", "*.md", "docs/*.md"],
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -25,16 +15,9 @@
     "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
   },
   "jest": {
-    "collectCoverageFrom": [
-      "lib/*.{js,jsx}",
-      "!lib/constants.js"
-    ],
-    "moduleDirectories": [
-      "node_modules"
-    ],
-    "setupFilesAfterEnv": [
-      "./test/setup"
-    ],
+    "collectCoverageFrom": ["lib/*.{js,jsx}", "!lib/constants.js"],
+    "moduleDirectories": ["node_modules"],
+    "setupFilesAfterEnv": ["./test/setup"],
     "testEnvironment": "jsdom"
   },
   "exports": "./index.js",
