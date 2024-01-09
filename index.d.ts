@@ -57,9 +57,9 @@ declare module 'resourcerer' {
 
     toJSON(): T;
 
-    url(): string;
+    url(urlOptions?: Record<string, any>): string;
 
-    urlRoot(): string;
+    urlRoot(urlOptions?: Record<string, any>): string;
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
 
@@ -165,6 +165,8 @@ declare module 'resourcerer' {
     setResourceState(newState: {[key: string]: any}): void;
     isOrWillBeLoading(): boolean;
     [key: `${string}LoadingState`]: LoadingTypes;
+    [key: `${string}Collection`]: Collection;
+    [key: `${string}Model`]: Model;
   }
 
   declare function haveAllLoaded(loadingStates: LoadingTypes | LoadingTypes[]): boolean;
