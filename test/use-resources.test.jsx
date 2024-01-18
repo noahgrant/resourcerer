@@ -882,6 +882,19 @@ describe('useResources', () => {
       await waitsFor(() => dataChild.props.hasLoaded);
     });
 
+    it('has its provided prop provided even when cached', async() => {
+      await waitsFor(() => requestSpy.mock.calls.length);
+      requestSpy.mockClear();
+      unmountAndClearModelCache();
+      ModelCache.put('actions', new Model());
+
+      dataChild = findDataChild(renderUseResources({serial: true}));
+      await waitsFor(() => requestSpy.mock.calls.length);
+      await waitsFor(() => dataChild.props.serialProp);
+      expect(requestSpy.mock.calls.pop()[0]).toMatch(/decisionLogs/);
+      await waitsFor(() => dataChild.props.hasLoaded);
+    });
+
     it('reverts back to pending state if its dependencies are removed', async() => {
       await waitsFor(() => dataChild.props.serialProp);
       expect(isLoading(dataChild.props.decisionLogsLoadingState)).toBe(true);
