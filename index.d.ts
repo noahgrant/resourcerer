@@ -48,7 +48,7 @@ declare module 'resourcerer' {
 
     fetch(options?: {parse?: boolean} & SyncOptions & SetOptions): Promise<[Model<T>, Response]>;
 
-    save(attrs: Partial<T>, options?: {wait?: boolean} & SyncOptions & SetOptions):
+    save(attrs: Partial<T>, options?: {wait?: boolean; patch?: boolean;} & SyncOptions & SetOptions):
       Promise<[Model<T>, Response]>;
 
     destroy(options?: {wait?: boolean} & SyncOptions & SetOptions): Promise<[Model<T>, Response]>;
@@ -76,7 +76,7 @@ declare module 'resourcerer' {
 
   declare class Collection<
     T extends Record<string, any> = {[key: string]: any},
-    O extends Record<string, any> & CSetOptions = {[key: string]: any}
+    O extends Record<string, any> & {Model?: new () => Model;} & CSetOptions = {[key: string]: any}
   > {
     constructor(
       models?: ModelArg<T> | ModelArg<T>[],
