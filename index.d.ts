@@ -87,7 +87,7 @@ declare module 'resourcerer' {
 
     add(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection<T>;
 
-    remove(models: ModelArg<T> | ModelArg<T>[]): Collection<T>;
+    remove(models: ModelArg<T> | ModelArg<T>[] | string | string[]): Collection<T>;
 
     set(models: ModelArg<T> | ModelArg<T>[], options?: CSetOptions): Collection<T>;
 
