@@ -13,6 +13,8 @@ declare module 'resourcerer' {
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     params?: Record<string, any>;
     url?: string;
+    // they are free to add any other options they like
+    [key: string]: any;
   };
 
   type SetOptions = {
@@ -50,6 +52,8 @@ declare module 'resourcerer' {
 
     save(attrs: Partial<T>, options?: {wait?: boolean; patch?: boolean;} & SyncOptions & SetOptions):
       Promise<[Model<T>, Response]>;
+
+    sync(model: Model<T>, options?: SyncOptions): Promise<[any, Response]>;
 
     destroy(options?: {wait?: boolean} & SyncOptions & SetOptions): Promise<[Model<T>, Response]>;
 
@@ -120,6 +124,8 @@ declare module 'resourcerer' {
 
     slice(start: number, end?: number): ModelArg<T>[];
 
+    sync(collection: Collection<T>, options?: SyncOptions): Promise<[any, Response]>;
+
     parse(response: Record<string, any> | any[], options?: Record<string, any>): Array<T>;
 
     create(
@@ -173,6 +179,8 @@ declare module 'resourcerer' {
   declare function haveAnyErrored(loadingStates: LoadingTypes | LoadingTypes[]): boolean;
   declare function areAnyLoading(loadingStates: LoadingTypes | LoadingTypes[]): boolean;
   declare function areAnyPending(loadingStates: LoadingTypes | LoadingTypes[]): boolean;
+
+  declare function sync(model: Model | Collection, options?: SyncOptions): Promise<[any, Response]>;
 
   type ResourceConfigObj = {
     data?: {[key: string]: any};
