@@ -62,6 +62,31 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`. (Yes, this is a bit contrived because you should actually replace the history entry in this case, but hopefully it helps to illuminate the issue.)
 
     3. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
+  
+2. **Given this extra complexity**, using the `useResources` hook, it might actually be easier to separate dependent resources into multiple hook calls (taken from [the serial requests example](https://github.com/noahgrant/resourcerer#serial-requests)):
+
+    ```js
+    const getQueueItemResource = ({QUEUE_ITEM}, props) => ({
+      [QUEUE_ITEM]: {
+        data: {id: props.itemId},
+        provides: {userId: getUserIdFromItem}
+      }
+    });
+
+    const getUserResource = ({USER}, props) => ({
+      [USER]: {
+        options: {state: props.activeState, userId: props.userId},
+        dependsOn: ['userId']
+      },
+    });
+  
+    export default function QueueItemPage(props) {
+      const {userId, queueItemModel} = useResources(getQueueItemResource, props);
+      const {userModel} = useResources(getUserResource, {...props, userId});
+    }
+    ```
+
+There is a trade-off to this approach: there is no extra render cycle between the return of the first resource and the loading state of the dependent resource _for cached resources_. However, you have to manage the individual loading states yourself&mdash;i.e., there will be no unified `isLoading` or `hasLoaded` property.
        
 ## Implicit dependent resources
 
