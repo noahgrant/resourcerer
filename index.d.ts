@@ -187,7 +187,6 @@ declare module 'resourcerer' {
     dependsOn?: string[];
     force?: boolean;
     lazy?: boolean;
-    modelKey?: ResourceKeys;
     noncritical?: boolean;
     options?: {[key: string]: any};
     params?: {[key: string]: any};
@@ -202,7 +201,9 @@ declare module 'resourcerer' {
   export type ExecutorFunction = (
     ResourceKeys_: ResourceKeys,
     props: {[key: string]: any}
-  ) => Partial<Record<ResourceValues, ResourceConfigObj>>;
+  // return type either has a resource key as the object key or is just a string with a modelKey property
+  ) => Partial<Record<ResourceValues, ResourceConfigObj>> |
+  Partial<Record<string, ResourceConfigObj & {modelKey: ResourceValues}>>;
 
   type WithModelSuffix<K, C> = C extends Collection ? `${K}Collection` : `${K}Model`;
 
@@ -214,8 +215,6 @@ declare module 'resourcerer' {
     WithModelSuffix<Key, InstanceType<ModelMap[InvertedResourceKeys[Key]]>>]:
       InstanceType<ModelMap[InvertedResourceKeys[Key]]>
   };
-
-  type test = ReturnType<ExecutorFunction>;
 
   export interface ModelCache {
     get(key: string): Model | Collection | undefined;
