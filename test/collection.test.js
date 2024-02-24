@@ -50,6 +50,14 @@ describe('Collection', () => {
     expect(collection.toJSON()).toEqual([]);
   });
 
+  it('gets a cacheKey assigned to a `cacheKey` property if passed', () => {
+    collection = new Collection;
+    expect(collection.cacheKey).not.toBeDefined();
+
+    collection = new Collection({}, {}, 'key_12345');
+    expect(collection.cacheKey).toEqual('key_12345');
+  });
+
   it('urlOptions get passed down to models', async() => {
     collection = new Collection([{id: '1'}], {one: 1, two: 2, comparator: 'foo', parse: true});
 

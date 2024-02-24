@@ -78,6 +78,7 @@ describe('Request', () => {
         await waitsFor(() => model instanceof Model);
 
         expect(model instanceof Model).toBe(true);
+        expect(model.cacheKey).toEqual('foo');
       });
 
       it('registers the component if passed one', async() => {
@@ -131,6 +132,7 @@ describe('Request', () => {
         await waitsFor(() => model instanceof Model);
 
         expect(Model.prototype.fetch).not.toHaveBeenCalled();
+        expect(model.cacheKey).toEqual('nofetch');
       });
 
       it('puts a model in the ModelCache', async() => {
@@ -182,6 +184,7 @@ describe('Request', () => {
         expect(m1).toEqual(m2);
         // this is kind of a hack; we might not really need it
         expect(Reflect.ownKeys(promise)[0]).toEqual(Reflect.ownKeys(promise2)[0]);
+        expect(m1.cacheKey).toEqual('foo');
       });
 
       it('executes both resolve handlers', async() => {
@@ -195,15 +198,17 @@ describe('Request', () => {
       });
 
       describe('and the first call was a prefetch call', () => {
-        it('registers the component of the second call with the model cache', () => {
+        it('registers the component of the second call with the model cache', async() => {
           ModelCache.register.mockClear();
           // prefetch call, no component
-          request('prefetch', Model);
+          const [model] = await request('prefetch', Model);
+
           expect(ModelCache.register).not.toHaveBeenCalled();
 
           // call it again with a component
           request('prefetch', Model, {component});
           expect(ModelCache.register).toHaveBeenCalled();
+          expect(model.cacheKey).toEqual('prefetch');
         });
       });
     });
@@ -287,10 +292,11 @@ describe('Request', () => {
 
     describe('with the \'lazy\' option', () => {
       it('returns a new model without fetching', async() => {
-        await request('lazy', Model, {component, lazy: true});
+        const [model] = await request('lazy', Model, {component, lazy: true});
 
         expect(Model.prototype.fetch).not.toHaveBeenCalled();
         expect(ModelCache.put).toHaveBeenCalled();
+        expect(model.cacheKey).toEqual('lazy');
       });
 
       it('returns an existing model without fetching', async() => {
@@ -303,6 +309,8 @@ describe('Request', () => {
         expect(Model.prototype.fetch).not.toHaveBeenCalled();
         expect(ModelCache.put).toHaveBeenCalled();
         expect(existingModel).toEqual(model);
+        // not defined because it was put in the cache manually
+        expect(model.cacheKey).not.toBeDefined();
       });
 
       it('fetches when another component requests the same model without lazy option', async() => {
@@ -318,6 +326,7 @@ describe('Request', () => {
         await requestPromise;
 
         expect(model.lazy).not.toBeDefined();
+        expect(model.cacheKey).toEqual('lazy');
         expect(Model.prototype.fetch).toHaveBeenCalled();
 
         Model.prototype.fetch.mockClear();

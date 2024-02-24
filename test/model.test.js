@@ -41,6 +41,14 @@ describe('Model', () => {
     expect(model.collection).toEqual(collection);
   });
 
+  it('gets a cacheKey assigned to a `cacheKey` property if passed', () => {
+    model = new Model;
+    expect(model.cacheKey).not.toBeDefined();
+
+    model = new Model({}, {}, 'key_12345');
+    expect(model.cacheKey).toEqual('key_12345');
+  });
+
   it('parses its attributes before being set if passed a `parse: true` option', () => {
     class _Model extends Model {
       parse(attrs) {
