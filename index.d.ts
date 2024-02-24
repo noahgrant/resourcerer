@@ -28,8 +28,11 @@ declare module 'resourcerer' {
     silent?: boolean;
   };
 
-  declare class Model<T extends Record<string, any> = {[key: string]: any}> {
-    constructor(attrs?: T, options?: Record<string, any> & SetOptions): Model;
+  declare class Model<
+    T extends Record<string, any> = {[key: string]: any},
+    O extends Record<string, any> & SetOptions = {[key: string]: any}
+  > {
+    constructor(attrs?: T, options?: O): Model<T, O>;
 
     // TODO: need to reference idAttribute here
     id: T extends {id: string} ? string : string | undefined;
@@ -61,9 +64,15 @@ declare module 'resourcerer' {
 
     toJSON(): T;
 
-    url(urlOptions?: Record<string, any>): string;
+    url(urlOptions?: Omit<O, keyof SetOptions>): string;
 
-    urlRoot(urlOptions?: Record<string, any>): string;
+    urlRoot(urlOptions?: Omit<O, keyof SetOptions>): string;
+
+    urlOptions: Omit<O, keyof SetOptions>;
+
+    collection?: Collection;
+
+    readonly cacheKey: string = null;
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
 
@@ -85,7 +94,7 @@ declare module 'resourcerer' {
     constructor(
       models?: ModelArg<T> | ModelArg<T>[],
       options?: O
-    ): Collection<T>;
+    ): Collection<T, O>;
 
     length: number;
 
@@ -135,7 +144,11 @@ declare module 'resourcerer' {
 
     fetch(options?: {parse?: boolean} & SyncOptions & CSetOptions): Promise<[Collection<T>, Response]>;
 
-    url(urlOptions?: O): string;
+    url(urlOptions?: Omit<O, keyof CSetOptions>): string;
+
+    urlOptions: Omit<O, keyof CSetOptions>;
+
+    readonly cacheKey: string = null;
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
 
