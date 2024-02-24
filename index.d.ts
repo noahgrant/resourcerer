@@ -186,6 +186,7 @@ declare module 'resourcerer' {
     [key: `${string}LoadingState`]: LoadingTypes;
     [key: `${string}Collection`]: Collection;
     [key: `${string}Model`]: Model;
+    [key: `${string}Status`]: number;
   }
 
   declare function haveAllLoaded(loadingStates: LoadingTypes | LoadingTypes[]): boolean;
