@@ -64,13 +64,13 @@ declare module 'resourcerer' {
 
     toJSON(): T;
 
-    url(urlOptions?: Omit<O, keyof SetOptions>): string;
+    url(urlOptions?: this["urlOptions"]): string;
 
-    urlRoot(urlOptions?: Omit<O, keyof SetOptions>): string;
-
-    urlOptions: Omit<O, keyof SetOptions>;
+    urlRoot(urlOptions?: this["urlOptions"]): string;
 
     collection?: Collection;
+
+    readonly urlOptions: Omit<O, keyof SetOptions>;
 
     readonly cacheKey: string = null;
 
@@ -144,9 +144,9 @@ declare module 'resourcerer' {
 
     fetch(options?: {parse?: boolean} & SyncOptions & CSetOptions): Promise<[Collection<T>, Response]>;
 
-    url(urlOptions?: Omit<O, keyof CSetOptions>): string;
+    url(urlOptions?: this["urlOptions"]): string;
 
-    urlOptions: Omit<O, keyof CSetOptions>;
+    readonly urlOptions: Omit<O, keyof CSetOptions>;
 
     readonly cacheKey: string = null;
 
