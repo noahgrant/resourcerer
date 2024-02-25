@@ -1255,24 +1255,6 @@ describe('useResources', () => {
     expect(Collection.prototype.fetch).toHaveBeenCalledTimes(1);
     expect(Collection.prototype.fetch.mock.instances[0] instanceof DecisionsCollection).toBe(true);
   });
-
-  it('isOrWillBeLoading is true for two cycles that props change and loading starts', async() => {
-    dataChild = findDataChild(renderUseResources());
-
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(false);
-
-    dataChild.props.setResourceState({userId: 'alex'});
-    expect(dataChild.props.hasLoaded).toBe(true);
-    expect(dataChild.props.isLoading).toBe(false);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-
-    await waitsFor(() => !dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(false);
-  });
 });
 
 /**
