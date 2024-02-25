@@ -36,10 +36,12 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         1. We can modify the url in the component’s `componentDidUpdate`/`useEffect` (either url path or query parameter), which will filter the prop down.
     
         When we provide using method (a), the dependent prop can be changed but not removed. When we provide using method (b), the dependent prop can be changed or removed.
-    
-        So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentDidUpdate`/`useEffect` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
+       
+       As an example of how we might be able to remove a dependent prop via method (b), consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `useEffect` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`. (Yes, this is a bit contrived because you should actually replace the history entry in this case, but hopefully it helps to illuminate the issue.)
+       
+        So if we remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `useEffect` to re-auto-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
         
-        And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/`withResources`, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
+        And again—`hasInitiallyLoaded` is still true and the `todoItemModel` model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/`withResources`, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
         ```js
         // overlay-wrapped component, where a loader will show over previously-rendered children,
@@ -58,9 +60,23 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         }
         ```
 
-        As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`. (Yes, this is a bit contrived because you should actually replace the history entry in this case, but hopefully it helps to illuminate the issue.)
+       If using `useResources`, we'll want to do the equivalent in our memo:
 
-    3. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
+       ```js
+       const MemoizedComponent = memo(<Component />, (prevProps, nextProps) => !nextProps.hasLoaded);
+
+       function Parent() {
+         return (
+           <div>
+             {isLoading ? <OverlayLoader /> : null}
+             {hasInitiallyLoaded ? <MemoizedComponent /> : null}
+           </div>
+         );
+       }
+       ```
+
+
+    4. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
   
 ## Implicit dependent resources
 
