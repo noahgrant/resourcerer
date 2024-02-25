@@ -4,7 +4,6 @@
 1. [Implicit dependent resources](#implicit-dependent-resources)
 1. [Unfetched Resources](#unfetched-resources)
 1. [Loading Overlays](#loading-overlays)
-1. [isOrWillBeLoading](#isorwillbeloading)
 1. [Recaching newly-saved models](#recaching-newly-saved-models)
 
 ## Thoughts on the PENDING Resource
@@ -37,10 +36,12 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         1. We can modify the url in the component’s `componentDidUpdate`/`useEffect` (either url path or query parameter), which will filter the prop down.
     
         When we provide using method (a), the dependent prop can be changed but not removed. When we provide using method (b), the dependent prop can be changed or removed.
-    
-        So if we use method (b) and remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `componentDidUpdate`/`useEffect` to re-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
+       
+       As an example of how we might be able to remove a dependent prop via method (b), consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `useEffect` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`. (Yes, this is a bit contrived because you should actually replace the history entry in this case, but hopefully it helps to illuminate the issue.)
+       
+        So if we remove the dependent prop, we enter a state where `isLoading`, `hasLoaded`, and `hasErrored` are all false. And since we have to wait for a `useEffect` to re-auto-update the url with the dependent prop, a lifecycle passes with this state, and there’s really nothing we can do about it.
         
-        And again—`hasInitiallyLoaded` is still true and the model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/`withResources`, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
+        And again—`hasInitiallyLoaded` is still true and the `todoItemModel` model prop is empty, which can cause layout issues if you use, for example, an overlaid loader over a previously-rendered component. For this reason, if using classes/`withResources`, such a previously-rendered component should use `nextProps.hasLoaded` instead of `!nextProps.isLoading` in its `shouldComponentUpdate`:
 
         ```js
         // overlay-wrapped component, where a loader will show over previously-rendered children,
@@ -59,35 +60,24 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         }
         ```
 
-        As an example of how we might be able to remove a dependent prop, consider someone navigating to a `/todos` url that auto-navigates to the first todo item and displays its details. The `todoItem` details resource depends on a `todoId` prop, which it gets in a `componentWillReceiveProps` via changing the url once the `todos` resource loads. So now we’re at `/todos/todo1234`. But if the user clicks the back button, we’ll be back at `/todos` with a cached `todos` resource and `PENDING` `todoItem` resource, and all three loading states set to `false`. (Yes, this is a bit contrived because you should actually replace the history entry in this case, but hopefully it helps to illuminate the issue.)
+       If using `useResources`, we'll want to do the equivalent in our memo:
 
-    3. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
+       ```js
+       const MemoizedComponent = memo(<Component />, (prevProps, nextProps) => !nextProps.hasLoaded);
+
+       function Parent() {
+         return (
+           <div>
+             {isLoading ? <OverlayLoader /> : null}
+             {hasInitiallyLoaded ? <MemoizedComponent /> : null}
+           </div>
+         );
+       }
+       ```
+
+
+    4. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
   
-2. **Given this extra complexity**, using the `useResources` hook, it might actually be easier to separate dependent resources into multiple hook calls (taken from [the serial requests example](https://github.com/noahgrant/resourcerer#serial-requests)):
-
-    ```js
-    const getQueueItemResource = ({QUEUE_ITEM}, props) => ({
-      [QUEUE_ITEM]: {
-        data: {id: props.itemId},
-        provides: {userId: getUserIdFromItem}
-      }
-    });
-
-    const getUserResource = ({USER}, props) => ({
-      [USER]: {
-        options: {state: props.activeState, userId: props.userId},
-        dependsOn: ['userId']
-      },
-    });
-  
-    export default function QueueItemPage(props) {
-      const {userId, queueItemModel} = useResources(getQueueItemResource, props);
-      const {userModel} = useResources(getUserResource, {...props, userId});
-    }
-    ```
-
-There is a trade-off to this approach: there is no extra render cycle between the return of the first resource and the loading state of the dependent resource _for cached resources_. However, you have to manage the individual loading states yourself&mdash;i.e., there will be no unified `isLoading` or `hasLoaded` property.
-       
 ## Implicit dependent resources
 
 Another way to effectively have a dependent resource is to use a conditional in your `getResources` method:
@@ -231,48 +221,6 @@ export default function UserTodos(props) {
   );
 }
 ```
-
-## isOrWillBeLoading (`useResources` only)
-
-Taking the previous example of [Loading Overlays](#loading-overlays) just a bit further, what if the todosCollection was 5000 entries long? Okay, you'd probably paginate. But that's not the point! Let's say it's an `<ExpensiveComponent />`, and as it is now, when we change loading states, the parent `MyComponent` would render `<ExpensiveComponent />` on every change, which will kill your UX. So let's wrap it in a `React.memo`!
-
-But how do we tell `React.memo` when to not render? This is tricky for a couple of reasons:
-
-* Because `useEffect`/`componentDidUpdate` occurs _after_ render, we actually have two renders we want to opt out of:
-    * parent props change
-    * render is called (opt out!) **See Note**
-    * resourcerer changes loaded state to loading from the change in props
-    * render is called (opt out!). parent shows the overlay loader
-    * request returns and loading state changes back to loaded
-    * render (we want this update!)
-
-    This is actually the reason why I am sad React did away with `componentWillReceiveProps` and does not offer an equivalent hook&mdash;using that instead would batch the props change and the loaded -> loading state change, and we'd only need to opt out of a single render. *sigh*. I digress.
-    
-* React.memo, unlike `shouldComponentUpdate`, does not change its `prevProps` if it skips a render. This makes sense if you think about `memo` being a higher-order-component&mdash;if the component doesn't update, its props don't change. But that makes it much harder to compare `prevProps` and `nextProps` when needing to skip two update cycles.
-
-Enter `isOrWillBeLoading`. `isOrWillBeLoading` is a function returned by `useResources`/`withResources` that will take care of all these things for you, and you can invoke it in your `React.memo` [areEqual function](https://reactjs.org/docs/react-api.html#reactmemo). The previous example becomes:
-
-```jsx
-import ExpensiveComponent from 'components/expensive_component/expensive_component';
-import {memo} from 'react';
-import {useResources} from 'resourcerer';
-
-const getResources = ({TODOS}, props) => ({[TODOS]: {}});
-const MemoizedExpensiveComponent = memo(ExpensiveComponent, (prevProps, nextProps) => nextProps.isOrWillBeLoading());
-
-export default function UserTodos(props) {
-  const {isLoading, isOrWillBeLoading, hasInitiallyLoaded} = useResources(getResources, props);
-    
-  return (
-    <div className='MyComponent'>
-      {isLoading ? <Loader /> : null}
-      {hasInitiallyLoaded ? <MemoizedExpensiveComponent {...{isOrWillBeLoading}} /> : null}
-    </div>
-  );
-}
-```
-
-**Note:** A future upgrade to this library will utilize a [render bailout](https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes) to remove this unnecessary render. The other two will still be required, though.
 
 ## Recaching newly-saved models
 
