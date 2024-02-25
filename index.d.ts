@@ -28,8 +28,11 @@ declare module 'resourcerer' {
     silent?: boolean;
   };
 
-  declare class Model<T extends Record<string, any> = {[key: string]: any}> {
-    constructor(attrs?: T, options?: Record<string, any> & SetOptions): Model;
+  declare class Model<
+    T extends Record<string, any> = {[key: string]: any},
+    O extends Record<string, any> & SetOptions = {[key: string]: any}
+  > {
+    constructor(attrs?: T, options?: O): Model<T, O>;
 
     // TODO: need to reference idAttribute here
     id: T extends {id: string} ? string : string | undefined;
@@ -61,9 +64,13 @@ declare module 'resourcerer' {
 
     toJSON(): T;
 
-    url(urlOptions?: Record<string, any>): string;
+    url(urlOptions?: this["urlOptions"]): string;
 
-    urlRoot(urlOptions?: Record<string, any>): string;
+    urlRoot(urlOptions?: this["urlOptions"]): string;
+
+    collection?: Collection;
+
+    readonly urlOptions: Omit<O, keyof SetOptions>;
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
 
@@ -85,7 +92,7 @@ declare module 'resourcerer' {
     constructor(
       models?: ModelArg<T> | ModelArg<T>[],
       options?: O
-    ): Collection<T>;
+    ): Collection<T, O>;
 
     length: number;
 
@@ -135,7 +142,9 @@ declare module 'resourcerer' {
 
     fetch(options?: {parse?: boolean} & SyncOptions & CSetOptions): Promise<[Collection<T>, Response]>;
 
-    url(urlOptions?: O): string;
+    url(urlOptions?: this["urlOptions"]): string;
+
+    readonly urlOptions: Omit<O, keyof CSetOptions>;
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
 
@@ -173,6 +182,7 @@ declare module 'resourcerer' {
     [key: `${string}LoadingState`]: LoadingTypes;
     [key: `${string}Collection`]: Collection;
     [key: `${string}Model`]: Model;
+    [key: `${string}Status`]: number;
   }
 
   declare function haveAllLoaded(loadingStates: LoadingTypes | LoadingTypes[]): boolean;
