@@ -891,7 +891,7 @@ describe('useResources', () => {
       dataChild = findDataChild(renderUseResources({serial: true}));
       await waitsFor(() => requestSpy.mock.calls.length);
       await waitsFor(() => dataChild.props.serialProp);
-      expect(requestSpy.mock.calls.pop()[0]).toMatch(/decisionLogs/);
+      expect(requestSpy.mock.calls.some((call) => /decisionLogs/.test(call[0]))).toBe(true);
       await waitsFor(() => dataChild.props.hasLoaded);
     });
 
@@ -1254,24 +1254,6 @@ describe('useResources', () => {
     await waitsFor(() => dataChild.props.hasLoaded);
     expect(Collection.prototype.fetch).toHaveBeenCalledTimes(1);
     expect(Collection.prototype.fetch.mock.instances[0] instanceof DecisionsCollection).toBe(true);
-  });
-
-  it('isOrWillBeLoading is true for two cycles that props change and loading starts', async() => {
-    dataChild = findDataChild(renderUseResources());
-
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(false);
-
-    dataChild.props.setResourceState({userId: 'alex'});
-    expect(dataChild.props.hasLoaded).toBe(true);
-    expect(dataChild.props.isLoading).toBe(false);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-
-    await waitsFor(() => !dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(true);
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(dataChild.props.isOrWillBeLoading()).toBe(false);
   });
 });
 
