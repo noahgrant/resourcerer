@@ -496,12 +496,17 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
 
 ### force
 
-Sometimes you want the latest of a resource, bypassing whatever model has already been cached in your application. To accomplish this, simply pass a `force: true` in a resource's config. The force-fetched response will replace any prior model in the cache, but may itself get replaced by a subsequent `force: true` request for the resource.
+Sometimes you want the latest of a resource, bypassing whatever model has already been cached in your application. To accomplish this, simply pass a `force: true` in a resource's config. The force-fetched response will replace any prior model in the cache.
 
 ```js
-  @withResources((ResourceKeys, props) => ({[ResourceKeys.LATEST_STATS]: {force: true}}))
-  class MyComponentWithLatestStats extends React.Component {}
+  const getResources = ({LATEST_STATS}, props) => ({[LATEST_STATS]: {force: true}});
+
+  function MyComponentWithLatestStats(props) {
+    const {latestStatsModel} = useResources(getResources, props);
+  }
 ```
+
+The resource will only get force-requested when the component mounts; the `force` flag will get ignored on subsequent updates. If you need to refetch after mounting to get the latest resource, use [refetch](#refetching).
 
 ### Custom Resource Names
 
