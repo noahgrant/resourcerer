@@ -41,6 +41,7 @@ const getResources = ({
   },
   [DECISIONS]: {
     ...props.includeDeleted ? {params: {include_deleted: true}} : {},
+    ...(props.force ? {force: true} : {}),
     lazy: props.lazy,
     measure
   },
@@ -51,7 +52,8 @@ const getResources = ({
       ...(props.shouldError ? {shouldError: true} : {}),
       ...(props.delay ? {delay: props.delay} : {})
     },
-    options: {userId: props.userId, fraudLevel: props.fraudLevel}
+    options: {userId: props.userId, fraudLevel: props.fraudLevel},
+    ...(props.force ? {force: true} : {})
   },
   ...(props.prefetch ? {
     [SEARCH_QUERY]: {
@@ -1213,6 +1215,27 @@ describe('useResources', () => {
     expect(requestSpy.mock.calls.length).toEqual(5);
 
     await waitsFor(() => dataChild.props.hasLoaded);
+  });
+
+  it('fetches on mount (but not on updated) even when cached with \'force\' option', async() => {
+    var decisionsCollection = new Collection(),
+        userModel = new Model();
+
+    ModelCache.put('decisions', decisionsCollection);
+    ModelCache.put('userfraudLevel=high_userId=noah', userModel);
+    dataChild = findDataChild(renderUseResources({force: true}));
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.mock.calls.length).toEqual(3);
+    expect(requestSpy.mock.calls.map(([name]) => name)).toEqual([
+      ResourceKeys.DECISIONS,
+      'userfraudLevel=high_userId=noah',
+      ResourceKeys.ANALYSTS
+    ]);
+
+    // now re-render, no more requests should be made
+    dataChild = findDataChild(renderUseResources({force: true}));
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.mock.calls.length).toEqual(3);
   });
 
   it('fetches lazily-cached resources', async() => {
