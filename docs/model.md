@@ -40,7 +40,7 @@ that you might find useful in rendering your data-hydrated components.
 
 ## Properties
 
-### `static` cacheFields
+### `static` dependencies
 `Array<string|function>`
 
 This property tells resourcerer how to determine whether to make a new request or to take a model out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.

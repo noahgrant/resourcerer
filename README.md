@@ -374,11 +374,11 @@ export default class UserModel extends Model {
     return `/users/${userId}`;
   }
   
-  static cacheFields = ['userId']
+  static dependencies = ['userId'];
 }
 ```
 
-The `cacheFields` static property is important here, as we'll see in a second; it is a list of properties that `resourcerer` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
+The `dependencies` static property is important here, as we'll see in a second; it is a list of properties that `resourcerer` will use to generate a cache key for the model. It will look for the `userId` property in the following places, in order:
 
 1. the `options` object
 1. the `data` object
@@ -422,7 +422,7 @@ In general, there are two ways to change `props.id` as in the previous example:
 
 ### params
 
-The `params` option is passed directly to the [sync method](/docs/model.md#sync) and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `params` property:
+The `params` option is passed directly to the [sync method](/docs/model.md#sync) and sent either as stringified query params (GET requests) or as a body (POST/PUT). Its properties are also referenced when generating a cache key if they are listed in a model's static `dependencies` property (See the [cache key section](#declarative-cache-keys) for more). Let's imagine that we have a lot of users and a lot of todos per user. So many that we only want to fetch the todos over a time range selected from a dropdown, sorted by a field also selected by a dropdown. These are query parameters we'd want to pass in our `params` property:
 
 ```js
   @withResources((ResourceKeys, props) => {
@@ -442,14 +442,14 @@ The `params` option is passed directly to the [sync method](/docs/model.md#sync)
   class UserTodos extends React.Component {}
 ```
 
-Now, as the prop fields change, the params sent with the request changes as well (provided we set our `cacheFields` property accordingly):
+Now, as the prop fields change, the params sent with the request changes as well (provided we set our `dependencies` property accordingly):
 
 `https://example.com/users/noahgrant/todos?limit=20&end_time=1494611831024&start_time=1492019831024&sort_field=importance`
 
 
 ### options
 
-[As referenced previously](#requesting-prop-driven-data), all properties on an `options` object will be passed into a model's/collection's `url` function. This makes it an ideal place to add _path parameters_ (contrast this with the [`params` object](#params), which is the place to add query (GET) or body (POST/PUT/PATCH) parameters). It will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
+[As referenced previously](#requesting-prop-driven-data), all properties on an `options` object will be passed into a model's/collection's `url` function. This makes it an ideal place to add _path parameters_ (contrast this with the [`params` object](#params), which is the place to add query (GET) or body (POST/PUT/PATCH) parameters). It will also be used in cache key generation if it has any fields specified in the model's static `dependencies` property (See the [cache key section](#declarative-cache-keys) for more). Continuing with our User Todos example, let's add an `options` property:
 
 ```js
 const getResources = (ResourceKeys, props) => {
@@ -469,7 +469,7 @@ const getResources = (ResourceKeys, props) => {
 };
 ```
 
-Here, this UserTodosCollection instance will get a `userId` property passed to both its `url` function as well as the options in its [constructor method](/docs/collection.md#constructor). We'll also want to add the `'userId'` string to the collection's [static `cacheFields` array](#requesting-prop-driven-data), because each cached collection should be specific to the user:
+Here, this UserTodosCollection instance will get a `userId` property passed to both its `url` function as well as the options in its [constructor method](/docs/collection.md#constructor). We'll also want to add the `'userId'` string to the collection's [static `dependencies` array](#requesting-prop-driven-data), because each cached collection should be specific to the user:
 
 ```js
 // js/models/user_todos_collection.js
@@ -479,7 +479,7 @@ export class UserTodosCollection extends Collection {
     return `/users/${userId}/todos`;
   }
   
-  static cacheFields = ['userId']
+  static dependencies = ['userId'];
 };
 ```  
 
@@ -560,7 +560,7 @@ const getResources = (ResourceKeys, props) => {
 
 When the user clicks on a 'next' arrow that updates page state, the collection will already be in the cache, and it will get passed as the new `userTodosCollection`. Accordingly, the third page will then get prefetched (`props.page` equal to 2 and `from` equal to 40). Two important things to note here:
 
-1. Don't forget to add `from` to the [`cacheFields`](#declarative-cache-keys) list!
+1. Don't forget to add `from` to the [`dependencies`](#declarative-cache-keys) list!
 1. The prefetched model does not get components registered to it; therefore, it is immediately scheduled for removal after the specified [cacheGracePeriod](#configuring). If the user clicks the next arrow, it then becomes the 'active' model and the `UserTodos` component will get registered to it, clearing the removal timer (see the [caching](caching-resources-with-modelcache) section).
 
 If you're looking to optimistically prefetch resources when a user hovers, say, over a link, see the [Prefetch on Hover](#prefetch-on-hover) section.
@@ -582,7 +582,7 @@ function MyCustomerComponent(props) {
 
 You can also use `data` to take advantage of [re-caching](/docs/advanced_topics.md#recaching-newly-saved-models).  
 
-Like `params` and `options`, the `data` object will also be used in cache key generation if it has any fields specified in the model's static `cacheFields` property (See the [cache key section](#declarative-cache-keys) for more). For [Collections](/docs/collection.md#constructor), there is an equivalent `models` property, but again, these are seldom used.
+Like `params` and `options`, the `data` object will also be used in cache key generation if it has any fields specified in the model's static `dependencies` property (See the [cache key section](#declarative-cache-keys) for more). For [Collections](/docs/collection.md#constructor), there is an equivalent `models` property, but again, these are seldom used.
 
 ### lazy
 
@@ -812,7 +812,7 @@ Again, it’s unlikely that you’ll use `ModelCache` directly while using `reso
 
 ## Declarative Cache Keys
 
-As alluded to previously, `resourcerer` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `cacheFields` array, where each entry can be either:
+As alluded to previously, `resourcerer` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `dependencies` array, where each entry can be either:
 
 1. A string, where each string is the name of a property that the model receives whose value should take part in the cache key. The model can receive this property either from the [options](#options) hash, the [data](#data) hash, or the [params](#params) hash, in that order.
 
@@ -847,18 +847,18 @@ export class UserTodosCollection extends Collection {
   }
   // ...
   
-  static cacheFields = [
+  static dependencies = [
     'limit',
     'userId',
     'sort_field',
      ({end_millis, start_millis}) => ({range: end_millis - start_millis})
-  ]
+  ];
 };
 ```
 
-We can see that `limit` and `sort_field` as specified in `cacheFields` are taken straight from the `params` object that `resourcerer` transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `params` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
+We can see that `limit` and `sort_field` as specified in `dependencies` are taken straight from the `params` object that `resourcerer` transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `params` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
 
-The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash;it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `cacheFields`, which takes the `params` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
+The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash;it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `dependencies`, which takes the `params` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
 
 The generated cache key would be something like `userTodos_limit=50_$range=86400000_sort_field=importance_userId=noah`. Again, note that:
 
@@ -930,10 +930,10 @@ import {Model} from 'resourcerer';
 
 class MyMeasuredModel extends Model {
   // either a boolean, which will track every request of this model instance
-  static measure = true
+  static measure = true;
 
   // or a function that returns a boolean, which will track instance requests based on a condition
-  static measure = ({data={}}) => data.id === 'noahgrant'
+  static measure = ({data={}}) => data.id === 'noahgrant';
 }
 ```
 
@@ -1051,7 +1051,7 @@ ResourcesConfig.set(configObj);
   // not component-specific, so they should be defined on the model instead of the component
   // todos-collection.js
   export default class TodosCollection extends Collection {
-    static cacheFields = ['category']
+    static dependencies = ['category'];
 
     url() {
       return '/todos';

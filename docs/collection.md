@@ -37,7 +37,7 @@ This is an instance property that represents the number of models in the collect
 
 Set this property if you want a collection's models to be an instance of a class other than the default Model
 
-### `static` cacheFields
+### `static` dependencies
 
 This property tells resourcerer how to determine whether to make a new request or to take a collection out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
 

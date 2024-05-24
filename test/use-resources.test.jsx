@@ -134,7 +134,7 @@ describe('useResources', () => {
       });
     };
 
-    UserModel.realCacheFields = UserModel.cacheFields;
+    UserModel.realCacheFields = UserModel.dependencies;
     document.body.appendChild(renderNode);
 
     requestSpy = jest.spyOn(Request, 'default');
@@ -157,7 +157,7 @@ describe('useResources', () => {
   });
 
   afterEach(async() => {
-    UserModel.cacheFields = UserModel.realCacheFields;
+    UserModel.dependencies = UserModel.realCacheFields;
 
     Request.default.mockRestore();
     Model.prototype.fetch.mockRestore();
@@ -492,8 +492,8 @@ describe('useResources', () => {
   });
 
   describe('creates a cache key', () => {
-    describe('when a model has a cacheFields property', () => {
-      it('with the ResourceKey as the base, keys from the cacheFields, ' +
+    describe('when a model has a dependencies property', () => {
+      it('with the ResourceKey as the base, keys from the dependencies, ' +
           'and values from \'params\'', () => {
         expect(getCacheKey({
           modelKey: ResourceKeys.USER,
@@ -514,7 +514,7 @@ describe('useResources', () => {
         })).toEqual('userfraudLevel=low_userId=alex');
       });
 
-      it('prioritizes cacheFields in \'options\' or \'data\' config properties', () => {
+      it('prioritizes dependencies in \'options\' or \'data\' config properties', () => {
         expect(getCacheKey({
           params: {fraudLevel: 'miniscule'},
           modelKey: ResourceKeys.USER,
@@ -522,8 +522,8 @@ describe('useResources', () => {
         })).toEqual('userfraudLevel=miniscule_userId=theboogieman');
       });
 
-      it('can invoke a cacheFields function entry', () => {
-        UserModel.cacheFields = ['userId',
+      it('can invoke a dependencies function entry', () => {
+        UserModel.dependencies = ['userId',
           ({fraudLevel, lastName}) => ({
             fraudLevel: fraudLevel + lastName,
             lastName
