@@ -2,7 +2,6 @@ import * as Request from '../lib/request';
 
 import {
   AnalystsCollection,
-  DecisionInstanceModel,
   DecisionLogsCollection,
   DecisionsCollection,
   NotesModel,
