@@ -28,7 +28,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
         
 1. When a previously-`PENDING` but currently `LOADED` resource has its dependent prop removed, it goes back to a `PENDING` state (recall that if the dependent prop is changed, it gets put back into a `LOADING` state while the new resource is fetched). This puts us in an interesting state:
     
-    1. `hasInitiallyLoaded` will remain true, as expected. But the `PENDING` resource’s prop&mdash;assuming the resource’s `cacheFields` list includes the dependent prop&mdash;will now return to the empty model/collection, so any child component that may remain in place after `hasInitiallyLoaded` may need to keep that in mind (if `shouldComponentUpdate` returns false when the new resource fetches, then this shouldn’t matter&mdash;see the next point).
+    1. `hasInitiallyLoaded` will remain true, as expected. But the `PENDING` resource’s prop&mdash;assuming the resource’s `dependencies` list includes the dependent prop&mdash;will now return to the empty model/collection, so any child component that may remain in place after `hasInitiallyLoaded` may need to keep that in mind (if `shouldComponentUpdate` returns false when the new resource fetches, then this shouldn’t matter&mdash;see the next point).
         
     2. Recall that we can provide the dependent prop in one of two ways:
         1. We can include it in another resource’s `provides` property, in which case the dependent prop gets set as state within resourcerer.
@@ -76,7 +76,7 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
        ```
 
 
-    4. In the case that the model's `cacheFields` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
+    4. In the case that the model's `dependencies` does not include the dependent prop (ie, the prop is used solely for triggering the resource request and doesn't factor into the request data), the model will still exist in the cache when the dependent prop is removed. In this case, the loading state is still returned to PENDING, but the existing model will also be present in the return value.
   
 ## Implicit dependent resources
 
@@ -140,7 +140,7 @@ export default class AccountModel extends Model {
     return `/accounts/${this.accountId}`;
   }
 
-  static cacheFields = ['accountId']
+  static dependencies = ['accountId'];
   
   static providesModels = (accountModel, ResourceKeys) => [{
     data: accountModel.get('config'),
@@ -174,7 +174,7 @@ The resource config objects within `providesModels` have the same schema, as men
 // account_model.js
 export default class AccountModel extends Model {
   // ...
-  static cacheFields: ['accountId']
+  static dependencies = ['accountId'];
   
   static providesModels = (accountModel, ResourceKeys) => [{
     data: accountModel.get('config'),

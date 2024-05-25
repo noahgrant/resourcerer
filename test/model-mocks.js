@@ -14,7 +14,7 @@ export class UserModel extends Model {
     return `/root/users/${this.userId}`;
   }
 
-  static cacheFields = ['fraudLevel', 'userId', 'id']
+  static dependencies = ['fraudLevel', 'userId', 'id']
 }
 
 export class AnalystsCollection extends Collection {
@@ -63,7 +63,7 @@ export class SearchQueryModel extends Model {
     return '/root/search';
   }
 
-  static cacheFields = ['type', 'detailed', 'filter', 'sort', 'limit', 'from']
+  static dependencies = ['type', 'detailed', 'filter', 'sort', 'limit', 'from']
 }
 
 export class SignalsCollection extends Collection {
@@ -94,11 +94,11 @@ export class DecisionLogsCollection extends Collection {
 
 // next three are unfetched resources
 export class DecisionInstanceModel extends Model {
-  static cacheFields = ['entityType', 'entityId']
+  static dependencies = ['entityType', 'entityId']
 }
 
 export class LabelInstanceModel extends Model {
-  static cacheFields = ['userId']
+  static dependencies = ['userId']
 }
 
 export class AccountConfigModel extends Model {

@@ -74,6 +74,8 @@ declare module 'resourcerer' {
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
 
+    static dependencies: Array<string | ((attrs: T) => Record<string, any>)>;
+
     static cacheTimeout: number;
 
     static idAttribute: string;
@@ -147,6 +149,8 @@ declare module 'resourcerer' {
     readonly urlOptions: Omit<O, keyof CSetOptions>;
 
     static cacheFields: Array<string | ((attrs: T) => Record<string, any>)>;
+
+    static dependencies: Array<string | ((attrs: T) => Record<string, any>)>;
 
     static modelIdAttribute: string;
 

@@ -158,7 +158,7 @@ describe('withResources', () => {
       });
     };
 
-    UserModel.realCacheFields = UserModel.cacheFields;
+    UserModel.realCacheFields = UserModel.dependencies;
     document.body.appendChild(renderNode);
 
     requestSpy = jest.spyOn(Request, 'default');
@@ -181,7 +181,7 @@ describe('withResources', () => {
   });
 
   afterEach(async() => {
-    UserModel.cacheFields = UserModel.realCacheFields;
+    UserModel.dependencies = UserModel.realCacheFields;
 
     Request.default.mockRestore();
     Model.prototype.fetch.mockRestore();
@@ -547,7 +547,14 @@ describe('withResources', () => {
       });
 
       it('can invoke a cacheFields function entry', () => {
-        UserModel.cacheFields = ['userId',
+        const originalLogsCacheFields = DecisionLogsCollection.cacheFields;
+
+        UserModel.dependencies = ['userId',
+          ({fraudLevel, lastName}) => ({
+            fraudLevel: fraudLevel + lastName,
+            lastName
+          })];
+        DecisionLogsCollection.cacheFields = ['userId',
           ({fraudLevel, lastName}) => ({
             fraudLevel: fraudLevel + lastName,
             lastName
@@ -561,6 +568,15 @@ describe('withResources', () => {
             lastName: 'grant'
           }
         })).toEqual('userfraudLevel=highgrant_lastName=grant_userId=noah');
+        expect(getCacheKey({
+          data: {userId: 'noah'},
+          modelKey: ResourceKeys.DECISION_LOGS,
+          params: {
+            fraudLevel: 'high',
+            lastName: 'grant'
+          }
+        })).toEqual('decisionLogsfraudLevel=highgrant_lastName=grant_userId=noah');
+        DecisionLogsCollection.cacheFields = originalLogsCacheFields;
       });
     });
   });
