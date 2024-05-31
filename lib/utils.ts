@@ -1,4 +1,4 @@
-import {LoadingStates} from './constants.js';
+import type { LoadingStates } from "./types";
 
 /**
  * Whether or not any loading state has errored. If a state is passed in,
@@ -7,8 +7,8 @@ import {LoadingStates} from './constants.js';
  * @param {string|string[]|object} loadingStates - specifics state to check for an error
  * @return {boolean}
  */
-export const hasErrored = (loadingStates) =>
-  qualifyLoadingStates(loadingStates).some((state) => state === LoadingStates.ERROR);
+export const hasErrored = (loadingStates: LoadingStates | LoadingStates[]): boolean =>
+  qualifyLoadingStates(loadingStates).some((state) => state === "error");
 
 /**
  * Whether or not any render-blocking loading state is still loading. If a
@@ -17,8 +17,8 @@ export const hasErrored = (loadingStates) =>
  * @param {string|string[]|object} loadingStates - specific states to check if one is loading
  * @return {boolean}
  */
-export const isLoading = (loadingStates) =>
-  qualifyLoadingStates(loadingStates).some((state) => state === LoadingStates.LOADING);
+export const isLoading = (loadingStates: LoadingStates | LoadingStates[]): boolean =>
+  qualifyLoadingStates(loadingStates).some((state) => state === "loading");
 
 /**
  * Whether or not all render-blocking loading states have loaded. If a
@@ -27,8 +27,8 @@ export const isLoading = (loadingStates) =>
  * @param {string|string[]|object} loadingStates - specific states to check that all have loaded
  * @return {boolean}
  */
-export const hasLoaded = (loadingStates) =>
-  qualifyLoadingStates(loadingStates).every((state) => state === LoadingStates.LOADED);
+export const hasLoaded = (loadingStates: LoadingStates | LoadingStates[]): boolean =>
+  qualifyLoadingStates(loadingStates).every((state) => state === "loaded");
 
 /**
  * Whether or not any loading state is pending. If a state is passed in,
@@ -37,9 +37,10 @@ export const hasLoaded = (loadingStates) =>
  * @param {string|string[]|object} loadingStates - specifics state to check for an error
  * @return {boolean}
  */
-export const isPending = (loadingStates) =>
-  qualifyLoadingStates(loadingStates).some((state) => state === LoadingStates.PENDING);
+export const isPending = (loadingStates: LoadingStates | LoadingStates[]): boolean =>
+  qualifyLoadingStates(loadingStates).some((state) => state === "pending");
 
+/* eslint-disable @typescript-eslint/no-empty-function */
 export function noOp() {}
 
 /**
@@ -49,7 +50,7 @@ export function noOp() {}
  * @param {string} word - string to camelcase
  * @return {string} camelCased word
  */
-export function camelize(word='') {
+export function camelize(word = "") {
   const SPACERS = /[-_\s]+(.)?/g;
 
   // let words that are already camelCase pass, but still catch SINGLE WORD ALL CAPS
@@ -57,15 +58,18 @@ export function camelize(word='') {
     return word;
   }
 
-  return word.trim().toLowerCase().replace(SPACERS, (match, char) => char?.toUpperCase());
+  return word
+    .trim()
+    .toLowerCase()
+    .replace(SPACERS, (match, char) => char?.toUpperCase());
 }
 
 /**
  * @param {function} fn - method to invoke only once
  * @return {function} function, that, after getting invoked once, gets set to null
  */
-export function once(fn) {
-  return (...args) => {
+export function once(fn: () => void) {
+  return (...args: any[]) => {
     if (fn) {
       fn.call(null, ...args);
       fn = null;
@@ -80,14 +84,17 @@ export function once(fn) {
  * @param {string[]} keys - list of keys to pick from obj
  * @return {object} new object with only those properties listed
  */
-export function pick(obj={}, ...keys) {
-  return keys.reduce((memo, key) => {
-    if (obj.hasOwnProperty(key)) {
-      memo[key] = obj[key];
-    }
+export function pick<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
+  return keys.reduce(
+    (memo, key) => {
+      if (key in obj) {
+        memo[key] = obj[key];
+      }
 
-    return memo;
-  }, {});
+      return memo;
+    },
+    {} as { [P in K]: T[P] }
+  );
 }
 
 /**
@@ -97,8 +104,8 @@ export function pick(obj={}, ...keys) {
  * @param {string[]} keys - list of keys to omit from obj
  * @return {object} new object with only those properties not listed in keys
  */
-export function omit(obj={}, ...keys) {
-  return pick(obj, ...Object.keys(obj).filter((key) => !keys.includes(key)));
+export function omit<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
+  return pick(obj, ...(Object.keys(obj).filter((key) => !keys.includes(key as K)) as K[]));
 }
 
 /**
@@ -110,9 +117,9 @@ export function omit(obj={}, ...keys) {
  * @param {string|string[]|object} loadingStates - specific states to transform into an array
  * @return {string[]} - list of LoadingState values
  */
-function qualifyLoadingStates(loadingStates) {
+function qualifyLoadingStates(loadingStates: LoadingStates | LoadingStates[]) {
   if (!Array.isArray(loadingStates)) {
-    if (loadingStates && typeof loadingStates === 'object') {
+    if (loadingStates && typeof loadingStates === "object") {
       return Object.values(loadingStates);
     }
 
@@ -129,9 +136,9 @@ function qualifyLoadingStates(loadingStates) {
  * @return {function}
  */
 export const uniqueId = (() => {
-  var count = 0;
+  let count = 0;
 
-  return (prefix='') => {
+  return (prefix = "") => {
     count++;
 
     return `${prefix}${count}`;
@@ -153,17 +160,21 @@ export function urlError() {
  * @param {object} obj2 - second object to compare
  * @return {boolean} whether the two objects are equivalent by value
  */
-export function isDeepEqual(obj1, obj2) {
+export function isDeepEqual(obj1: Record<string, any>, obj2: Record<string, any>) {
   if (obj1 === obj2) {
     return true;
-  } else if ((typeof obj1 === 'object' && obj1 !== null) &&
-    (typeof obj2 === 'object' && obj2 !== null)) {
+  } else if (
+    typeof obj1 === "object" &&
+    obj1 !== null &&
+    typeof obj2 === "object" &&
+    obj2 !== null
+  ) {
     if (Object.keys(obj1).length !== Object.keys(obj2).length) {
       return false;
     }
 
     for (let prop in obj1) {
-      if (obj2.hasOwnProperty(prop)) {
+      if (prop in obj2) {
         if (!isDeepEqual(obj1[prop], obj2[prop])) {
           return false;
         }
@@ -187,25 +198,24 @@ export function isDeepEqual(obj1, obj2) {
  *   other items in the list
  * @param {any[]} - sorted list
  */
-export function sortBy(list=[], comparator) {
-  /* eslint-disable id-length */
-  return list.map((value, index) => ({value, index, criteria: comparator(value)}))
-      .sort((left, right) => {
-        var a = left.criteria,
-            b = right.criteria;
+export function sortBy(list: any[] = [], comparator: (val: any) => string | number) {
+  return list
+    .map((value, index) => ({ value, index, criteria: comparator(value) }))
+    .sort((left, right) => {
+      const a = left.criteria;
+      const b = right.criteria;
 
-        if (a !== b) {
-          if (a > b || a === undefined) {
-            return 1;
-          } else if (a < b || b === undefined) {
-            return -1;
-          }
+      if (a !== b) {
+        if (a > b || a === undefined) {
+          return 1;
+        } else if (a < b || b === undefined) {
+          return -1;
         }
+      }
 
-        return left.index - right.index;
-      })
-      .map(({value}) => value);
-  /* eslint-enable id-length */
+      return left.index - right.index;
+    })
+    .map(({ value }) => value);
 }
 
 /**
@@ -215,6 +225,6 @@ export function sortBy(list=[], comparator) {
  * @param {any} prop - property of object to evaluate
  * @return {any} evaluated value of object at property
  */
-export function result(obj={}, prop, ...args) {
-  return typeof obj[prop] === 'function' ? obj[prop](...args) : obj[prop];
+export function result(obj: Record<string, any> = {}, prop: string, ...args: any[]) {
+  return typeof obj[prop] === "function" ? obj[prop](...args) : obj[prop];
 }

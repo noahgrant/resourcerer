@@ -1,8 +1,9 @@
-import {ModelMap, ResourceKeys} from './config.js';
-import {noOp, once} from './utils.js';
+import { ModelMap, ResourceKeys } from "./config";
+import { noOp, once } from "./utils";
+import type { ExecutorFunction } from "./types";
 
-import {getCacheKey} from './resourcerer.js';
-import request from './request.js';
+import { getCacheKey } from "./resourcerer.js";
+import request from "./request.js";
 
 // prevents api request bursts based on quick swipes
 const PREFETCH_TIMEOUT = 50;
@@ -18,24 +19,24 @@ const PREFETCH_TIMEOUT = 50;
  *   would be needed
  * @return {function} callback to be invoked onMouseEnter of appropriate DOM el
  */
-export default (getResources, expectedProps={}) => {
-  var fetched,
-      resources = Object.entries(getResources(ResourceKeys, expectedProps) || {});
+export default (getResources: ExecutorFunction, expectedProps: Record<string, any> = {}) => {
+  let fetched: boolean;
+  const resources = Object.entries(getResources(ResourceKeys, expectedProps) || {});
 
-  return (evt) => {
-    var {target} = evt,
-        prefetchTimeout;
+  return (evt: MouseEvent) => {
+    const { target } = evt;
+    let prefetchTimeout;
 
     if (target && !fetched) {
       // set short timeout so that we can cancel if user 'doesn't intend'
       // to click on the link
       prefetchTimeout = window.setTimeout(() => {
         resources.forEach(([name, config]) => {
-          request(getCacheKey({modelKey: name, ...config}, expectedProps), ModelMap[name], {
+          request(getCacheKey({ modelKey: name, ...config }), ModelMap[name], {
             ...config,
-            prefetch: true
-          // Prefetch is only opportunistic so if we error now,
-          // we'll retry and handle the error in withResources
+            prefetch: true,
+            // Prefetch is only opportunistic so if we error now,
+            // we'll retry and handle the error in withResources
           }).catch(noOp);
         });
 
@@ -43,7 +44,7 @@ export default (getResources, expectedProps={}) => {
       }, PREFETCH_TIMEOUT);
 
       // if we leave the prefetch element before the timeout, don't prefetch
-      target.addEventListener('mouseleave', once(_onMouseLeave.bind(null, prefetchTimeout)));
+      target.addEventListener("mouseleave", once(_onMouseLeave.bind(null, prefetchTimeout)));
     }
   };
 };
@@ -54,6 +55,6 @@ export default (getResources, expectedProps={}) => {
  *
  * @param {number} timeout - timeout to clear so that prefetch doesn't happen
  */
-function _onMouseLeave(timeout) {
+function _onMouseLeave(timeout: number) {
   window.clearTimeout(timeout);
 }

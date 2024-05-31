@@ -3,8 +3,18 @@
   "version": "1.2.3",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": ["declarative data-fetching framework", "react"],
-  "files": ["*.js", "index.d.ts", "lib/*.js", "test/*.js", "*.md", "docs/*.md"],
+  "keywords": [
+    "declarative data-fetching framework",
+    "react"
+  ],
+  "files": [
+    "*.js",
+    "index.d.ts",
+    "lib/*.js",
+    "test/*.js",
+    "*.md",
+    "docs/*.md"
+  ],
   "main": "index.js",
   "type": "module",
   "scripts": {
@@ -15,9 +25,16 @@
     "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
   },
   "jest": {
-    "collectCoverageFrom": ["lib/*.{js,jsx}", "!lib/constants.js"],
-    "moduleDirectories": ["node_modules"],
-    "setupFilesAfterEnv": ["./test/setup"],
+    "collectCoverageFrom": [
+      "lib/*.{js,jsx}",
+      "!lib/constants.js"
+    ],
+    "moduleDirectories": [
+      "node_modules"
+    ],
+    "setupFilesAfterEnv": [
+      "./test/setup"
+    ],
     "testEnvironment": "jsdom"
   },
   "exports": "./index.js",
@@ -30,12 +47,19 @@
     "@babel/plugin-transform-runtime": "^7.10.5",
     "@babel/preset-env": "^7.10.4",
     "@babel/preset-react": "^7.10.4",
+    "@stylistic/eslint-plugin": "^2.1.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
     "babel-loader": "^8.0.5",
-    "eslint": "^7.32.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jest": "^25.2.2",
-    "eslint-plugin-react": "7.26",
     "eslint-plugin-sift": "^0.3.0",
     "jest": "^27.3.1",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.5",
     "webpack": "^4.29.6",
     "whatwg-fetch": "^3.6.2"
   },

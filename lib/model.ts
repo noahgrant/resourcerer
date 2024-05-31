@@ -1,16 +1,27 @@
-import {isDeepEqual, result, uniqueId, urlError} from './utils.js';
+import { isDeepEqual, result, uniqueId, urlError } from "./utils";
 
-import Events from './events.js';
-import sync from './sync.js';
+import Events from "./events";
+import sync, { type SyncOptions } from "./sync";
+import Collection from "./collection";
+
+type ConstructorOptions = {
+  collection?: Collection;
+  parse?: boolean;
+};
+
+type SetOptions = {
+  silent?: boolean;
+  unset?: boolean;
+};
 
 const RESERVED_OPTION_KEYS = [
-  'Model',
-  'comparator',
-  'parse',
-  'collection',
-  'silent',
-  'method',
-  'unset'
+  "Model",
+  "comparator",
+  "parse",
+  "collection",
+  "silent",
+  "method",
+  "unset",
 ];
 
 /**
@@ -25,7 +36,17 @@ const RESERVED_OPTION_KEYS = [
  *    .save(), and .destroy() methods, the former two of which also update its representation using
  *    the methods listed in the first step.
  */
-export default class Model {
+export default class Model<
+  T extends Record<string, any> = { [key: string]: any },
+  O extends Record<string, any> & SetOptions & ConstructorOptions = { [key: string]: any },
+> extends Events {
+  cid: string;
+  id: string | number;
+  attributes: T;
+  readonly urlOptions: Omit<O, keyof SetOptions> = {} as O;
+  collection?: Collection;
+  ["constructor"]: typeof Model;
+
   /**
    * @param {object} attributes - initial server data representation to be kept on the model
    * @param {object} options - generic map. in the default constructor, use:
@@ -35,24 +56,27 @@ export default class Model {
    *   * collection {Collection} - links this model to a collection, if applicable
    *   * ...any other options that .set() takes
    */
-  constructor(attributes={}, options={}) {
-    this.cid = uniqueId('c');
-    this.attributes = {};
+  constructor(attributes?: T, options?: O) {
+    super();
+
+    this.cid = uniqueId("c");
+    this.attributes = {} as T;
 
     if (options.collection) {
       this.collection = options.collection;
     }
 
     if (options.parse) {
-      attributes = this.parse(attributes, options) || {};
+      attributes = this.parse(attributes, options) || ({} as T);
     }
 
-    this.urlOptions = Object.keys(options).reduce((memo, key) => Object.assign(
-      memo,
-      !RESERVED_OPTION_KEYS.includes(key) ? {[key]: options[key]} : {}
-    ), {});
+    this.urlOptions = Object.keys(options).reduce(
+      (memo, key) =>
+        Object.assign(memo, !RESERVED_OPTION_KEYS.includes(key) ? { [key]: options[key] } : {}),
+      {} as O
+    );
 
-    this.set({...result(this.constructor, 'defaults'), ...attributes}, options);
+    this.set({ ...result(this.constructor, "defaults"), ...attributes }, options);
   }
 
   /**
@@ -61,7 +85,7 @@ export default class Model {
    * Regardless, the value at this attribute will be set to model.id, the id field directly on the
    * model (not in attributes).
    */
-  static idAttribute = 'id'
+  static idAttribute = "id";
 
   /**
    * This is a list of keys (could be attribute keys, but also keys passed in from the options
@@ -69,22 +93,27 @@ export default class Model {
    * cache a model and consider models to be identical. Can also be a function that returns an
    * object.
    */
-  static dependencies = []
+  static dependencies: Array<string | ((attrs: Record<string, any>) => Record<string, any>)> = [];
 
   // deprecated
-  static cacheFields = []
+  static cacheFields: Array<string | ((attrs: Record<string, any>) => Record<string, any>)> = [];
+
+  /**
+   * Use this to override the default library-wide cacheTimeout set in the config.
+   */
+  static cacheTimeout: number;
 
   /**
    * Default attributes on a model. Can be an object or a function that returns an object.
    */
-  static defaults = {}
+  static defaults = {};
 
   /**
    * Use this to tell resourcerer to track this model's request time via the `track` method added
    * in the resourcerer configuration file. This can be a boolean or a function that returns a
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
-  static measure = false
+  static measure = false;
 
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire
@@ -93,13 +122,13 @@ export default class Model {
    * @return {object} model attributes
    */
   toJSON() {
-    return {...this.attributes};
+    return { ...this.attributes };
   }
 
   /**
    * Proxies the `sync` module by default, but this can be overridden for custom behavior.
    */
-  sync(...args) {
+  sync(...args: Parameters<typeof sync>) {
     return sync.call(this, ...args);
   }
 
@@ -109,7 +138,7 @@ export default class Model {
    * @param {string} attr - attribute key
    * @return {any} data attribute at that key
    */
-  get(attr) {
+  get(attr: keyof T) {
     return this.attributes[attr];
   }
 
@@ -119,11 +148,11 @@ export default class Model {
    * @param {string[]} attrs - attribute keys for which to get values
    * @return {object} subsection of model data containing the specified keys
    */
-  pick(...attrs) {
-    return attrs.reduce((memo, attr) => Object.assign(
-      memo,
-      this.has(attr) ? {[attr]: this.get(attr)} : {}
-    ), {});
+  pick(...attrs: (keyof T)[]) {
+    return attrs.reduce(
+      (memo, attr) => Object.assign(memo, this.has(attr) ? { [attr]: this.get(attr) } : {}),
+      {}
+    );
   }
 
   /**
@@ -132,7 +161,7 @@ export default class Model {
    * @param {string} attr - attribute key
    * @return {boolean} whether the model has a value at that key
    */
-  has(attr) {
+  has(attr: keyof T) {
     return ![undefined, null].includes(this.get(attr));
   }
 
@@ -149,17 +178,17 @@ export default class Model {
    *   silent: {boolean} if true, skips the triggerUpdate() call after setting the attributes
    * @return {Model} model instance
    */
-  set(attrs={}, options={}) {
-    var prevId = this.id,
-        hasSomethingChanged = false;
+  set(attrs: Partial<T> = {}, options: SetOptions = {}) {
+    const prevId = this.id;
+    let hasSomethingChanged = false;
 
     // For each `set` attribute, update or delete the current value.
-    for (let attr of Object.keys(attrs)) {
+    for (let attr of Object.keys(attrs) as (keyof T)[]) {
       if (!hasSomethingChanged && !isDeepEqual(this.attributes[attr], attrs[attr])) {
         hasSomethingChanged = true;
       }
 
-      options.unset ? delete this.attributes[attr] : this.attributes[attr] = attrs[attr];
+      options.unset ? delete this.attributes[attr] : (this.attributes[attr] = attrs[attr]);
     }
 
     // Update the `id`.
@@ -172,7 +201,7 @@ export default class Model {
       this.triggerUpdate();
 
       if (this.collection && prevId && prevId !== this.id) {
-        this.collection._updateModelReference(this.id, prevId, this);
+        this.collection._updateModelReference(this.id, prevId, this as Model);
       }
     }
 
@@ -186,8 +215,8 @@ export default class Model {
    * @param {object} options - set options
    * @return {Model} model instance
    */
-  unset(attr, options) {
-    return this.set({[attr]: undefined}, {unset: true, ...options});
+  unset(attr: keyof T, options?: SetOptions) {
+    return this.set({ [attr]: undefined } as Partial<T>, { unset: true, ...options });
   }
 
   /**
@@ -196,14 +225,14 @@ export default class Model {
    * @param {object} options - set options
    * @return {Model} model instance
    */
-  clear(options) {
-    var attrs = {};
+  clear(options: SetOptions) {
+    const attrs: T = {} as T;
 
-    for (let key of Object.keys(this.attributes)) {
+    for (let key of Object.keys(this.attributes) as (keyof T)[]) {
       attrs[key] = undefined;
     }
 
-    return this.set(attrs, {unset: true, ...options});
+    return this.set(attrs, { unset: true, ...options });
   }
 
   /**
@@ -214,20 +243,18 @@ export default class Model {
    * @param {object} options - can include any property used by the sync module
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  fetch(options={}) {
-    options = {parse: true, method: 'GET', ...options};
+  fetch(options: SyncOptions & SetOptions = {}) {
+    options = { parse: true, method: "GET", ...options };
 
-    return this.sync(this, options)
-        .then(([json, response]) => {
-          var serverAttrs = options.parse ? this.parse(json, options) : json;
+    return this.sync(this, options).then(([json, response]) => {
+      const serverAttrs = options.parse ? this.parse(json, options) : json;
 
-          this.set(serverAttrs, options);
-          // sync update
-          this.triggerUpdate();
+      this.set(serverAttrs, options);
+      // sync update
+      this.triggerUpdate();
 
-          return [this, response];
-        })
-        .catch((response) => Promise.reject(response));
+      return [this, response] as const;
+    });
   }
 
   /**
@@ -241,50 +268,56 @@ export default class Model {
    *   to wait to set properties on the model until after the save request succeeds
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  save(attrs, options) {
-    var previousAttributes = this.toJSON();
+  save(
+    attrs: Partial<T>,
+    options: { wait?: boolean; patch?: boolean } & SyncOptions & SetOptions = {}
+  ) {
+    const previousAttributes = this.toJSON();
 
-    options = {parse: true, ...options};
+    options = { parse: true, ...options };
     attrs = attrs || this.toJSON();
 
     // If we're not waiting and attributes exist, save acts as `set(attr).save(null, opts)`
     if (!options.wait) {
       this.set(attrs, options);
     } else {
-      options.attrs = {...this.attributes, ...attrs};
+      options.attrs = { ...this.attributes, ...attrs };
     }
 
-    options.method = this.isNew() ? 'POST' : options.patch ? 'PATCH' : 'PUT';
+    options.method =
+      this.isNew() ? "POST"
+      : options.patch ? "PATCH"
+      : "PUT";
 
-    if (options.method === 'PATCH' && !options.attrs) {
+    if (options.method === "PATCH" && !options.attrs) {
       options.attrs = attrs;
     }
 
     return this.sync(this, options)
-        .then(([json, response]) => {
-          var serverAttrs = options.parse ? this.parse(json, options) : json;
+      .then(([json, response]) => {
+        let serverAttrs = options.parse ? this.parse(json, options) : json;
 
-          if (options.wait) {
-            serverAttrs = {...attrs, ...serverAttrs};
-          }
+        if (options.wait) {
+          serverAttrs = { ...attrs, ...serverAttrs };
+        }
 
-          // avoid triggering any updates in the set call since we'll do it immediately after
-          this.set(serverAttrs, {silent: true, ...options});
-          // sync update
-          this.triggerUpdate();
+        // avoid triggering any updates in the set call since we'll do it immediately after
+        this.set(serverAttrs, { silent: true, ...options });
+        // sync update
+        this.triggerUpdate();
 
-          return [this, response];
-        })
-        .catch((response) => {
-          if (!options.wait) {
-            // keep the clear silent so that we only render when we reset attributes
-            this.clear({silent: true}).set(previousAttributes, options);
-          } else {
-            this.attributes = previousAttributes;
-          }
+        return [this, response];
+      })
+      .catch((response) => {
+        if (!options.wait) {
+          // keep the clear silent so that we only render when we reset attributes
+          this.clear({ silent: true }).set(previousAttributes, options);
+        } else {
+          this.attributes = previousAttributes;
+        }
 
-          return Promise.reject(response);
-        });
+        return Promise.reject(response);
+      });
   }
 
   /**
@@ -296,31 +329,32 @@ export default class Model {
    *   to wait to set properties on the model until after the request succeeds
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  destroy(options={}) {
-    var request = this.isNew() ?
-          Promise.resolve([]) :
-          this.sync(this, {method: 'DELETE', ...options}),
-        collection = this.collection;
+  destroy(options: { wait?: boolean } & SyncOptions & SetOptions = {}) {
+    const request =
+        this.isNew() ? Promise.resolve([]) : this.sync(this, { method: "DELETE", ...options }),
+      collection = this.collection;
 
     if (!options.wait) {
       this.triggerUpdate();
-      this.collection?.remove(this, {silent: true});
+      this.collection?.remove(this, { silent: true });
     }
 
-    return request.then(([json, response]) => {
-      if (options.wait && !this.isNew()) {
-        this.triggerUpdate();
-        this.collection?.remove(this, {silent: true});
-      }
+    return request
+      .then(([json, response]) => {
+        if (options.wait && !this.isNew()) {
+          this.triggerUpdate();
+          this.collection?.remove(this, { silent: true });
+        }
 
-      return [this, response];
-    }).catch((response) => {
-      if (!options.wait && !this.isNew()) {
-        collection?.add(this);
-      }
+        return [this, response];
+      })
+      .catch((response) => {
+        if (!options.wait && !this.isNew()) {
+          collection?.add(this);
+        }
 
-      return Promise.reject(response);
-    });
+        return Promise.reject(response);
+      });
   }
 
   /**
@@ -330,16 +364,18 @@ export default class Model {
    *
    * @return {string} the url endpoint to request for this particular model instance
    */
-  url(options=this.urlOptions) {
-    var base = result(this, 'urlRoot', options) || result(this.collection, 'url', options) ||
-      urlError();
+  url(options = this.urlOptions) {
+    const base =
+      result(this, "urlRoot", options) || result(this.collection, "url", options) || urlError();
 
     if (this.isNew()) {
       return base;
     }
 
-    return base.replace(/[^/]$/, '$&/') +
-      window.encodeURIComponent(this.get(this.constructor.idAttribute));
+    return (
+      base.replace(/[^/]$/, "$&/") +
+      window.encodeURIComponent(this.get(this.constructor.idAttribute))
+    );
   }
 
   /**
@@ -352,7 +388,7 @@ export default class Model {
    * @return {object} data object transformed from the server response to be applied as the model's
    *   data attributes
    */
-  parse(response, options) {
+  parse(response: any, options: SyncOptions & SetOptions): T {
     return response;
   }
 

@@ -1,6 +1,32 @@
-import {camelize, noOp} from './utils.js';
-import React from 'react';
-import {setRequestPrefilter} from './sync.js';
+import { camelize, noOp } from "./utils.js";
+import Collection from "./collection";
+import Model from "./model";
+import React from "react";
+import { setRequestPrefilter } from "./sync.js";
+
+export interface ResourcererConfig {
+  cacheGracePeriod: number;
+  errorBoundaryChild: React.Element;
+  queryParamsPropName: string;
+  stringify: (
+    params: string | URLSearchParams | string[][] | Record<string, string>,
+    options: Record<string, any>
+  ) => string;
+  track: (...args: any[]) => void;
+  log: (...args: any[]) => void;
+  prefilter: (options: Record<string, any>) => Record<string, any> | void;
+  set: (config: Record<keyof ResourcererConfig, any>) => void;
+}
+
+export interface ResourceKeys {
+  add: (keys: Record<keyof ResourceKeys, string>) => void;
+  [key: string]: string;
+}
+
+export interface ModelMap {
+  add: (models: Record<string, Model | Collection>) => void;
+  [key: keyof Omit<ResourceKeys, "add">]: Model | Collection;
+}
 
 /**
  * This module contains all the required setup for implementing withResources
@@ -15,14 +41,14 @@ import {setRequestPrefilter} from './sync.js';
  *   as the second argument to the withResources function and are used to
  *   declaritively request a model for a component.
  */
-export const ResourceKeys = {
+export const ResourceKeys: ResourceKeys = {
   /**
    * @param {{string: string}} keys - resource keys to assign to the
    *   ResourceKeys configuration object
    */
   add(keys) {
     return Object.assign(this, keys);
-  }
+  },
 };
 
 /**
@@ -32,7 +58,7 @@ export const ResourceKeys = {
  *   and ModelMap for a resource are required in to use a resource with
  *   withResources.
  */
-export const ModelMap = {
+export const ModelMap: ModelMap = {
   /**
    * @param {{string: Model|Collection}} models - an object of
    *   ResourceKeys as keys and Models as values
@@ -49,7 +75,7 @@ export const ModelMap = {
         // auto-add to resource keys with a camelized version of the key for its
         // prop prefix string, then add the model to the same key, removing its
         // passed key
-        ResourceKeys.add({[key]: camelKey});
+        ResourceKeys.add({ [key]: camelKey });
 
         if (key !== camelKey) {
           models[camelKey] = models[key];
@@ -59,7 +85,7 @@ export const ModelMap = {
     });
 
     return Object.assign(this, models);
-  }
+  },
 };
 
 /**
@@ -68,26 +94,26 @@ export const ModelMap = {
  *   have been provided by the response of a parent resource. For use with the
  *   `providesModels` static property on a Model.
  */
-export const UnfetchedResources = new Set();
+export const UnfetchedResources = new Set<keyof ResourceKeys>();
 
 /**
  * ResourcesConfig {object}: A general config object for a limited amount of
  *   customization with the withResources library.
  */
-export const ResourcesConfig = {
+export const ResourcesConfig: ResourcererConfig = {
   /**
-  * {number}: milliseconds to keep a resource in the cache after the last
-  * registered component is unmounted. Default 2 minutes.
-  */
+   * {number}: milliseconds to keep a resource in the cache after the last
+   * registered component is unmounted. Default 2 minutes.
+   */
   cacheGracePeriod: 120000,
   /**
-  * {React.Element}: Component to display when a withResources ErrorBoundary
-  * catches an error.
-  */
+   * {React.Element}: Component to display when a withResources ErrorBoundary
+   * catches an error.
+   */
   errorBoundaryChild: React.createElement(
-    'div',
-    {className: 'caught-error'},
-    React.createElement('p', null, 'An error occurred.')
+    "div",
+    { className: "caught-error" },
+    React.createElement("p", null, "An error occurred.")
   ),
   /** {function}: Hook to send errors to a logging service. */
   log: noOp,
@@ -99,7 +125,7 @@ export const ResourcesConfig = {
    * within a withResources client. default 'urlParams'. You can ignore this
    * if you flatten them yourselves.
    */
-  queryParamsPropName: 'urlParams',
+  queryParamsPropName: "urlParams",
 
   /**
    * Method that should be used to stringify GET requests. By default, this uses URLSearchParams,
@@ -127,5 +153,5 @@ export const ResourcesConfig = {
     }
 
     return Object.assign(this, config);
-  }
+  },
 };

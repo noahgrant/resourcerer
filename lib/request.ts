@@ -1,7 +1,11 @@
-import Collection from './collection.js';
-import ModelCache from './model-cache.js';
+import Model from "./model";
+import Collection from "./collection";
+import ModelCache from "./model-cache";
 
-const loadingCache = {};
+const loadingCache: Record<
+  string,
+  Promise<[Model | Collection] | [Model | Collection, number]>
+> = {};
 
 /**
  * Retrieves a model from the ModelCache. If needed, best to use this in an
@@ -11,7 +15,7 @@ const loadingCache = {};
  * @return {Model?|Collection?} model instance from
  *   cache at the cache key if it exists
  */
-export const getFromCache = (key) => ModelCache.get(key);
+export const getFromCache = (key: string) => ModelCache.get(key);
 
 /**
  * Return whether or not a model exists within ModelCache for the given key. If
@@ -21,7 +25,7 @@ export const getFromCache = (key) => ModelCache.get(key);
  * @param {string} key - The cache key of the model to check for existence.
  * @return {boolean}
  */
-export const existsInCache = (key) => !!ModelCache.get(key);
+export const existsInCache = (key: string) => !!ModelCache.get(key);
 
 /**
  * Main method for retrieving models/collections.
@@ -45,10 +49,10 @@ export const existsInCache = (key) => !!ModelCache.get(key);
  *
  * @return {promise} a promise that will resolve with the new Model/Collection instance
  */
-export default (key, Model, options={}) => {
-  var model = ModelCache.get(key),
-      addToLoadingCache,
-      _promise;
+export default (key: string, Model: Model | Collection, options = {}) => {
+  let model = ModelCache.get(key);
+  let addToLoadingCache;
+  let _promise: Promise<[Model | Collection] | [Model | Collection, number]>;
 
   options = {
     data: Model && Model.prototype instanceof Collection ? [] : {},
@@ -57,8 +61,8 @@ export default (key, Model, options={}) => {
     fetch: true,
     force: false,
     lazy: false,
-    method: 'GET',
-    ...options
+    method: "GET",
+    ...options,
   };
 
   if (!loadingCache[key]) {
@@ -69,7 +73,7 @@ export default (key, Model, options={}) => {
         if (options.fetch && !options.lazy) {
           addToLoadingCache = true;
 
-          model.fetch({params: options.params}).then(
+          model.fetch({ params: options.params }).then(
             ([newModel, response]) => {
               delete loadingCache[key];
               // waiting to delete lazy property until after fetch completes ensures multiple
@@ -88,15 +92,15 @@ export default (key, Model, options={}) => {
         } else {
           // lazy means resolve but don't fetch yet; it will get updates from other components
           // we only want to do this if a model is not yet in the cache
-          options.lazy && !ModelCache.get(key) ? model.lazy = true : null;
+          options.lazy && !ModelCache.get(key) ? (model.lazy = true) : null;
 
           ModelCache.put(key, model, options.component);
           resolve([model]);
         }
-      // this block normally will not get invoked because previous-cached resources will bypass
-      // the request module to avoid the async Promise tick. this will still get called for some
-      // unconventional resource loading such as prefetch requests that are cached, both from the
-      // prefetch module and from the `prefetches` resource config property
+        // this block normally will not get invoked because previous-cached resources will bypass
+        // the request module to avoid the async Promise tick. this will still get called for some
+        // unconventional resource loading such as prefetch requests that are cached, both from the
+        // prefetch module and from the `prefetches` resource config property
       } else {
         // this will cancel any in-flight timeouts and add the component
         // to the list of components using the resource

@@ -1,8 +1,17 @@
-import {isDeepEqual, sortBy} from './utils.js';
+import { isDeepEqual, sortBy } from "./utils.js";
 
-import Events from './events.js';
-import Model from './model.js';
-import sync from './sync.js';
+import Events from "./events.js";
+import Model from "./model.js";
+import sync, { type SyncOptions } from "./sync";
+
+type ModelArg<A, O> = Model<A, O> | Record<string, any>;
+
+type CSetOptions = {
+  parse?: boolean;
+  silent?: boolean;
+};
+
+type comparator = ((arg: Model) => number | string) | ((arg1: Model, arg2: Model) => number);
 
 /**
  * A Collection instance represents a list of items in a RESTful sense. Each item returned at the
@@ -15,7 +24,27 @@ import sync from './sync.js';
  * for GETting it's items from the server, but its .create() method is really a small wrapper around
  * Model#save that adds it to the collection when it is finished.
  */
-export default class Collection {
+export default class Collection<
+  T extends Record<string, any> = { [key: string]: any },
+  O extends Record<string, any> & {
+    Model?: new () => Model;
+    comparator?: comparator;
+  } & CSetOptions = {
+    [key: string]: any;
+  },
+> extends Events {
+  ["constructor"]: typeof Collection;
+
+  Model: Model<T, O>;
+
+  comparator?: comparator;
+
+  models: Model<T, O>[] = [];
+
+  length: number;
+
+  _byId: Record<string, Model<T, O>>;
+
   /**
    * @param {object[]} models - initial models to be set on the collection
    * @param {object} options - options map used in .set(), like {parse: true} to run the models
@@ -27,38 +56,43 @@ export default class Collection {
    *   * comparator {function|string} - dynamically overrides the static comparator property used to
    *     sort the collection
    */
-  constructor(models, options={}) {
-    const RESERVED_OPTION_KEYS = ['Model', 'comparator', 'silent', 'parse'];
+  constructor(models?: ModelArg<T, O> | ModelArg<T, O>[], options: O = {} as O) {
+    super();
+
+    const RESERVED_OPTION_KEYS = ["Model", "comparator", "silent", "parse"];
 
     this.Model = options.Model || this._getModelClass();
     this.comparator = options.comparator || this.constructor.comparator;
 
     this._reset();
 
-    this.urlOptions = Object.keys(options).reduce((memo, key) => Object.assign(
-      memo,
-      !RESERVED_OPTION_KEYS.includes(key) ? {[key]: options[key]} : {}
-    ), {});
+    this.urlOptions = Object.keys(options).reduce(
+      (memo, key) =>
+        Object.assign(memo, !RESERVED_OPTION_KEYS.includes(key) ? { [key]: options[key] } : {}),
+      {}
+    );
 
     if (models) {
       // silent for completeness, i guess. but a nothing triggered here because it's impossible for
       // a listener to have been attached at this point
-      this.reset(models, {silent: true, ...options});
+      this.reset(models, { silent: true, ...options });
     }
   }
+
+  urlOptions: Record<string, any> = {};
 
   /**
    * The default model for a collection is just a Model, but this can be overridden by any other
    * custom Model subclass.
    */
-  static Model = Model
+  static Model = Model;
 
   /**
    * Defines the property by which we can uniquely identify models in the collection. Override this
    * if you're not defining your own custom Model class but still need to index by a different field
    * than the default ('id').
    */
-  static modelIdAttribute = null
+  static modelIdAttribute: "string" = null;
 
   /**
    * This is a list of keys (could be attribute keys, but also keys passed in from the options
@@ -66,17 +100,22 @@ export default class Collection {
    * cache a model and consider models to be identical. Can also be a function that returns an
    * object.
    */
-  static dependencies = []
+  static dependencies: Array<string | ((attrs: Record<string, any>) => Record<string, any>)> = [];
 
   // deprecated
-  static cacheFields = []
+  static cacheFields: Array<string | ((attrs: Record<string, any>) => Record<string, any>)> = [];
+
+  /**
+   * Use this to override the default library-wide cacheTimeout set in the config.
+   */
+  static cacheTimeout: number;
 
   /**
    * Use this to tell resourcerer to track this collection's request time via the `track` method
    * added in the resourcerer configuration file. This can be a boolean or a function that returns a
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
-  static measure = false
+  static measure = false;
 
   /**
    * Similar to the method for an individual model, this maps through each model in the collection
@@ -91,7 +130,7 @@ export default class Collection {
   /**
    * Proxies the `sync` module by default, but this can be overridden for custom behavior.
    */
-  sync(...args) {
+  sync(...args: Parameters<typeof sync>) {
     return sync.call(this, ...args);
   }
 
@@ -104,7 +143,7 @@ export default class Collection {
    * @param {object} options - .set() options hash
    * @return {Collection} collection instance
    */
-  add(models, options={}) {
+  add(models: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
     return this.set(models, options);
   }
 
@@ -116,8 +155,8 @@ export default class Collection {
    * @param {object} options - .set() options hash
    * @return {Collection} collection instance
    */
-  remove(models, options={}) {
-    var removed = this._removeModels(!Array.isArray(models) ? [models] : models);
+  remove(models: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
+    const removed = this._removeModels(!Array.isArray(models) ? [models] : models);
 
     if (!options.silent && removed.length) {
       // update trigger on collection, necessary because removed models won't trigger collection
@@ -140,29 +179,23 @@ export default class Collection {
    *   * silent {boolean} - if true, does not trigger an update after setting
    * @return {Collection} collection instance
    */
-  set(models, options={}) {
-    var shouldSort = false;
+  set(models?: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
+    let shouldSort = false;
 
     if (!models) {
       return this;
     } else if (options.parse && !this._isModel(models)) {
-      models = this.parse(models, options) || [];
+      models = this.parse(models, options);
     }
 
     // models can be passed as a single model or a list
-    models = !Array.isArray(models) ? [models] : models;
-
-    for (let model of models) {
+    for (let model of Array.isArray(models) ? models : [models]) {
       // if model already exists, swap in new attributes
       if (this.get(model)) {
         let attrs = this._isModel(model) ? model.attributes : model;
 
-        this.get(model).set(
-          options.parse ?
-            this.get(model).parse(attrs, options) :
-            attrs
-        );
-      // otherwise add it to the collection
+        this.get(model).set(options.parse ? this.get(model).parse(attrs, options) : attrs);
+        // otherwise add it to the collection
       } else {
         model = this._prepareModel(model, options);
 
@@ -196,7 +229,7 @@ export default class Collection {
    * @param {object} options - .set() options hash
    * @return {Collection} collection instance
    */
-  reset(models=[], options={}) {
+  reset(models: ModelArg<T, O> | ModelArg<T, O>[] = [], options: CSetOptions = {}) {
     for (let i = 0; i < this.models.length; i++) {
       this._removeReference(this.models[i]);
     }
@@ -204,7 +237,7 @@ export default class Collection {
     this._reset();
     // this is silent so that we don't trigger until we are all done. this is extra
     // important after a request returns because as of React 17 those are still synchronous udpates
-    this.add(models, {silent: true, ...options});
+    this.add(models, { silent: true, ...options });
 
     if (!options.silent) {
       // reset trigger
@@ -222,14 +255,16 @@ export default class Collection {
    *   id, or an object containing either
    * @return {Model} collection's model, if found
    */
-  get(obj) {
-    if (!obj && typeof obj !== 'number') {
+  get(obj: Model["id"] | ModelArg<T, O>) {
+    if (!obj && typeof obj !== "number") {
       return undefined;
     }
 
-    return this._byId[obj] ||
+    return (
+      this._byId[obj] ||
       this._byId[(this._isModel(obj) ? obj.attributes : obj)[this.Model.idAttribute]] ||
-      obj.cid && this._byId[obj.cid];
+      (obj.cid && this._byId[obj.cid])
+    );
   }
 
   /**
@@ -240,7 +275,7 @@ export default class Collection {
    *   id, or an object containing either
    * @return {boolean} whether the model is in the collection
    */
-  has(obj) {
+  has(obj: Model["id"] | ModelArg<T, O>) {
     return ![undefined, null].includes(this.get(obj));
   }
 
@@ -250,7 +285,7 @@ export default class Collection {
    * @param {number} index
    * @return {Model}
    */
-  at(index) {
+  at(index: number) {
     if (index < 0) {
       index += this.length;
     }
@@ -263,7 +298,7 @@ export default class Collection {
    * @param {function} predicate - mapping function taking each model as an argument
    * @return {any[]}
    */
-  map(predicate) {
+  map(predicate: (model: Model<T, O>) => any) {
     return this.models.map(predicate);
   }
 
@@ -271,7 +306,7 @@ export default class Collection {
    * @param {function} predicate - function taking each model as an argument and returning a boolean
    * @return {Model?} the first model where the predicate returned true
    */
-  find(predicate) {
+  find(predicate: (model: Model<T, O>) => boolean) {
     return this.models.find(predicate);
   }
 
@@ -279,7 +314,7 @@ export default class Collection {
    * @param {function} predicate - function taking each model as an argument and returning a boolean
    * @return {Model[]} the list of models where the predicate returned true
    */
-  filter(predicate) {
+  filter(predicate: (model: Model<T, O>) => boolean) {
     return this.models.filter(predicate);
   }
 
@@ -287,7 +322,7 @@ export default class Collection {
    * @param {object} attrs - object of properties and values to match models against
    * @return {Model?} the first model found with the matched properties in `attrs`
    */
-  findWhere(attrs) {
+  findWhere(attrs: Partial<T>) {
     return this.where(attrs, true);
   }
 
@@ -296,8 +331,8 @@ export default class Collection {
    * @param {boolean} first - whether to take all matched models or just the first
    * @return {Model[]} list of models found with the matched properties in `attrs`
    */
-  where(attrs, first) {
-    var predicate = (model) => {
+  where(attrs: Partial<T>, first: boolean) {
+    const predicate = (model: Model<T>) => {
       for (let [attr, val] of Object.entries(attrs)) {
         if (!isDeepEqual(model.get(attr), val)) {
           return false;
@@ -307,14 +342,14 @@ export default class Collection {
       return true;
     };
 
-    return this[first ? 'find' : 'filter'](predicate);
+    return this[first ? "find" : "filter"](predicate);
   }
 
   /**
    * @param {string} attr - an attribute to get from each model in the collectionn
    * @return {string[]} list of that attribute's values in the collection
    */
-  pluck(attr) {
+  pluck(attr: keyof T) {
     return this.map((model) => model.get(attr));
   }
 
@@ -322,7 +357,7 @@ export default class Collection {
    * @param {any[]} args - same args for an array's .slice() method
    * @return {Model[]} collection model subset
    */
-  slice(...args) {
+  slice(...args: number[]) {
     return this.models.slice(...args);
   }
 
@@ -332,18 +367,15 @@ export default class Collection {
    */
   sort() {
     if (!this.comparator) {
-      throw new Error('Cannot sort a set without a comparator');
+      throw new Error("Cannot sort a set without a comparator");
     }
 
     // Run sort based on type of `comparator`.
-    if (typeof this.comparator === 'function' && this.comparator.length > 1) {
+    if (typeof this.comparator === "function" && this.comparator.length > 1) {
       this.models.sort(this.comparator.bind(this));
     } else {
-      this.models = sortBy(
-        this.models,
-        (model) => typeof this.comparator === 'function' ?
-          this.comparator(model) :
-          model.get(this.comparator)
+      this.models = sortBy(this.models, (model) =>
+        typeof this.comparator === "function" ? this.comparator(model) : model.get(this.comparator)
       );
     }
 
@@ -358,18 +390,16 @@ export default class Collection {
    * @param {object} options - can include any property used by the sync module
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  fetch(options={}) {
-    options = {parse: true, method: 'GET', ...options};
+  fetch(options: SyncOptions & CSetOptions = {}) {
+    options = { parse: true, method: "GET", ...options };
 
-    return this.sync(this, options)
-        .then(([json, response]) => {
-          this.reset(json, {silent: true, ...options});
-          // sync trigger
-          this.triggerUpdate();
+    return this.sync(this, options).then(([json, response]) => {
+      this.reset(json, { silent: true, ...options });
+      // sync trigger
+      this.triggerUpdate();
 
-          return [this, response];
-        })
-        .catch((response) => Promise.reject(response));
+      return [this, response];
+    });
   }
 
   /**
@@ -382,34 +412,35 @@ export default class Collection {
    *   to wait to add the model to the collection until after the save request succeeds
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  create(model, options={}) {
+  create(model: ModelArg<T, O>, options?: { wait?: boolean } & SyncOptions & CSetOptions) {
     model = this._prepareModel(model, options);
 
     if (!options.wait) {
       this.add(model, options);
     }
 
-    return model.save(null, options)
-        .then((...args) => {
-          if (options.wait) {
-            // note that this is NOT silent because even though we are already triggering an update
-            // after the model sync, because the model isn't added, the collection doesn't also get
-            // an update
-            this.add(model, options);
-          }
+    return model
+      .save(null, options)
+      .then((...args) => {
+        if (options.wait) {
+          // note that this is NOT silent because even though we are already triggering an update
+          // after the model sync, because the model isn't added, the collection doesn't also get
+          // an update
+          this.add(model, options);
+        }
 
-          // model should now have an id property if it didn't previously
-          this._addReference(model);
+        // model should now have an id property if it didn't previously
+        this._addReference(model);
 
-          return args[0];
-        })
-        .catch((response) => {
-          if (!options.wait) {
-            this.remove(model);
-          }
+        return args[0];
+      })
+      .catch((response) => {
+        if (!options.wait) {
+          this.remove(model);
+        }
 
-          return Promise.reject(response);
-        });
+        return Promise.reject(response);
+      });
   }
 
   /**
@@ -422,7 +453,7 @@ export default class Collection {
    * @return {object} data object transformed from the server response to be applied as the
    *   collections' models' data attributes
    */
-  parse(response, options) {
+  parse(response: any, options: SyncOptions & CSetOptions): T[] {
     return response;
   }
 
@@ -440,7 +471,7 @@ export default class Collection {
       let attr = this.constructor.modelIdAttribute;
 
       return class extends Model {
-        static idAttribute = attr
+        static idAttribute = attr;
       };
     }
 
@@ -465,7 +496,7 @@ export default class Collection {
    * @param {object} options - options to be passed to the model's constructor
    * @return {Model}
    */
-  _prepareModel(attrs, options) {
+  _prepareModel(attrs: ModelArg<T, O>, options?: O): Model<T, O> {
     if (this._isModel(attrs)) {
       if (!attrs.collection) {
         attrs.collection = this;
@@ -474,7 +505,7 @@ export default class Collection {
       return attrs;
     }
 
-    return new this.Model(attrs, {...this.urlOptions, ...options, collection: this});
+    return new this.Model(attrs, { ...this.urlOptions, ...options, collection: this });
   }
 
   /**
@@ -485,8 +516,8 @@ export default class Collection {
    * @return {Model[]} list of models actually removed, since they won't get removed if they don't
    *   exist in the collection in the first place
    */
-  _removeModels(models) {
-    var removed = [];
+  _removeModels(models: (Model["id"] | ModelArg<T, O>)[]) {
+    const removed = [];
 
     for (let i = 0; i < models.length; i++) {
       let model = this.get(models[i]);
@@ -519,7 +550,7 @@ export default class Collection {
    * @param {any} model - object in question
    * @return {boolean} whether the object is an instance of Model
    */
-  _isModel(model) {
+  _isModel(model: any): boolean {
     return model instanceof Model;
   }
 
@@ -531,12 +562,12 @@ export default class Collection {
    *
    * @param {Model} model
    */
-  _addReference(model) {
+  _addReference(model: Model<T>) {
     this._byId[model.cid] = model;
 
     let id = model.attributes[this.Model.idAttribute];
 
-    if (id || typeof id === 'number') {
+    if (id || typeof id === "number") {
       this._byId[id] = model;
     }
 
@@ -550,7 +581,7 @@ export default class Collection {
    *
    * @param {Model} model
    */
-  _removeReference(model) {
+  _removeReference(model: Model<T>) {
     delete this._byId[model.cid];
 
     let id = model.attributes[this.Model.idAttribute];
@@ -572,13 +603,10 @@ export default class Collection {
    * @param {string} prevId - the old id to remove
    * @param {Model} model - Model instance for new reference
    */
-  _updateModelReference(id, prevId, model) {
+  _updateModelReference(id: string | number, prevId: string | number, model: Model<T, O>) {
     if (id) {
       delete this._byId[prevId];
       this._byId[id] = model;
     }
   }
 }
-
-// mix in events to the Collection
-Object.assign(Collection.prototype, Events);
