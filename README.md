@@ -139,6 +139,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [prefetches](#prefetches)
         1. [data](#data)
         1. [lazy](#lazy)
+        1. [minDuration](#minduration) 
         1. [dependsOn](#dependson)
         1. [provides](#provides)
     1. [Data mutations](#data-mutations)
@@ -626,6 +627,10 @@ function TodoSearchItem(props) {
 ```
 
 If the todo model has been fetched already, we'll read straight from that. And if it gets updated, this component, via resourcerer, is listening for updates and will re-render to keep our entire UI in sync. Otherwise, we'll just fall back to our read-only search results. WIN!
+
+### minDuration
+
+Sometimes requests can be _too_ fast for certain UIs. In these cases, spinners and other loading states can appear more like a jarring flicker than a helpful status indicator. For these, you can pass a `minDuration` equal to the minimum number of milliseconds that a request should take. This is great for [save and destroy](#data-mutations) requests. It will work for fetch requests via `useResources`, as well, but beware: if multiple components use the same resource and there are different (or missing) values for `minDuration`, this will cause a race condition.
 
 ### dependsOn
 

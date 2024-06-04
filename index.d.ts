@@ -13,6 +13,7 @@ declare module 'resourcerer' {
     method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     params?: Record<string, any>;
     url?: string;
+    minDuration?: number;
     // they are free to add any other options they like
     [key: string]: any;
   };

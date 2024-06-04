@@ -227,6 +227,18 @@ describe('sync', () => {
     }
   });
 
+  it('waits minDuration to resolve if one is passed', async() => {
+    var resolved;
+
+    library.fetch({minDuration: 150}).then(() => resolved = true);
+    await new Promise((res) => window.setTimeout(res, 50));
+    expect(resolved).not.toBeDefined();
+    await new Promise((res) => window.setTimeout(res, 50));
+    expect(resolved).not.toBeDefined();
+    await new Promise((res) => window.setTimeout(res, 50));
+    expect(resolved).toBe(true);
+  });
+
   describe('headers', () => {
     it('can override contentType in options', async() => {
       setRequestPrefilter((options) => ({
