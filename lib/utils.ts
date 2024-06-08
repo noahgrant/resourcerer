@@ -68,7 +68,7 @@ export function camelize(word = "") {
  * @param {function} fn - method to invoke only once
  * @return {function} function, that, after getting invoked once, gets set to null
  */
-export function once(fn: () => void) {
+export function once(fn: (...args: any[]) => void) {
   return (...args: any[]) => {
     if (fn) {
       fn.call(null, ...args);
@@ -87,9 +87,7 @@ export function once(fn: () => void) {
 export function pick<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
   return keys.reduce(
     (memo, key) => {
-      if (key in obj) {
-        memo[key] = obj[key];
-      }
+      memo[key] = obj[key];
 
       return memo;
     },
