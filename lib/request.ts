@@ -1,6 +1,16 @@
 import Model from "./model";
 import Collection from "./collection";
 import ModelCache from "./model-cache";
+import { SyncOptions } from "./sync";
+
+interface RequestOptions extends Pick<SyncOptions, "params"> {
+  data?: any;
+  component?: NonNullable<unknown>;
+  options?: Record<string, any>;
+  fetch?: boolean;
+  force?: boolean;
+  lazy?: boolean;
+}
 
 const loadingCache: Record<
   string,
@@ -43,25 +53,28 @@ export const existsInCache = (key: string) => !!ModelCache.get(key);
  *   * params {object} - query params to pass into the fetch method
  *   * fetch {boolean} - whether fetch the model after creation
  *   * force {boolean} - force the fetch to be made if the model is already cached
- *   * method {string} - request type (GET|POST|PUT|DELETE)
  *   * options {object} - options to pass to the Model constructor
- *   * prefetch {boolean} - whether the request should be treated as a prefetched resource
  *
  * @return {promise} a promise that will resolve with the new Model/Collection instance
  */
-export default (key: string, Model: Model | Collection, options = {}) => {
+export default (
+  key: string,
+  Model:
+    | (new (data: Record<string, any>, options: RequestOptions["options"]) => Model)
+    | (new (data: Record<string, any>[], options: RequestOptions["options"]) => Collection),
+  options: RequestOptions = {} as RequestOptions
+): Promise<[Model | Collection] | [Model | Collection, number]> => {
   let model = ModelCache.get(key);
   let addToLoadingCache;
   let _promise: Promise<[Model | Collection] | [Model | Collection, number]>;
 
   options = {
-    data: Model && Model.prototype instanceof Collection ? [] : {},
+    data: "prototype" in Model && Model.prototype instanceof Collection ? [] : {},
     params: {},
     options: {},
     fetch: true,
     force: false,
     lazy: false,
-    method: "GET",
     ...options,
   };
 

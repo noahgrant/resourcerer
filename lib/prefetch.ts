@@ -1,6 +1,6 @@
 import { ModelMap, ResourceKeys } from "./config";
 import { noOp, once } from "./utils";
-import type { ExecutorFunction } from "./types";
+import type { ExecutorFunction, Resource } from "./types";
 
 import { getCacheKey } from "./resourcerer.js";
 import request from "./request.js";
@@ -21,7 +21,7 @@ const PREFETCH_TIMEOUT = 50;
  */
 export default (getResources: ExecutorFunction, expectedProps: Record<string, any> = {}) => {
   let fetched: boolean;
-  const resources = Object.entries(getResources(ResourceKeys, expectedProps) || {});
+  const resources = Object.entries(getResources(ResourceKeys, expectedProps) || {}) as Resource[];
 
   return (evt: MouseEvent) => {
     const { target } = evt;
@@ -32,12 +32,10 @@ export default (getResources: ExecutorFunction, expectedProps: Record<string, an
       // to click on the link
       prefetchTimeout = window.setTimeout(() => {
         resources.forEach(([name, config]) => {
-          request(getCacheKey({ modelKey: name, ...config }), ModelMap[name], {
-            ...config,
-            prefetch: true,
+          request(getCacheKey({ modelKey: name, ...config }), ModelMap[name], config)
             // Prefetch is only opportunistic so if we error now,
             // we'll retry and handle the error in withResources
-          }).catch(noOp);
+            .catch(noOp);
         });
 
         fetched = true;

@@ -40,12 +40,14 @@ export default class Model<
   T extends Record<string, any> = { [key: string]: any },
   O extends Record<string, any> & SetOptions & ConstructorOptions = { [key: string]: any },
 > extends Events {
+  ["constructor"]: typeof Model;
+
   cid: string;
   id: string | number;
   attributes: T;
   readonly urlOptions: Omit<O, keyof SetOptions> = {} as O;
   collection?: Collection;
-  ["constructor"]: typeof Model;
+  lazy?: boolean;
 
   /**
    * @param {object} attributes - initial server data representation to be kept on the model

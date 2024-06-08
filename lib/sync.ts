@@ -14,6 +14,7 @@ export type SyncOptions = {
   params?: Record<string, any>;
   url?: string;
   minDuration?: number;
+  error?: (response: Response) => any;
   // they are free to add any other options they like
   [key: string]: any;
 };
@@ -40,7 +41,7 @@ export default function (model: Model | Collection, options: SyncOptions = {}) {
     : {}),
     // default catch block. most large applications should override this in the config settings to
     // provide support for things like 401s or 429s.
-    error: (response: Response) => Promise.reject(response),
+    error: (response: Response) => response,
     ...options,
   });
 }
@@ -67,21 +68,25 @@ export function ajax(options: SyncOptions): Promise<SyncResolvedValue> {
   const hasBodyContent = !/^(?:GET|HEAD)$/.test(options.method) && hasParams;
   const startTime = Date.now();
 
-  const onRequestComplete = (json: any, response: Response) => {
+  const onRequestComplete = (json: any, response: Response): Promise<SyncResolvedValue> => {
     const requestDuration = Date.now() - startTime;
     const routeRequest = (
-      resolve = Promise.resolve.bind(Promise),
-      reject = Promise.reject.bind(Promise)
-    ) => (response.ok ? resolve([json, response]) : reject(Object.assign(response, { json })));
+      resolve: (value: SyncResolvedValue) => void,
+      reject: (response?: any) => void
+    ) =>
+      response.ok ?
+        resolve([json, response])
+      : reject(options.error(Object.assign(response, { json })));
 
-    return !options.minDuration || requestDuration >= options.minDuration ?
-        routeRequest()
-      : new Promise((resolve, reject) =>
-          window.setTimeout(
-            () => routeRequest(resolve, reject),
-            options.minDuration - requestDuration
-          )
-        );
+    return new Promise((resolve, reject) =>
+      !options.minDuration || requestDuration >= options.minDuration ?
+        // resolve immediately if no min duration or duration exceeds min, otherwise wait
+        routeRequest(resolve, reject)
+      : window.setTimeout(
+          () => routeRequest(resolve, reject),
+          options.minDuration - requestDuration
+        )
+    );
   };
 
   if (options.method === "GET" && hasParams) {
@@ -118,8 +123,7 @@ export function ajax(options: SyncOptions): Promise<SyncResolvedValue> {
         .json()
         .catch(() => ({}))
         .then((json) => onRequestComplete(json, res))
-    )
-    .catch(options.error);
+    );
 }
 
 /**

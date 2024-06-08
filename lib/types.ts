@@ -13,7 +13,7 @@ type Camelize<T extends string> =
   : T extends `${infer A}${Uppercase<infer B>}` ? Lowercase<T>
   : T;
 
-type ResourceKeys = {
+export type ResourceKeysType = {
   [key in Exclude<keyof ModelMap, "add">]: key extends string ? Camelize<Uncapitalize<key>> : key;
 };
 
@@ -29,7 +29,7 @@ export type ResourceConfigObj = {
   dependsOn?: string[];
   force?: boolean;
   lazy?: boolean;
-  modelKey?: ResourceKeys;
+  modelKey?: keyof ResourceKeysType;
   noncritical?: boolean;
   options?: { [key: string]: any };
   params?: { [key: string]: any };

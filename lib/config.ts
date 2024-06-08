@@ -1,12 +1,13 @@
 import { camelize, noOp } from "./utils.js";
 import Collection from "./collection";
 import Model from "./model";
-import React from "react";
+import React, { type ReactElement } from "react";
 import { setRequestPrefilter } from "./sync.js";
+import { ResourceKeysType } from "./types.js";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;
-  errorBoundaryChild: React.Element;
+  errorBoundaryChild: ReactElement;
   queryParamsPropName: string;
   stringify: (
     params: string | URLSearchParams | string[][] | Record<string, string>,
@@ -18,14 +19,14 @@ export interface ResourcererConfig {
   set: (config: Record<keyof ResourcererConfig, any>) => void;
 }
 
-export interface ResourceKeys {
-  add: (keys: Record<keyof ResourceKeys, string>) => void;
+export interface ResourceKeysObj {
+  add: (keys: Record<keyof ResourceKeysType, string>) => void;
   [key: string]: string;
 }
 
 export interface ModelMap {
-  add: (models: Record<string, Model | Collection>) => void;
-  [key: keyof Omit<ResourceKeys, "add">]: Model | Collection;
+  add: (models: Record<string, (new () => Model) | (new () => Collection)>) => void;
+  [key: keyof Omit<ResourceKeysType, "add">]: (new () => Model) | (new () => Collection);
 }
 
 /**
@@ -41,7 +42,7 @@ export interface ModelMap {
  *   as the second argument to the withResources function and are used to
  *   declaritively request a model for a component.
  */
-export const ResourceKeys: ResourceKeys = {
+export const ResourceKeys: ResourceKeysObj = {
   /**
    * @param {{string: string}} keys - resource keys to assign to the
    *   ResourceKeys configuration object
@@ -94,7 +95,7 @@ export const ModelMap: ModelMap = {
  *   have been provided by the response of a parent resource. For use with the
  *   `providesModels` static property on a Model.
  */
-export const UnfetchedResources = new Set<keyof ResourceKeys>();
+export const UnfetchedResources = new Set<keyof ResourceKeysType>();
 
 /**
  * ResourcesConfig {object}: A general config object for a limited amount of

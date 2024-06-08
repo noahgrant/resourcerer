@@ -35,6 +35,8 @@ export default class Collection<
 > extends Events {
   ["constructor"]: typeof Collection;
 
+  lazy?: boolean;
+
   Model: Model<T, O>;
 
   comparator?: comparator;
@@ -398,7 +400,7 @@ export default class Collection<
       // sync trigger
       this.triggerUpdate();
 
-      return [this, response];
+      return [this, response] as const;
     });
   }
 
@@ -470,7 +472,7 @@ export default class Collection<
     if (this.constructor.modelIdAttribute) {
       let attr = this.constructor.modelIdAttribute;
 
-      return class extends Model {
+      return class extends Model<T, O> {
         static idAttribute = attr;
       };
     }
