@@ -19,14 +19,14 @@ export interface ResourcererConfig {
   set: (config: Record<keyof ResourcererConfig, any>) => void;
 }
 
-export interface ResourceKeysObj {
-  add: (keys: Record<keyof ResourceKeysType, string>) => void;
+interface ResourceKeysConfig {
+  add: (keys: Record<ResourceKeysType, string>) => void;
   [key: string]: string;
 }
 
 export interface ModelMap {
   add: (models: Record<string, (new () => Model) | (new () => Collection)>) => void;
-  [key: keyof Omit<ResourceKeysType, "add">]: (new () => Model) | (new () => Collection);
+  [key: string]: (new () => Model) | (new () => Collection);
 }
 
 /**
@@ -42,7 +42,7 @@ export interface ModelMap {
  *   as the second argument to the withResources function and are used to
  *   declaritively request a model for a component.
  */
-export const ResourceKeys: ResourceKeysObj = {
+export const ResourceKeys: ResourceKeysConfig = {
   /**
    * @param {{string: string}} keys - resource keys to assign to the
    *   ResourceKeys configuration object
@@ -95,7 +95,7 @@ export const ModelMap: ModelMap = {
  *   have been provided by the response of a parent resource. For use with the
  *   `providesModels` static property on a Model.
  */
-export const UnfetchedResources = new Set<keyof ResourceKeysType>();
+export const UnfetchedResources = new Set<ResourceKeysType>();
 
 /**
  * ResourcesConfig {object}: A general config object for a limited amount of

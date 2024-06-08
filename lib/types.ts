@@ -13,9 +13,9 @@ type Camelize<T extends string> =
   : T extends `${infer A}${Uppercase<infer B>}` ? Lowercase<T>
   : T;
 
-export type ResourceKeysType = {
-  [key in Exclude<keyof ModelMap, "add">]: key extends string ? Camelize<Uncapitalize<key>> : key;
-};
+export type ResourceKeysType = Camelize<
+  Uncapitalize<Exclude<Extract<keyof ModelMap, string>, "add">>
+>;
 
 type InternalResourceConfigObj = {
   prefetch?: boolean;
