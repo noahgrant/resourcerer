@@ -34,11 +34,12 @@ let prefilter: ResourcererConfig["prefilter"] = (x) => x;
 export default function (model: Model | Collection, options: SyncOptions = {}) {
   return ajax({
     contentType: MIME_TYPE_JSON,
+    params:
+      options.params || ["POST", "PATCH", "PUT"].includes(options.method || "") ?
+        options.attrs || model.toJSON()
+      : {},
     // url can be passed via the model (as a property or function) or via options.url directly
-    ...(!options.url ? { url: result(model, "url", model.urlOptions) || urlError() } : {}),
-    ...(!options.params && ["POST", "PATCH", "PUT"].includes(options.method) ?
-      { params: options.attrs || model.toJSON() }
-    : {}),
+    url: options.url || result(model, "url", model.urlOptions) || urlError(),
     // default catch block. most large applications should override this in the config settings to
     // provide support for things like 401s or 429s.
     error: (response: Response) => response,
@@ -63,9 +64,11 @@ export default function (model: Model | Collection, options: SyncOptions = {}) {
  * @return {promise} fetch request. resolves with an array of the model and its request status or
  *   rejects with the response
  */
-export function ajax(options: SyncOptions): Promise<SyncResolvedValue> {
+export function ajax(
+  options: SyncOptions & Required<Pick<SyncOptions, "error" | "url" | "params">>
+): Promise<SyncResolvedValue> {
   const hasParams = !!Object.keys(options.params || {}).length;
-  const hasBodyContent = !/^(?:GET|HEAD)$/.test(options.method) && hasParams;
+  const hasBodyContent = !/^(?:GET|HEAD)$/.test(options.method || "") && hasParams;
   const startTime = Date.now();
 
   const onRequestComplete = (json: any, response: Response): Promise<SyncResolvedValue> => {

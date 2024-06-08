@@ -3,13 +3,14 @@ import { isDeepEqual, result, uniqueId, urlError } from "./utils";
 import Events from "./events";
 import sync, { type SyncOptions } from "./sync";
 import Collection from "./collection";
+import { ResourceConfigObj } from "./types";
 
-type ConstructorOptions = {
+export type ConstructorOptions = {
   collection?: Collection;
   parse?: boolean;
 };
 
-type SetOptions = {
+export type SetOptions = {
   silent?: boolean;
   unset?: boolean;
 };
@@ -48,6 +49,7 @@ export default class Model<
   readonly urlOptions: Omit<O, keyof SetOptions> = {} as O;
   collection?: Collection;
   lazy?: boolean;
+  refetching?: boolean;
 
   /**
    * @param {object} attributes - initial server data representation to be kept on the model
@@ -58,7 +60,7 @@ export default class Model<
    *   * collection {Collection} - links this model to a collection, if applicable
    *   * ...any other options that .set() takes
    */
-  constructor(attributes?: T, options?: O) {
+  constructor(attributes?: T, options: O = {} as O) {
     super();
 
     this.cid = uniqueId("c");
@@ -115,7 +117,7 @@ export default class Model<
    * in the resourcerer configuration file. This can be a boolean or a function that returns a
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
-  static measure = false;
+  static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
 
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire
@@ -185,12 +187,14 @@ export default class Model<
     let hasSomethingChanged = false;
 
     // For each `set` attribute, update or delete the current value.
-    for (let attr of Object.keys(attrs) as (keyof T)[]) {
-      if (!hasSomethingChanged && !isDeepEqual(this.attributes[attr], attrs[attr])) {
+    for (let attr of Object.keys(attrs)) {
+      if (!hasSomethingChanged && !isDeepEqual(this.attributes[attr], attrs[attr] as T[keyof T])) {
         hasSomethingChanged = true;
       }
 
-      options.unset ? delete this.attributes[attr] : (this.attributes[attr] = attrs[attr]);
+      options.unset ?
+        delete this.attributes[attr]
+      : (this.attributes[attr as keyof T] = attrs[attr] as T[keyof T]);
     }
 
     // Update the `id`.
@@ -230,8 +234,8 @@ export default class Model<
   clear(options: SetOptions) {
     const attrs: T = {} as T;
 
-    for (let key of Object.keys(this.attributes) as (keyof T)[]) {
-      attrs[key] = undefined;
+    for (let key of Object.keys(this.attributes)) {
+      attrs[key as keyof T] = undefined as T[keyof T];
     }
 
     return this.set(attrs, { unset: true, ...options });

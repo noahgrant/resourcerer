@@ -1,8 +1,6 @@
 import { hasErrored, hasLoaded, isLoading } from "./utils";
 import { ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources } from "./config";
-/* eslint-disable no-unused-vars */
-import React, { Component, useEffect, useReducer, useRef, useState } from "react";
-/* eslint-enable no-unused-vars */
+import React, { type Component, useEffect, useReducer, useRef, useState } from "react";
 
 import Collection from "./collection";
 import ErrorBoundary from "./error-boundary";
@@ -17,6 +15,7 @@ import type {
   Resource,
   Props,
   ResourceConfigObj,
+  ResourceKeysType,
 } from "./types";
 
 const SPREAD_PROVIDES_CHAR = "_";
@@ -110,7 +109,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // to keep track of which models have been updated in state, and then we'll reset this when
   // useEffect is finally called.
   const cachedModelsSinceLastEffect = useRef({});
-  const refetchedModelsSinceLastEffect = useRef({});
+  const refetchedModelsSinceLastEffect = useRef<{ [key: string]: boolean }>({});
   const forceUpdate = useForceUpdate();
 
   // note that this only tells when cache keys have changed. if a resource has already been
@@ -331,7 +330,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
         .map(([, config]) => getModelFromCache(config))
         .filter(Boolean)
         .concat(bypassedModels)
-        .forEach((model) => model.offUpdate(componentRef.current));
+        .forEach((model) => model?.offUpdate(componentRef.current));
     };
   }, []);
 
@@ -344,13 +343,13 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     // over passed props (like defaultProps), but state should take
     // precedence over all
     ...props,
-    ...(props[ResourcesConfig.queryParamsPropName] || {}),
+    ...props[ResourcesConfig.queryParamsPropName],
     ...resourceState,
 
-    refetch: (fn) => {
+    refetch: (fn: (keys: typeof ResourceKeys) => string[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
         fn(ResourceKeys).forEach((name) => {
-          var model = getModelFromCache(findConfig([name, {}], getResources, props));
+          const model = getModelFromCache(findConfig([name, {}], getResources, props));
 
           /**
            * Set a refetching flag on the model and re-render. This will cause all components
@@ -416,7 +415,7 @@ export const withResources = (getResources: ExecutorFunction) => (Component: Com
  * @return {[string, object][]} flattened [name, config] list of resources
  *   to be consumed by the useResources with prefetch properties assigned.
  */
-function generateResources(getResources: ExecutorFunction, props: Record<string, any>) {
+function generateResources(getResources: ExecutorFunction, props: Record<string, any>): Resource[] {
   return Object.entries(getResources(ResourceKeys, props) || {}).reduce(
     (memo, [name, config = {}]) =>
       memo.concat(
@@ -475,7 +474,9 @@ function getResourceStatus(name: string) {
 function getResourcePropertyName(baseName: string, modelKey: string) {
   const Constructor = ModelMap[modelKey];
 
-  return Constructor.prototype instanceof Collection ? `${baseName}Collection` : `${baseName}Model`;
+  return Constructor?.prototype instanceof Collection ?
+      `${baseName}Collection`
+    : `${baseName}Model`;
 }
 
 /**
@@ -551,7 +552,11 @@ export function getCacheKey({ modelKey, params = {}, options = {}, data = {} }: 
  * @return {string} the resource config for the resource of name `name` and matching
  *   prefetch, if applicable
  */
-function findConfig([name, { prefetch }]: Resource, getResources: ExecutorFunction, props: Props) {
+function findConfig(
+  [name, { prefetch }]: [string, { prefetch?: boolean }],
+  getResources: ExecutorFunction,
+  props: Props
+) {
   const [, config = {}] =
     generateResources(getResources, props).find(
       ([_name, _config = {}]) =>
@@ -778,11 +783,15 @@ function trackRequestTime(
  * @param {array[]} resources - list of resource config entries for fetching
  * @return {string[]} a list of critical loading states for the component
  */
-function getCriticalLoadingStates(loadingStates: LoadingStateObj, resources: Resource[]) {
+function getCriticalLoadingStates(
+  loadingStates: LoadingStateObj,
+  resources: Resource[]
+): LoadingStates[] {
   return resources
     .filter(withoutNoncritical)
     .filter(withoutPrefetch)
-    .map(([name]) => loadingStates[getResourceState(name)]);
+    .map(([name]) => loadingStates[getResourceState(name)])
+    .filter((x) => x) as LoadingStates[];
 }
 
 /**
@@ -914,14 +923,14 @@ function loaderReducer(
  * @param {object} config - resource config object for a particular request instance
  * @return {boolean} whether a particular request time should be measured
  */
-function shouldMeasureRequest(modelKey, config) {
+function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigObj) {
   if (!window.performance || !window.performance.mark) {
     return false;
   }
 
-  return typeof ModelMap[modelKey].measure === "function" ?
-      ModelMap[modelKey].measure(config)
-    : !!ModelMap[modelKey].measure;
+  return typeof ModelMap[modelKey]?.measure === "function" ?
+      ModelMap[modelKey]?.measure(config)
+    : !!ModelMap[modelKey]?.measure;
 }
 
 /**

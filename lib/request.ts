@@ -64,7 +64,7 @@ export default (
     | (new (data: Record<string, any>[], options: RequestOptions["options"]) => Collection),
   options: RequestOptions = {} as RequestOptions
 ): Promise<[Model | Collection] | [Model | Collection, number]> => {
-  let model = ModelCache.get(key);
+  let cachedModel = ModelCache.get(key);
   let addToLoadingCache;
   let _promise: Promise<[Model | Collection] | [Model | Collection, number]>;
 
@@ -80,8 +80,8 @@ export default (
 
   if (!loadingCache[key]) {
     _promise = new Promise((resolve, reject) => {
-      if (!model || model.lazy || options.force) {
-        model = model || new Model(options.data, options.options);
+      if (!cachedModel || cachedModel.lazy || options.force) {
+        const model = cachedModel || new Model(options.data, options.options);
 
         if (options.fetch && !options.lazy) {
           addToLoadingCache = true;
@@ -121,7 +121,7 @@ export default (
 
         // the model has been fetched and is stored in the cache, so just
         // immediately resolve with that as our value
-        resolve([model]);
+        resolve([cachedModel]);
       }
     });
 
@@ -139,5 +139,5 @@ export default (
 
   // return the existing promise if the promise hasn't yet been fulfilled.
   // this way we can attach more .then() handlers
-  return loadingCache[key];
+  return loadingCache[key] as Promise<[Model | Collection] | [Model | Collection, number]>;
 };

@@ -1,4 +1,4 @@
-import { camelize, noOp } from "./utils.js";
+import { noOp } from "./utils.js";
 import Collection from "./collection";
 import Model from "./model";
 import React, { type ReactElement } from "react";
@@ -20,14 +20,22 @@ export interface ResourcererConfig {
 }
 
 interface ResourceKeysConfig {
-  add: (keys: Record<ResourceKeysType, string>) => void;
   [key: string]: string;
 }
 
 export interface ModelMap {
-  add: (models: Record<string, (new () => Model) | (new () => Collection)>) => void;
-  [key: string]: (new () => Model) | (new () => Collection);
+  [key: string]:
+    | (new (attrs: Record<string, any>, options: Record<string, any>) => Model)
+    | (new (models: Record<string, any>[], options: Record<string, any>) => Collection);
 }
+
+export const register = (models: ModelMap) => {
+  Object.assign(
+    ResourceKeys,
+    Object.entries(models).reduce((memo, [modelKey]) => ({ [modelKey]: modelKey }), {})
+  );
+  Object.assign(ModelMap, models);
+};
 
 /**
  * This module contains all the required setup for implementing withResources
@@ -42,15 +50,7 @@ export interface ModelMap {
  *   as the second argument to the withResources function and are used to
  *   declaritively request a model for a component.
  */
-export const ResourceKeys: ResourceKeysConfig = {
-  /**
-   * @param {{string: string}} keys - resource keys to assign to the
-   *   ResourceKeys configuration object
-   */
-  add(keys) {
-    return Object.assign(this, keys);
-  },
-};
+export const ResourceKeys: ResourceKeysConfig = {};
 
 /**
  * ModelMap {{string: Model|Collection}}: an object that
@@ -59,35 +59,7 @@ export const ResourceKeys: ResourceKeysConfig = {
  *   and ModelMap for a resource are required in to use a resource with
  *   withResources.
  */
-export const ModelMap: ModelMap = {
-  /**
-   * @param {{string: Model|Collection}} models - an object of
-   *   ResourceKeys as keys and Models as values
-   */
-  add(models) {
-    Object.keys(models).forEach((key) => {
-      // for backwards-compatibility, we auto-add the key only if the key
-      // doesn't exist as a property on the ResourceKeys object (as a string in
-      // KEY_FORM) and it also doesn't exist as a value on the ResourceKeys
-      // object (in camelCase form)
-      if (!ResourceKeys[key] && !Object.values(ResourceKeys).includes(key)) {
-        let camelKey = camelize(key);
-
-        // auto-add to resource keys with a camelized version of the key for its
-        // prop prefix string, then add the model to the same key, removing its
-        // passed key
-        ResourceKeys.add({ [key]: camelKey });
-
-        if (key !== camelKey) {
-          models[camelKey] = models[key];
-          delete models[key];
-        }
-      }
-    });
-
-    return Object.assign(this, models);
-  },
-};
+export const ModelMap: ModelMap = {};
 
 /**
  * UnfetchedResources {ResourceKeys[]}: a Set of ResourceKeys that, when

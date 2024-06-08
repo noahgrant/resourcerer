@@ -13,11 +13,10 @@ type Camelize<T extends string> =
   : T extends `${infer A}${Uppercase<infer B>}` ? Lowercase<T>
   : T;
 
-export type ResourceKeysType = Camelize<
-  Uncapitalize<Exclude<Extract<keyof ModelMap, string>, "add">>
->;
+export type ResourceKeysType = Camelize<Extract<keyof ModelMap, string>>;
 
 type InternalResourceConfigObj = {
+  modelKey: ResourceKeysType;
   prefetch?: boolean;
   refetch?: boolean;
 };
@@ -29,7 +28,7 @@ export type ResourceConfigObj = {
   dependsOn?: string[];
   force?: boolean;
   lazy?: boolean;
-  modelKey?: keyof ResourceKeysType;
+  modelKey?: ResourceKeysType;
   noncritical?: boolean;
   options?: { [key: string]: any };
   params?: { [key: string]: any };
@@ -37,12 +36,10 @@ export type ResourceConfigObj = {
   provides?: { [key: string]: (model: Model | Collection) => any };
 };
 
-export type ResourceValues = Extract<ResourceKeys[keyof ResourceKeys], string>;
-
 export type ExecutorFunction = (
-  ResourceKeys_: ResourceKeys,
+  ResourceKeys: { [key: string]: ResourceKeysType },
   props: { [key: string]: any }
   // return type either has a resource key as the object key or is just a string with a modelKey property
 ) =>
-  | Partial<Record<ResourceValues, ResourceConfigObj>>
-  | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceValues }>>;
+  | Partial<Record<ResourceKeysType, ResourceConfigObj>>
+  | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeysType }>>;

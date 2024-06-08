@@ -40,7 +40,7 @@ export default {
    *
    * @param {string} cacheKey - The cache key of the model to be removed.
    * @param {Model | Collection} model - model to be cached
-   * @param {React.Component} component - component to register to model in the component manifest
+   * @param {{}} object instance assigned to the component
    */
   put(cacheKey: string, model: Model | Collection, component?: Component) {
     modelCache.set(cacheKey, model);
@@ -57,12 +57,14 @@ export default {
    * currently-scheduled cache removal timeout.
    *
    * @param {string} cacheKey
-   * @param {React.Component} component
+   * @param {{}} object instance assigned to the component
    */
-  register(cacheKey: string, component: Component) {
-    window.clearTimeout(timeouts[cacheKey]);
-    componentManifest.set(cacheKey, componentManifest.get(cacheKey) || new Set());
-    componentManifest.get(cacheKey).add(component);
+  register(cacheKey: string, component?: Component) {
+    if (component) {
+      window.clearTimeout(timeouts[cacheKey]);
+      componentManifest.set(cacheKey, componentManifest.get(cacheKey) || new Set());
+      componentManifest.get(cacheKey)?.add(component);
+    }
   },
 
   /**

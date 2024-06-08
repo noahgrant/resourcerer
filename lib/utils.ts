@@ -69,10 +69,12 @@ export function camelize(word = "") {
  * @return {function} function, that, after getting invoked once, gets set to null
  */
 export function once(fn: (...args: any[]) => void) {
+  let invoked = false;
+
   return (...args: any[]) => {
-    if (fn) {
+    if (!invoked) {
       fn.call(null, ...args);
-      fn = null;
+      invoked = true;
     }
   };
 }
@@ -102,7 +104,10 @@ export function pick<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
  * @param {string[]} keys - list of keys to omit from obj
  * @return {object} new object with only those properties not listed in keys
  */
-export function omit<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
+export function omit<T extends Record<string, any>, K extends keyof T>(
+  obj: T = {} as T,
+  ...keys: K[]
+) {
   return pick(obj, ...(Object.keys(obj).filter((key) => !keys.includes(key as K)) as K[]));
 }
 
