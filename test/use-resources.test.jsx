@@ -477,7 +477,7 @@ describe('useResources', () => {
     });
 
   it('passes a false \'fetch\' option if the model key is of an unfetched model', async() => {
-    requestSpy.mockResolvedValue([]);
+    requestSpy.mockResolvedValue([{}]);
     dataChild = findDataChild(renderUseResources({unfetch: true}));
 
     await waitsFor(() => requestSpy.mock.calls.length);
@@ -1205,16 +1205,64 @@ describe('useResources', () => {
 
     expect(requestSpy.mock.calls.length).toEqual(3);
     dataChild.props.refetch(({DECISIONS, USER}) => [DECISIONS, USER]);
+    dataChild.props.refetch(({DECISIONS, USER}) => [DECISIONS, USER]);
 
     await waitsFor(() => !dataChild.props.hasLoaded);
 
     expect(dataChild.props.decisionsLoadingState).toEqual(LoadingStates.LOADING);
+    expect(dataChild.props.decisionsLoadingState).toEqual(
+      LoadingStates.LOADING
+    );
     expect(dataChild.props.userLoadingState).toBe(LoadingStates.LOADING);
     expect(dataChild.props.analystsLoadingState).toBe(LoadingStates.LOADED);
+    // we can call render again a few times but the request won't get made even
+    // though models still have the refetching flag
+    renderUseResources();
+    renderUseResources();
 
     expect(requestSpy.mock.calls.length).toEqual(5);
 
     await waitsFor(() => dataChild.props.hasLoaded);
+  });
+
+  it('refetching in one component sets loading states in another', async() => {
+    class SecondTestChild extends React.Component {
+      render() {
+        return <div />;
+      }
+    }
+
+    class RefetchWrapper extends React.Component {
+      render() {
+        return (
+          <>
+            <TestComponent />
+            <TestComponent TestChildren={SecondTestChild} />
+          </>
+        );
+      }
+    }
+
+    const refetchWrapper = ReactDOM.render(<RefetchWrapper />, renderNode);
+
+    dataChild = findDataChild(refetchWrapper);
+    const secondChild = findDataChild(refetchWrapper, SecondTestChild);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    expect(secondChild.props.hasLoaded).toBe(true);
+    dataChild.props.refetch(({DECISIONS}) => [DECISIONS]);
+
+    await waitsFor(() => dataChild.props.isLoading);
+    expect(secondChild.props.isLoading).toBe(true);
+
+    await Promise.all([
+      waitsFor(() => dataChild.props.hasLoaded),
+      waitsFor(() => secondChild.props.hasLoaded)
+    ]);
+
+    // 3 for each component, and then one refetch for each component
+    expect(requestSpy.mock.calls.length).toEqual(8);
   });
 
   it('fetches on mount (but not on updated) even when cached with \'force\' option', async() => {
