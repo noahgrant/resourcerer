@@ -24,9 +24,7 @@ interface ResourceKeysConfig {
 }
 
 export interface ModelMap {
-  [key: string]:
-    | (new (attrs: Record<string, any>, options: Record<string, any>) => Model)
-    | (new (models: Record<string, any>[], options: Record<string, any>) => Collection);
+  [key: string]: typeof Model | typeof Collection;
 }
 
 export const register = (models: ModelMap) => {

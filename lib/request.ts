@@ -60,8 +60,8 @@ export const existsInCache = (key: string) => !!ModelCache.get(key);
 export default (
   key: string,
   Model:
-    | (new (data: Record<string, any>, options: RequestOptions["options"]) => Model)
-    | (new (data: Record<string, any>[], options: RequestOptions["options"]) => Collection),
+    | { new (data: Record<string, any>, options: RequestOptions["options"]): Model }
+    | { new (data: Record<string, any>[], options: RequestOptions["options"]): Collection },
   options: RequestOptions = {} as RequestOptions
 ): Promise<[Model | Collection] | [Model | Collection, number]> => {
   let cachedModel = ModelCache.get(key);

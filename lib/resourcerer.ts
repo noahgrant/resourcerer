@@ -20,6 +20,9 @@ import type {
 
 const SPREAD_PROVIDES_CHAR = "_";
 
+type ModelType = typeof Model | typeof Collection;
+type ModelInstanceType = Model | Collection;
+
 /**
  * The useResources hook handles several different data-related things for a component
  * automatically:
@@ -101,14 +104,14 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // an edge case may be seen with resources that become pending or go from pending across
   // renders. using this reference will guarantee that we always remove listeners from the
   // correct models before attaching new listeners
-  const listenedModelsRef = useRef([]);
+  const listenedModelsRef = useRef<ModelInstanceType[]>([]);
   // when props change and we have models ready in the cache, we set model state in the render
   // process. that means we re-run this function without calling any useEffect callbacks. since
   // prevProps will not (and should not) have changed, the same models that we're to be updated
   // as state in the first render phase would also be up for update in the next one. so we have
   // to keep track of which models have been updated in state, and then we'll reset this when
   // useEffect is finally called.
-  const cachedModelsSinceLastEffect = useRef({});
+  const cachedModelsSinceLastEffect = useRef<{ [key: ResourceKeysType]: boolean }>({});
   const refetchedModelsSinceLastEffect = useRef<{ [key: string]: boolean }>({});
   const forceUpdate = useForceUpdate();
 
@@ -150,7 +153,9 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     // think it would be preferable to use state (within a separate useEffect) to determine
     // which models get listened to. but as mentioned, that would require the effect to depend
     // on cache keys, which are dynamic, and effects can't have dynamic dependencies right now
-    let listenedModels = resources.map(([, config]) => getModelFromCache(config)).filter(Boolean);
+    let listenedModels = resources
+      .map(([, config]) => getModelFromCache(config))
+      .filter(Boolean) as ModelInstanceType[];
 
     // remove previous listeners and attach new ones
     listenedModelsRef.current.forEach((model) => model.offUpdate(componentRef.current));
@@ -280,7 +285,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
 
             loaderDispatch({
               type: "loaded",
-              payload: { name, config, status, resources },
+              payload: { name, status, resources },
             });
           });
         },
@@ -293,7 +298,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
 
             loaderDispatch({
               type: "error",
-              payload: { name, config, status },
+              payload: { name, status },
             });
           });
         },
@@ -842,7 +847,7 @@ function modelAggregator(resources: Resource[]) {
 function partitionResources(
   resourcesToUpdate: Resource[],
   loadingStates: Record<string, LoadingStates>
-) {
+): [Resource[], Resource[]] {
   return resourcesToUpdate.reduce(
     (memo, [name, config]) =>
       (
@@ -870,26 +875,30 @@ function partitionResources(
  *
  * Also sets the hasInitiallyLoaded state when all critical loading states have
  * loaded for the first time.
- *
- * @param {{loadingStates: object, requestStatuses: object, hasInitiallyLoaded: boolean}} -
- *   current loader state
- * @param {{type: LoadingStates, payload: object}} - reducer action object
- * @return {{loadingStates: object, requestStatuses: object, hasInitiallyLoaded: boolean}} -
- *   next loader state
  */
-function loaderReducer(
-  {
-    loadingStates,
-    requestStatuses,
-    hasInitiallyLoaded,
-  }: { loadingStates: LoadingStateObj; requestStatuses: any; hasInitiallyLoaded: boolean },
-  { type, payload = {} }: { type: LoadingStates; payload: {} }
-) {
-  const { name, status, resources } = payload;
+type LoaderAction =
+  | { type: "error"; payload: { name: string; status: number } }
+  | {
+      type: "loaded";
+      payload: { name: string; status: number; resources: Resource[] };
+    }
+  | { type: "loading"; payload: LoadingStateObj };
+type LoaderState = {
+  loadingStates: LoadingStateObj;
+  requestStatuses: Record<`${string}Status`, number>;
+  hasInitiallyLoaded: boolean;
+};
 
+function loaderReducer(
+  { loadingStates, requestStatuses, hasInitiallyLoaded }: LoaderState,
+  { type, payload = {} }: LoaderAction
+): LoaderState {
   switch (type) {
     case "error":
     case "loaded": {
+      // @ts-ignore
+      const { name, status, resources } = payload;
+
       let nextLoadingStates = { ...loadingStates, [getResourceState(name)]: type };
 
       return {
@@ -924,13 +933,15 @@ function loaderReducer(
  * @return {boolean} whether a particular request time should be measured
  */
 function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigObj) {
-  if (!window.performance || !window.performance.mark) {
+  const Constructor = ModelMap[modelKey];
+
+  if (!Constructor || !window.performance || !window.performance.mark) {
     return false;
   }
 
-  return typeof ModelMap[modelKey]?.measure === "function" ?
-      ModelMap[modelKey]?.measure(config)
-    : !!ModelMap[modelKey]?.measure;
+  return typeof Constructor.measure === "function" ?
+      Constructor.measure(config)
+    : !!Constructor.measure;
 }
 
 /**
