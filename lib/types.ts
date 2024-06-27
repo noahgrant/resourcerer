@@ -3,7 +3,7 @@ import { type ModelMap } from "./config";
 import Collection from "./collection";
 
 export type LoadingStates = "error" | "loading" | "loaded" | "pending";
-export type Resource = [string, ResourceConfigObj & InternalResourceConfigObj];
+export type Resource = [string, InternalResourceConfigObj];
 export type Props = Record<string, any>;
 
 // this will make CONST_CASE a camelCase but also leave camelCase alone
@@ -15,13 +15,8 @@ type Camelize<T extends string> =
 
 export type ResourceKeysType = Camelize<Extract<keyof ModelMap, string>>;
 
-type InternalResourceConfigObj = {
-  modelKey: ResourceKeysType;
-  prefetch?: boolean;
-  refetch?: boolean;
-};
-
-export type LoadingStateObj = { [key: `${string}LoadingState`]: LoadingStates };
+export type LoadingStateKey = `${string}LoadingState`;
+export type LoadingStateObj = { [key: LoadingStateKey]: LoadingStates };
 
 export type ResourceConfigObj = {
   data?: { [key: string]: any };
@@ -33,7 +28,13 @@ export type ResourceConfigObj = {
   options?: { [key: string]: any };
   params?: { [key: string]: any };
   prefetches?: { [key: string]: any }[];
-  provides?: { [key: string]: (model: Model | Collection) => any };
+  provides?: { [key: string]: (model: Model | Collection, props: Record<string, any>) => any };
+};
+
+export type InternalResourceConfigObj = ResourceConfigObj & {
+  modelKey: ResourceKeysType;
+  prefetch?: boolean;
+  refetch?: boolean;
 };
 
 export type ExecutorFunction = (

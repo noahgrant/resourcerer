@@ -113,11 +113,10 @@ export function omit<T extends Record<string, any>, K extends keyof T>(
 
 /**
  * Our helper loading methods can take many types: a single loading state, an
- * array of loading states, or an object whose values are loading states. This
- * method takes the different shapes and returns an array of loading state
- * values to be processed by the rest of the helper methods.
+ * array of loading states. This method takes the different shapes and returns
+ * an array of loading state values to be processed by the rest of the helper methods.
  *
- * @param {string|string[]|object} loadingStates - specific states to transform into an array
+ * @param {string|string[]} loadingStates - specific states to transform into an array
  * @return {string[]} - list of LoadingState values
  */
 function qualifyLoadingStates(loadingStates: LoadingStates | LoadingStates[]) {

@@ -45,6 +45,7 @@ export default class Collection<
 
   lazy?: boolean;
   refetching?: boolean;
+  measure?: boolean | ((config: ResourceConfigObj) => boolean);
 
   Model: typeof Model<T, O>;
 

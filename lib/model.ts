@@ -50,6 +50,7 @@ export default class Model<
   collection?: Collection;
   lazy?: boolean;
   refetching?: boolean;
+  measure?: boolean | ((config: ResourceConfigObj) => boolean);
 
   /**
    * @param {object} attributes - initial server data representation to be kept on the model

@@ -1,6 +1,14 @@
 import { hasErrored, hasLoaded, isLoading } from "./utils";
 import { ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources } from "./config";
-import React, { type Component, useEffect, useReducer, useRef, useState } from "react";
+import React, {
+  type ComponentClass,
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 
 import Collection from "./collection";
 import ErrorBoundary from "./error-boundary";
@@ -15,13 +23,15 @@ import type {
   Resource,
   Props,
   ResourceConfigObj,
+  InternalResourceConfigObj,
   ResourceKeysType,
+  LoadingStateKey,
 } from "./types";
 
 const SPREAD_PROVIDES_CHAR = "_";
 
-type ModelType = typeof Model | typeof Collection;
 type ModelInstanceType = Model | Collection;
+type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
 
 /**
  * The useResources hook handles several different data-related things for a component
@@ -67,7 +77,7 @@ type ModelInstanceType = Model | Collection;
  *   * ...any other option that can be passed directly to the `request` function
  */
 export const useResources = (getResources: ExecutorFunction, _props: Record<string, any>) => {
-  const [resourceState, setResourceState] = useState({});
+  const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
   const resources = generateResources(getResources, props);
   const initialLoadingStates = buildResourcesLoadingState(resources.filter(withoutPrefetch), props);
@@ -87,13 +97,15 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // show an empty model as a resource is being requested instead of
   // continuing to show the previous model. on the plus side, setting them
   // as state means we won't need a loading overlay component to do this for us
-  const [models, setModels] = useState(modelAggregator(resources.filter(withoutPrefetch)));
+  const [models, setModels] = useState<ModelState>(
+    modelAggregator(resources.filter(withoutPrefetch))
+  );
   const isMountedRef = useIsMounted();
   // this is used as an identifier to this component instance to register
   // with the ModelCache. it should be constant across renders, sow keep it in a ref.
   const componentRef = useRef({});
   // this reference to previous props allows us to know when resources are changing
-  const prevPropsRef = useRef(null);
+  const prevPropsRef = useRef<Record<string, any>>({});
   // this might look confusing but is important. we need to know, before
   // setting any loaded or error states, that a returned resource belongs
   // to the most recent component props. so we use a ref to persist across the closure
@@ -133,12 +145,12 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
         return (
           !previousCacheKey ||
           previousCacheKey !== getCacheKey(config) ||
-          !hasAllDependencies(prevPropsRef.current, [, config]) ||
+          !hasAllDependencies(prevPropsRef.current, ["", config]) ||
           // we only want to refetch if the resource is currently in a loaded state. but then
           // we'll move to a loading state and short-circuit the render cycle, and it won't be
           // loaded in the next cycle. that's why we use the ref, as well
           (config.refetch &&
-            (hasLoaded(loadingStates[getResourceState(name)]) ||
+            (hasLoaded(loadingStates[getResourceState(name)] as LoadingStates) ||
               refetchedModelsSinceLastEffect.current[name])) ||
           // make sure if we were lazy and are no longer lazy (from the same component) that we
           // get included in the list to get updated (and vice versa)
@@ -168,7 +180,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   const pendingResources = resources
     .filter(not(hasAllDependencies.bind(null, props)))
     .filter(
-      ([, config]) => prevPropsRef.current && hasAllDependencies(prevPropsRef.current, [, config])
+      ([, config]) => prevPropsRef.current && hasAllDependencies(prevPropsRef.current, ["", config])
     );
   const resourcesToUpdate = getResourcesToUpdate(resources);
   const nextLoadingStates: LoadingStateObj = {
@@ -209,12 +221,16 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     // for removing the resource.
     loadedResources.forEach(([, config]) => {
       const cacheKey = getCacheKey(config);
+      const model = ModelCache.get(cacheKey);
 
       ModelCache.register(cacheKey, componentRef.current);
       // make sure we add any provided props for serial requests. when this function rerenders any
       // cached dependent models will also trigger a setModels call and an additional re-render
       // without a useEffect
-      provideProps(ModelCache.get(cacheKey), config.provides, props, setResourceState);
+
+      if (model) {
+        provideProps(model, config.provides, props, setResourceState);
+      }
     });
 
     // make sure if we bypass fetching because of cached models that we attach fresh listeners
@@ -232,7 +248,11 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // set our updated resources' loading states to LOADING. but don't set if we're already in a
   // loading state for that resource, because that's a pointless extra render. also, any resources
   // that have lost their dependencies should go back to a pending state.
-  if (Object.keys(nextLoadingStates).some((ky) => nextLoadingStates[ky] !== loadingStates[ky])) {
+  if (
+    Object.keys(nextLoadingStates).some(
+      (ky) => nextLoadingStates[ky as LoadingStateKey] !== loadingStates[ky as LoadingStateKey]
+    )
+  ) {
     loaderDispatch({ type: "loading", payload: nextLoadingStates });
   }
 
@@ -255,6 +275,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
         resourcesToUpdate.forEach(([name, config]) => {
           const prevConfig = findConfig([name, config], getResources, prevPropsRef.current),
             prevCacheKey = getCacheKey(prevConfig);
+          const prevModel = ModelCache.get(prevCacheKey);
 
           // unregister component from previous models that are getting updated
           ModelCache.unregister(componentRef.current, prevCacheKey);
@@ -262,8 +283,8 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
           // this is our re-caching: if we already have a new model in the cache that has now been
           // saved (and thus has a real cache key), move the model to the new cache key and remove
           // it from the old one. this will save an unnecessary request.
-          if (prevConfig.data && !prevConfig.data?.id && config.data?.id) {
-            ModelCache.put(getCacheKey(config), ModelCache.get(prevCacheKey));
+          if (prevModel && prevConfig.data && !prevConfig.data?.id && config.data?.id) {
+            ModelCache.put(getCacheKey(config), prevModel);
             ModelCache.remove(prevCacheKey);
           }
         });
@@ -271,12 +292,12 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
 
       fetchResources(resourcesToFetch, props, {
         component: componentRef.current,
-        isCurrentResource: ([name, config]: Resource, cacheKey: string) =>
+        isCurrentResource: ([name, config], cacheKey) =>
           isMountedRef.current &&
           !config.prefetch &&
           cacheKey === findCacheKey([name, config], getResources, currentPropsRef.current),
         setResourceState,
-        onRequestSuccess: (model: Model | Collection, status: number, [name, config]: Resource) => {
+        onRequestSuccess: (model, status, [name, config]) => {
           // to batch these state updates into one, per this comment:
           // https://stackoverflow.com/questions/48563650/
           // does-react-keep-the-order-for-state-updates/48610973#48610973
@@ -289,7 +310,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
             });
           });
         },
-        onRequestFailure: (status: number, [name, config]: Resource) => {
+        onRequestFailure: (status, [name, config]) => {
           ReactDOM.unstable_batchedUpdates(() => {
             // request failed, which means this model should not be in the cache. but we still want
             // to set our model state so that when we go back into a loading state, the empty
@@ -391,7 +412,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
  * the comment above useResources for details on the getResources executor function, or check the
  * README.
  */
-export const withResources = (getResources: ExecutorFunction) => (Component: Component) =>
+export const withResources = (getResources: ExecutorFunction) => (Component: ComponentClass) =>
   function DataCarrier(props: Record<string, any>) {
     const resources = useResources(getResources, props);
 
@@ -433,21 +454,24 @@ function generateResources(getResources: ExecutorFunction, props: Record<string,
                 ?.refetching,
               ...config,
             },
-          ],
+          ] as Resource,
         ].concat(
           // expand prefetched resources with their own options based on
           // their prefetch props, and store those in the `prefetch` property
-          (config.prefetches || []).map((prefetch) => [
-            name,
-            {
-              modelKey: config.modelKey || name,
-              ...getResources(ResourceKeys, { ...props, ...prefetch })[name],
-              prefetch,
-            },
-          ])
+          (config.prefetches || []).map(
+            (prefetch) =>
+              [
+                name,
+                {
+                  modelKey: config.modelKey || name,
+                  ...getResources(ResourceKeys, { ...props, ...prefetch })[name],
+                  prefetch: true,
+                },
+              ] as Resource
+          )
         )
       ),
-    []
+    [] as Resource[]
   );
 }
 
@@ -499,8 +523,9 @@ function getResourcePropertyName(baseName: string, modelKey: string) {
  * @return {Model|Collection} empty model or collection instance with frozen
  *   atributes or models, respectively
  */
-function getEmptyModel({ modelKey, data, options }: ResourceConfigObj) {
+function getEmptyModel({ modelKey, data, options }: InternalResourceConfigObj) {
   const Model_ = typeof ModelMap[modelKey] === "function" ? ModelMap[modelKey] : Model;
+  // @ts-ignore
   const emptyInstance = new Model_(data, options);
 
   // flag to differentiate between other model instances that happen to be empty
@@ -530,19 +555,24 @@ function getEmptyModel({ modelKey, data, options }: ResourceConfigObj) {
  * @param {object} config - resource config object (destructured)
  * @return {string} cache key
  */
-export function getCacheKey({ modelKey, params = {}, options = {}, data = {} }: ResourceConfigObj) {
-  const toKeyValString = ([key, val]) => (val ? `${key}=${val}` : ""),
+export function getCacheKey({
+  modelKey,
+  params = {},
+  options = {},
+  data = {},
+}: InternalResourceConfigObj) {
+  const toKeyValString = ([key, val]: [string, any]) => (val ? `${key}=${val}` : ""),
     dependencies =
-      ModelMap[modelKey]?.dependencies?.length ?
-        ModelMap[modelKey].dependencies
-      : ModelMap[modelKey]?.cacheFields || [],
+      (ModelMap[modelKey]?.dependencies?.length ?
+        ModelMap[modelKey]?.dependencies
+      : ModelMap[modelKey]?.cacheFields) || [],
     fields = dependencies
       .map((key) =>
         typeof key === "function" ?
           Object.entries(key(params)).map(toKeyValString).join("_")
         : toKeyValString([key, options[key] || data[key] || params[key]])
       )
-      .filter((x) => x);
+      .filter(Boolean);
 
   return `${modelKey || ""}${fields.sort().join("_")}`;
 }
@@ -561,8 +591,8 @@ function findConfig(
   [name, { prefetch }]: [string, { prefetch?: boolean }],
   getResources: ExecutorFunction,
   props: Props
-) {
-  const [, config = {}] =
+): InternalResourceConfigObj {
+  const [, config = { modelKey: "" }] =
     generateResources(getResources, props).find(
       ([_name, _config = {}]) =>
         name === _name &&
@@ -625,10 +655,10 @@ function buildResourcesLoadingState(
             !config.refetch &&
             !config.force &&
             (shouldBypassFetch(props, [name, config]) ||
-              (getModelFromCache(config) && !getModelFromCache(config).lazy))
+              (getModelFromCache(config) && !getModelFromCache(config)?.lazy))
           ) ?
             defaultState
-          : !hasAllDependencies(props, [, config]) ? "pending"
+          : !hasAllDependencies(props, ["", config]) ? "pending"
           : config.lazy ?
             // any lazy resource should be considered loaded in its resource state, even
             // though it will temporarily show up in the resourcesToUpdate list
@@ -772,7 +802,7 @@ function trackRequestTime(
       Resource: name,
       params,
       options,
-      duration: Math.round(fetchEntry.duration),
+      duration: Math.round(fetchEntry?.duration || 0),
     });
 
     window.performance.clearMarks(name);
@@ -809,14 +839,14 @@ function getCriticalLoadingStates(
  * @return {function} function that can be passed to a state-setting function
  *   that returns models keyed by name
  */
-function modelAggregator(resources: Resource[]) {
+function modelAggregator(resources: Resource[]): ModelState {
   const newModels = resources.reduce(
     (memo, [name, config]) =>
       Object.assign(memo, {
         [getResourcePropertyName(name, config.modelKey)]:
           getModelFromCache(config) || getEmptyModel(config),
       }),
-    {}
+    {} as Record<string, ModelInstanceType>
   );
 
   return (models = {}) =>
@@ -854,12 +884,12 @@ function partitionResources(
         config.refetch ||
         config.force ||
         config.prefetch ||
-        !hasLoaded(loadingStates[getResourceState(name)]) ||
+        !hasLoaded(loadingStates[getResourceState(name)] as LoadingStates) ||
         getModelFromCache(config)?.lazy
       ) ?
         [memo[0], memo[1].concat([[name, config]])]
       : [memo[0].concat([[name, config]]), memo[1]],
-    [[], []]
+    [[], []] as [Resource[], Resource[]]
   );
 }
 
@@ -880,7 +910,7 @@ type LoaderAction =
   | { type: "error"; payload: { name: string; status: number } }
   | {
       type: "loaded";
-      payload: { name: string; status: number; resources: Resource[] };
+      payload: { name: string; status?: number; resources: Resource[] };
     }
   | { type: "loading"; payload: LoadingStateObj };
 type LoaderState = {
@@ -903,7 +933,10 @@ function loaderReducer(
 
       return {
         loadingStates: nextLoadingStates,
-        requestStatuses: { ...requestStatuses, [getResourceStatus(name)]: status },
+        requestStatuses: {
+          ...requestStatuses,
+          ...(status ? { [getResourceStatus(name)]: status } : {}),
+        },
         hasInitiallyLoaded:
           hasInitiallyLoaded ||
           (type === "loaded" &&
@@ -969,7 +1002,23 @@ function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigOb
 function fetchResources(
   resources: Resource[],
   props: Props,
-  { component, isCurrentResource, setResourceState, onRequestSuccess, onRequestFailure }
+  {
+    component,
+    isCurrentResource,
+    setResourceState,
+    onRequestSuccess,
+    onRequestFailure,
+  }: {
+    component: NonNullable<unknown>;
+    isCurrentResource: (resource: Resource, cacheKey: string) => boolean;
+    setResourceState: Dispatch<SetStateAction<Record<string, any>>>;
+    onRequestSuccess: (
+      model: Model | Collection,
+      status: number | undefined,
+      resource: Resource
+    ) => void;
+    onRequestFailure: (status: number, resource: Resource) => void;
+  }
 ) {
   // ensure critical requests go out first
   /* eslint-disable id-length */
@@ -993,7 +1042,7 @@ function fetchResources(
         window.performance.mark(name);
       }
 
-      return request(cacheKey, ModelMap[modelKey], {
+      return request(cacheKey, ModelMap[modelKey]!, {
         fetch: !UnfetchedResources.has(modelKey),
         params,
         component,
@@ -1009,8 +1058,9 @@ function fetchResources(
           delete model.refetching;
 
           // add unfetched resources that a model might provide
-          if (ModelMap[modelKey].providesModels) {
-            ModelMap[modelKey].providesModels(model, ResourceKeys).forEach((uConfig) => {
+          /*
+          if (ModelMap[modelKey]?.providesModels) {
+            ModelMap[modelKey]?.providesModels(model, ResourceKeys).forEach((uConfig) => {
               const uCacheKey = getCacheKey(uConfig);
               const existingModel = ModelCache.get(uCacheKey);
 
@@ -1030,6 +1080,7 @@ function fetchResources(
               }
             });
           }
+          */
 
           // don't continue unless component is still mounted and resource is current
           if (isCurrentResource([name, config], cacheKey)) {
@@ -1064,7 +1115,12 @@ function fetchResources(
  * @param {object} props - current component props
  * @param {function} setResourceState - updates resource state
  */
-function provideProps(model: Model | Collection, provides = {}, props: Props, setResourceState) {
+function provideProps(
+  model: Model | Collection,
+  provides: ResourceConfigObj["provides"] = {},
+  props: Props,
+  setResourceState: Dispatch<SetStateAction<Record<string, any>>>
+) {
   if (Object.entries(provides).length) {
     setResourceState((state) => ({
       ...state,
