@@ -5,7 +5,6 @@
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
-    "noEmit": true,
     "declaration": true,
     "incremental": true,
     "esModuleInterop": true,
@@ -26,8 +25,7 @@
     "noPropertyAccessFromIndexSignature": false,
     "noUnusedLocals": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": "",
-    "types": ["node"]
+    "baseUrl": ""
   },
   "include": ["index.ts", "lib/*.ts"]
 }

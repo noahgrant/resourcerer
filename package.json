@@ -3,40 +3,49 @@
   "version": "1.2.3",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": ["declarative data-fetching framework", "react"],
-  "files": ["*.js", "index.d.ts", "lib/*.js", "test/*.js", "*.md", "docs/*.md"],
+  "keywords": [
+    "declarative data-fetching framework",
+    "react"
+  ],
+  "files": [
+    "*.js",
+    "index.d.ts",
+    "lib/*.js",
+    "test/*.js",
+    "*.md",
+    "docs/*.md"
+  ],
   "main": "index.js",
   "type": "module",
   "scripts": {
     "checks": "npm typecheck && npm test && npm run lint",
-    "lint": "eslint lib/*.js* test/*.js*",
-    "typecheck": "tsc --noEmit --incremental false",
+    "lint": "eslint lib/*.ts* test/*.js*",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc lib/*.ts --outDir build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
   },
   "jest": {
-    "collectCoverageFrom": ["lib/*.{js,jsx}", "!lib/constants.js"],
-    "moduleDirectories": ["node_modules"],
-    "setupFilesAfterEnv": ["./test/setup"],
+    "collectCoverageFrom": [
+      "lib/*.{js,jsx}",
+      "!lib/constants.js"
+    ],
+    "moduleDirectories": [
+      "node_modules"
+    ],
+    "setupFilesAfterEnv": [
+      "./test/setup"
+    ],
     "testEnvironment": "jsdom"
   },
   "exports": "./index.js",
   "devDependencies": {
-    "@babel/cli": "^7.10.5",
-    "@babel/core": "^7.10.5",
-    "@babel/eslint-parser": "^7.15.8",
-    "@babel/plugin-proposal-class-properties": "^7.12.1",
-    "@babel/plugin-proposal-decorators": "^7.10.5",
-    "@babel/plugin-transform-runtime": "^7.10.5",
-    "@babel/preset-env": "^7.10.4",
-    "@babel/preset-react": "^7.10.4",
     "@stylistic/eslint-plugin": "^2.1.0",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
-    "babel-loader": "^8.0.5",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jest": "^25.2.2",
