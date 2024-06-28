@@ -21,6 +21,8 @@
     "@typescript-eslint/no-explicit-any": 0,
     "@typescript-eslint/no-unused-vars": [0, { "args": "after-used", "caughtErrors": "none" }],
     "@typescript-eslint/ban-ts-comment": 0,
+    "@typescript-eslint/no-non-null-assertion": 0,
+    "@typescript-eslint/no-empty-function": 0,
     "prefer-const": [0, { "destructuring": "all" }],
     "no-console": "error",
     "no-sparse-arrays": 0

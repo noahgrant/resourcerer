@@ -25,7 +25,10 @@
     "noPropertyAccessFromIndexSignature": false,
     "noUnusedLocals": true,
     "noUncheckedIndexedAccess": true,
-    "baseUrl": ""
+    "baseUrl": "",
+    "removeComments": true,
+    "outDir": "build"
   },
-  "include": ["index.ts", "lib/*.ts"]
+  "include": ["index.ts", "lib/*.ts"],
+  "exclude": ["node_modules", "build"]
 }
