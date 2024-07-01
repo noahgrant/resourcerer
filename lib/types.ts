@@ -26,6 +26,7 @@ export type ResourceConfigObj = {
   modelKey?: ResourceKeysType;
   noncritical?: boolean;
   options?: { [key: string]: any };
+  path?: { [key: string]: any };
   params?: { [key: string]: any };
   prefetches?: { [key: string]: any }[];
   provides?: { [key: string]: (model: Model | Collection, props: Record<string, any>) => any };

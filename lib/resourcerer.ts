@@ -54,7 +54,8 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *        account when determining the loading state of the component. default
  *        is false
  *   * params {object} - query params for the fetch call passed to the `request`
- *   * options {object} - instance properties set on the model (which are not data)
+ *   * path {object} - params passed to the `url` function
+ *   * options {object} - generic options object passed to the model constructor
  *   * dependsOn {string[]} - prop fields required to be present before the
  *        resource will fetch
  *   * provides {object<string: function>[]} - list of props that a resource
@@ -525,10 +526,10 @@ function getResourcePropertyName(baseName: string, modelKey: string) {
  * @return {Model|Collection} empty model or collection instance with frozen
  *   atributes or models, respectively
  */
-function getEmptyModel({ modelKey, data, options }: InternalResourceConfigObj) {
+function getEmptyModel({ modelKey, data, options, path }: InternalResourceConfigObj) {
   const Model_ = typeof ModelMap[modelKey] === "function" ? ModelMap[modelKey] : Model;
   // @ts-ignore
-  const emptyInstance = new Model_(data, options);
+  const emptyInstance = new Model_(data, { ...options, ...path });
 
   // flag to differentiate between other model instances that happen to be empty
   (emptyInstance as ModelInstanceType).isEmptyModel = true;
@@ -546,7 +547,7 @@ function getEmptyModel({ modelKey, data, options }: InternalResourceConfigObj) {
  * the constructor's static `dependencies` array:
  *
  *   `dependencies` values are taken directly from the config object as opposed
- *   to props, in the following order: `options` object, `data` object,
+ *   to props, in the following order: `path` object, `data` object,
  *   `params` object. Field keys are included in this method, which is why it is
  *   preferred. `dependencies` entries can be functions, too, which take the
  *   `params` object as a parameter and return a key/value object that gets
@@ -558,7 +559,7 @@ function getEmptyModel({ modelKey, data, options }: InternalResourceConfigObj) {
 export function getCacheKey({
   modelKey,
   params = {},
-  options = {},
+  path = {},
   data = {},
 }: InternalResourceConfigObj) {
   const Constructor = ModelMap[modelKey] as ConstructorTypes;
@@ -567,7 +568,7 @@ export function getCacheKey({
       .map((key) =>
         typeof key === "function" ?
           Object.entries(key(params)).map(toKeyValString).join("_")
-        : toKeyValString([key, options[key] || data[key] || params[key]])
+        : toKeyValString([key, path[key] || data[key] || params[key]])
       )
       .filter(Boolean);
 
@@ -785,7 +786,7 @@ function useIsMounted() {
  */
 function trackRequestTime(
   name: string,
-  { params, options }: { params?: Record<string, any>; options?: Record<string, any> } = {}
+  { params, path }: { params?: Record<string, any>; path?: Record<string, any> } = {}
 ) {
   const measurementName = `${name}Fetch`;
   let fetchEntry;
@@ -798,7 +799,7 @@ function trackRequestTime(
     ResourcesConfig.track("API Fetch", {
       Resource: name,
       params,
-      options,
+      path,
       duration: Math.round(fetchEntry?.duration || 0),
     });
 
@@ -1031,7 +1032,7 @@ function fetchResources(
   return Promise.all(
     // nice visual for this promise chain: http://tinyurl.com/y6wt47b6
     resources.map(([name, config]) => {
-      const { params, modelKey, provides = {}, refetch, ...rest } = config;
+      const { modelKey, provides = {}, refetch, ...rest } = config;
       const cacheKey = getCacheKey(config);
       const shouldMeasure = shouldMeasureRequest(modelKey, config) && !getModelFromCache(config);
 
@@ -1040,7 +1041,6 @@ function fetchResources(
       }
 
       return request(cacheKey, ModelMap[modelKey]!, {
-        params,
         component,
         force: refetch,
         ...rest,

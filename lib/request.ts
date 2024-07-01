@@ -7,6 +7,7 @@ interface RequestOptions extends Pick<SyncOptions, "params"> {
   data?: any;
   component?: NonNullable<unknown>;
   options?: Record<string, any>;
+  path?: Record<string, any>;
   fetch?: boolean;
   force?: boolean;
   lazy?: boolean;
@@ -81,7 +82,8 @@ export default (
   if (!loadingCache[key]) {
     _promise = new Promise((resolve, reject) => {
       if (!cachedModel || cachedModel.lazy || options.force) {
-        const model = cachedModel || new Model(options.data, options.options);
+        const model =
+          cachedModel || new Model(options.data, { ...options.options, ...options.path });
 
         if (options.fetch && !options.lazy) {
           addToLoadingCache = true;

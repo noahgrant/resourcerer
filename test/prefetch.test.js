@@ -10,7 +10,7 @@ const renderNode = document.createElement("div");
 const getResources = (_, props) => ({
   user: {
     params: { home: props.home, source: props.source },
-    options: { userId: props.userId },
+    path: { userId: props.userId },
   },
   decisions: {},
 });
@@ -42,7 +42,7 @@ describe("prefetch", () => {
     expect(Request.default.mock.calls[0][0]).toEqual("usersource=hbase_userId=noah");
     expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
     expect(Request.default.mock.calls[0][2]).toEqual({
-      options: { userId: "noah" },
+      path: { userId: "noah" },
       params: { home: "sf", source: "hbase" },
     });
 
