@@ -33,13 +33,11 @@ type comparator =
  * Model#save that adds it to the collection when it is finished.
  */
 export default class Collection<
-  T extends Record<string, any> = { [key: string]: any },
+  T extends Record<string, any> = {},
   O extends Record<string, any> & {
     Model?: typeof Model<T, O>;
     comparator?: comparator;
-  } & CSetOptions = {
-    [key: string]: any;
-  },
+  } & CSetOptions = {},
 > extends Events {
   lazy?: boolean;
   refetching?: boolean;
@@ -267,7 +265,7 @@ export default class Collection<
    *   id, or an object containing either
    * @return {Model} collection's model, if found
    */
-  get(obj: Model["id"] | ModelArg<T, O>) {
+  get(obj: Model<T, O>["id"] | ModelArg<T, O>) {
     if (!obj && typeof obj !== "number") {
       return undefined;
     }
@@ -286,7 +284,7 @@ export default class Collection<
    *   id, or an object containing either
    * @return {boolean} whether the model is in the collection
    */
-  has(obj: Model["id"] | ModelArg<T, O>) {
+  has(obj: Model<T, O>["id"] | ModelArg<T, O>) {
     return ![undefined, null].includes(this.get(obj));
   }
 
@@ -343,7 +341,7 @@ export default class Collection<
    * @return {Model[]} list of models found with the matched properties in `attrs`
    */
   where(attrs: Partial<T>, first: boolean) {
-    const predicate = (model: Model<T>) => {
+    const predicate = (model: Model<T, O>) => {
       for (let [attr, val] of Object.entries(attrs)) {
         if (!isDeepEqual(model.get(attr), val)) {
           return false;
@@ -529,11 +527,11 @@ export default class Collection<
    * @return {Model[]} list of models actually removed, since they won't get removed if they don't
    *   exist in the collection in the first place
    */
-  _removeModels(models: (Model["id"] | ModelArg<T, O>)[]) {
+  _removeModels(models: (Model<T, O>["id"] | ModelArg<T, O>)[]) {
     const removed = [];
 
     for (let i = 0; i < models.length; i++) {
-      let model = this.get(models[i] as Model["id"] | ModelArg<T, O>);
+      let model = this.get(models[i] as Model<T, O>["id"] | ModelArg<T, O>);
 
       if (!model) {
         continue;

@@ -24,7 +24,7 @@ interface ResourceKeysConfig {
 }
 
 export interface ModelMap {
-  [key: string]: typeof Model | typeof Collection;
+  [key: string]: (new () => Model) | (new () => Collection);
 }
 
 export const register = (models: ModelMap) => {

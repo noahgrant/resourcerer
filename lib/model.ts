@@ -38,8 +38,8 @@ const RESERVED_OPTION_KEYS = [
  *    the methods listed in the first step.
  */
 export default class Model<
-  T extends Record<string, any> = { [key: string]: any },
-  O extends Record<string, any> & SetOptions & ConstructorOptions = { [key: string]: any },
+  T extends Record<string, any> = {},
+  O extends Record<string, any> & SetOptions & ConstructorOptions = {},
 > extends Events {
   cid: string;
   id: string | number;
@@ -206,7 +206,7 @@ export default class Model<
       this.triggerUpdate();
 
       if (this.collection && prevId && prevId !== this.id) {
-        this.collection._updateModelReference(this.id, prevId, this as Model);
+        this.collection._updateModelReference(this.id, prevId, this as Model<T, O>);
       }
     }
 

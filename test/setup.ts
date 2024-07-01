@@ -16,9 +16,9 @@ import {
   SignalsCollection,
   UserModel,
 } from "./model-mocks";
-import { ModelMap, register } from "../lib/config";
+import { type ModelMap, register } from "../lib/config";
 
-declare module "resourcerer" {
+declare module "../lib/config" {
   export interface ModelMap {
     accountConfig: new () => AccountConfigModel;
     actions: new () => ActionsCollection;
