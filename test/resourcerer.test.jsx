@@ -43,7 +43,7 @@ const getResources = (_, props) => ({
       ...(props.shouldError ? { shouldError: true } : {}),
       ...(props.delay ? { delay: props.delay } : {}),
     },
-    options: { userId: props.userId, fraudLevel: props.fraudLevel },
+    path: { userId: props.userId, fraudLevel: props.fraudLevel },
     ...(props.force ? { force: true } : {}),
   },
   ...(props.prefetch ?
@@ -64,7 +64,7 @@ const getResources = (_, props) => ({
           : { serialProp: transformSpy.mockReturnValue(42) },
       },
       decisionLogs: {
-        options: { logs: props.serialProp },
+        path: { logs: props.serialProp },
         dependsOn: ["serialProp"],
       },
     }
@@ -84,7 +84,7 @@ const getResources = (_, props) => ({
  * Note we need to ensure the component has loaded in most cases before we
  * unmount so that we don't empty the cache before the models get loaded.
  */
-describe("useResources", () => {
+describe("resourcerer", () => {
   var originalPerf = window.performance,
     dataChild,
     resources,
@@ -501,12 +501,12 @@ describe("useResources", () => {
         }
       );
 
-      it("prioritizes dependencies in 'options' or 'data' config properties", () => {
+      it("prioritizes dependencies in 'path' or 'data' config properties", () => {
         expect(
           getCacheKey({
             params: { fraudLevel: "miniscule" },
             modelKey: "user",
-            options: { userId: "theboogieman" },
+            path: { userId: "theboogieman" },
           })
         ).toEqual("userfraudLevel=miniscule_userId=theboogieman");
       });
@@ -721,7 +721,7 @@ describe("useResources", () => {
         expect(ResourcesConfig.track).toHaveBeenCalledWith("API Fetch", {
           Resource: "decisions",
           params: undefined,
-          options: undefined,
+          path: undefined,
           duration: 5,
         });
 
@@ -750,7 +750,7 @@ describe("useResources", () => {
         expect(ResourcesConfig.track).toHaveBeenCalledWith("API Fetch", {
           Resource: "decisions",
           params: { include_deleted: true },
-          options: undefined,
+          path: undefined,
           duration: 5,
         });
 
