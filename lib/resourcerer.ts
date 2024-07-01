@@ -1,5 +1,5 @@
 import { hasErrored, hasLoaded, isLoading } from "./utils";
-import { ModelMap, ResourceKeys, ResourcesConfig, UnfetchedResources } from "./config";
+import { ModelMap, ResourceKeys, ResourcesConfig } from "./config";
 import React, {
   type ComponentClass,
   type Dispatch,
@@ -1043,7 +1043,6 @@ function fetchResources(
       }
 
       return request(cacheKey, ModelMap[modelKey]!, {
-        fetch: !UnfetchedResources.has(modelKey),
         params,
         component,
         force: refetch,

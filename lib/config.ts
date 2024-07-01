@@ -3,7 +3,6 @@ import Collection from "./collection";
 import Model from "./model";
 import React, { type ReactElement } from "react";
 import { setRequestPrefilter } from "./sync";
-import { ResourceKeysType } from "./types";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;
@@ -58,14 +57,6 @@ export const ResourceKeys: ResourceKeysConfig = {};
  *   withResources.
  */
 export const ModelMap: ModelMap = {};
-
-/**
- * UnfetchedResources {ResourceKeys[]}: a Set of ResourceKeys that, when
- *   declaratively requested, should not be fetched because they are known to
- *   have been provided by the response of a parent resource. For use with the
- *   `providesModels` static property on a Model.
- */
-export const UnfetchedResources = new Set<ResourceKeysType>();
 
 /**
  * ResourcesConfig {object}: A general config object for a limited amount of
