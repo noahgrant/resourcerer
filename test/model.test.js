@@ -28,7 +28,6 @@ describe("Model", () => {
 
   it("has expected default static properties", () => {
     expect(Model.idAttribute).toEqual("id");
-    expect(Model.cacheFields).toEqual([]);
     expect(Model.dependencies).toEqual([]);
     expect(Model.defaults).toEqual({});
   });

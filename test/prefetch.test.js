@@ -54,31 +54,6 @@ describe("prefetch", () => {
     UserModel.dependencies = oldFields;
   });
 
-  it("correctly turns the config object into cache key using legacy cacheFields", () => {
-    var oldFields = UserModel.dependencies;
-
-    UserModel.dependencies = [];
-    UserModel.cacheFields = ["userId", "source"];
-
-    prefetch(getResources, expectedProps)(dummyEvt);
-    vi.advanceTimersByTime(100);
-
-    expect(Request.default.mock.calls[0][0]).toEqual("usersource=hbase_userId=noah");
-    expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
-    expect(Request.default.mock.calls[0][2]).toEqual({
-      options: { userId: "noah" },
-      params: { home: "sf", source: "hbase" },
-    });
-
-    expect(Request.default.mock.calls[1][0]).toEqual("decisions");
-    expect(Request.default.mock.calls[1][1]).toEqual(DecisionsCollection);
-    expect(Request.default.mock.calls[1][2]).toEqual({});
-
-    expect(() => prefetch(() => false)({})).not.toThrow();
-    UserModel.cacheFields = [];
-    UserModel.dependencies = oldFields;
-  });
-
   it("will fire if the user hovers over the element for longer than the timeout", () => {
     var leaveEvt = new Event("mouseleave");
 

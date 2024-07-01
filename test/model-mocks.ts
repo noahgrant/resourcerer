@@ -28,7 +28,7 @@ export class DecisionsCollection extends Collection {
     return "/root/decisions";
   }
 
-  static cacheFields = ["include_deleted"];
+  static dependencies = ["include_deleted"];
 }
 
 export class NotesModel extends Model {
@@ -38,7 +38,7 @@ export class NotesModel extends Model {
     return `/root/${userId}/notes`;
   }
 
-  static cacheFields = ["userId"];
+  static dependencies = ["userId"];
 }
 
 export class SearchQueryModel extends Model {
@@ -84,7 +84,7 @@ export class DecisionLogsCollection extends Collection {
     return "/root/decision_logs";
   }
 
-  static cacheFields = ["logs"];
+  static dependencies = ["logs"];
 }
 
 // next three are unfetched resources
