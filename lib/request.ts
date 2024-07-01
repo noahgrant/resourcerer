@@ -69,7 +69,7 @@ export default (
   let _promise: Promise<[Model | Collection] | [Model | Collection, number]>;
 
   options = {
-    data: "prototype" in Model && Model.prototype instanceof Collection ? [] : {},
+    data: Model && "prototype" in Model && Model.prototype instanceof Collection ? [] : {},
     params: {},
     options: {},
     fetch: true,
