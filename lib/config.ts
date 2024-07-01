@@ -18,19 +18,11 @@ export interface ResourcererConfig {
   set: (config: Record<keyof ResourcererConfig, any>) => void;
 }
 
-interface ResourceKeysConfig {
-  [key: string]: string;
-}
-
 export interface ModelMap {
   [key: string]: (new () => Model) | (new () => Collection);
 }
 
 export const register = (models: ModelMap) => {
-  Object.assign(
-    ResourceKeys,
-    Object.entries(models).reduce((memo, [modelKey]) => ({ [modelKey]: modelKey }), {})
-  );
   Object.assign(ModelMap, models);
 };
 
@@ -38,16 +30,6 @@ export const register = (models: ModelMap) => {
  * This module contains all the required setup for implementing withResources
  * within an application.
  */
-
-/**
- * ResourceKeys {{string: string}}: an object that should contain a key for each
- *   model whose value is a string, ie: `USER: 'user'` for a userModel. The
- *   string becomes the prefix for all props related to this resource, for
- *   example, props.userModel and props.userLoadingState. These keys are passed
- *   as the second argument to the withResources function and are used to
- *   declaritively request a model for a component.
- */
-export const ResourceKeys: ResourceKeysConfig = {};
 
 /**
  * ModelMap {{string: Model|Collection}}: an object that

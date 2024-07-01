@@ -1,4 +1,4 @@
-import { ModelMap, ResourceKeys } from "./config";
+import { ModelMap } from "./config";
 import { noOp, once } from "./utils";
 import type { ExecutorFunction, Resource } from "./types";
 
@@ -21,7 +21,7 @@ const PREFETCH_TIMEOUT = 50;
  */
 export default (getResources: ExecutorFunction, expectedProps: Record<string, any> = {}) => {
   let fetched: boolean;
-  const resources = Object.entries(getResources(ResourceKeys, expectedProps) || {}) as Resource[];
+  const resources = Object.entries(getResources(expectedProps) || {}) as Resource[];
 
   return (evt: MouseEvent) => {
     const { target } = evt;
