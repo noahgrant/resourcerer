@@ -105,7 +105,8 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // with the ModelCache. it should be constant across renders, sow keep it in a ref.
   const componentRef = useRef({});
   // this reference to previous props allows us to know when resources are changing
-  const prevPropsRef = useRef<Record<string, any>>({});
+  // important: starts at null so that getResourcesToUpdate marks all initial resources as to-update
+  const prevPropsRef = useRef<Record<string, any> | null>(null);
   // this might look confusing but is important. we need to know, before
   // setting any loaded or error states, that a returned resource belongs
   // to the most recent component props. so we use a ref to persist across the closure
@@ -273,7 +274,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     if (resourcesToUpdate.length) {
       if (prevPropsRef.current) {
         resourcesToUpdate.forEach(([name, config]) => {
-          const prevConfig = findConfig([name, config], getResources, prevPropsRef.current),
+          const prevConfig = findConfig([name, config], getResources, prevPropsRef.current!),
             prevCacheKey = getCacheKey(prevConfig);
           const prevModel = ModelCache.get(prevCacheKey);
 
