@@ -41,8 +41,6 @@ export default class Model<
   T extends Record<string, any> = { [key: string]: any },
   O extends Record<string, any> & SetOptions & ConstructorOptions = { [key: string]: any },
 > extends Events {
-  ["constructor"]: typeof Model;
-
   cid: string;
   id: string | number;
   attributes: T;
@@ -199,8 +197,8 @@ export default class Model<
     }
 
     // Update the `id`.
-    if (this.constructor.idAttribute in attrs) {
-      this.id = this.get(this.constructor.idAttribute);
+    if ((this.constructor as typeof Model).idAttribute in attrs) {
+      this.id = this.get((this.constructor as typeof Model).idAttribute);
     }
 
     // trigger updated for the change
@@ -381,7 +379,7 @@ export default class Model<
 
     return (
       base.replace(/[^/]$/, "$&/") +
-      window.encodeURIComponent(this.get(this.constructor.idAttribute))
+      window.encodeURIComponent(this.get((this.constructor as typeof Model).idAttribute))
     );
   }
 
@@ -407,7 +405,7 @@ export default class Model<
    * @return {boolean}
    */
   isNew() {
-    return !this.has(this.constructor.idAttribute);
+    return !this.has((this.constructor as typeof Model).idAttribute);
   }
 }
 

@@ -1,9 +1,9 @@
-import { noOp } from "./utils.js";
+import { noOp } from "./utils";
 import Collection from "./collection";
 import Model from "./model";
 import React, { type ReactElement } from "react";
-import { setRequestPrefilter } from "./sync.js";
-import { ResourceKeysType } from "./types.js";
+import { setRequestPrefilter } from "./sync";
+import { ResourceKeysType } from "./types";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;

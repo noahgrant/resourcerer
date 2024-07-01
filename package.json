@@ -3,8 +3,18 @@
   "version": "1.2.3",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": ["declarative data-fetching framework", "react"],
-  "files": ["*.js", "index.d.ts", "lib/*.js", "test/*.js", "*.md", "docs/*.md"],
+  "keywords": [
+    "declarative data-fetching framework",
+    "react"
+  ],
+  "files": [
+    "*.js",
+    "index.d.ts",
+    "lib/*.js",
+    "test/*.js",
+    "*.md",
+    "docs/*.md"
+  ],
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "type": "module",
@@ -14,15 +24,10 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc",
     "prepublish": "npm run build",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "test:debug": "node --inspect-brk ./node_modules/.bin/jest --runInBand"
-  },
-  "jest": {
-    "collectCoverageFrom": ["lib/*.{js,jsx}", "!lib/constants.js"],
-    "moduleDirectories": ["node_modules"],
-    "setupFilesAfterEnv": ["./test/setup"],
-    "testEnvironment": "jsdom"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:debug": "vitest --inspect-brk --pool threads --poolOptions.threads.singleThread run"
   },
   "exports": "./index.js",
   "devDependencies": {
@@ -31,15 +36,15 @@
     "@types/eslint__js": "^8.42.3",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^1.6.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-jest": "^25.2.2",
-    "jest": "^27.3.1",
     "prettier": "^3.2.5",
     "typescript": "^5.4.5",
     "typescript-eslint": "^7.14.1",
-    "webpack": "^4.29.6",
-    "whatwg-fetch": "^3.6.2"
+    "vitest": "^1.6.0"
   },
   "peerDependencies": {
     "react": "^16.14.0 || ^17.0.0 || ^18.0.0",

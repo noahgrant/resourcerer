@@ -67,7 +67,7 @@ export default function (model: Model | Collection, options: SyncOptions = {}) {
 export function ajax(
   options: SyncOptions & Required<Pick<SyncOptions, "error" | "url" | "params">>
 ): Promise<SyncResolvedValue> {
-  const hasParams = !!Object.keys(options.params || {}).length;
+  const hasParams = !!Object.keys(options.params).length;
   const hasBodyContent = !/^(?:GET|HEAD)$/.test(options.method || "") && hasParams;
   const startTime = Date.now();
 

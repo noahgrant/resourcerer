@@ -41,8 +41,6 @@ export default class Collection<
     [key: string]: any;
   },
 > extends Events {
-  ["constructor"]: typeof Collection;
-
   lazy?: boolean;
   refetching?: boolean;
   measure?: boolean | ((config: ResourceConfigObj) => boolean);
@@ -74,7 +72,7 @@ export default class Collection<
     const RESERVED_OPTION_KEYS = ["Model", "comparator", "silent", "parse"];
 
     this.Model = options.Model || this._getModelClass<T, O>();
-    this.comparator = options.comparator || this.constructor.comparator;
+    this.comparator = options.comparator || (this.constructor as typeof Collection).comparator;
 
     this._reset();
 
@@ -481,15 +479,15 @@ export default class Collection<
    * @return {Model} model class associated with the collection
    */
   _getModelClass<T extends Record<string, any>, O extends Record<string, any>>() {
-    if (this.constructor.modelIdAttribute) {
-      let attr = this.constructor.modelIdAttribute;
+    if ((this.constructor as typeof Collection).modelIdAttribute) {
+      let attr = (this.constructor as typeof Collection).modelIdAttribute;
 
       return class extends Model<T, O> {
         static idAttribute = attr;
       };
     }
 
-    return this.constructor.Model<T, O>;
+    return (this.constructor as typeof Collection).Model<T, O>;
   }
 
   /**
