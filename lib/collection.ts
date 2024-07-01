@@ -33,15 +33,16 @@ type comparator =
  * Model#save that adds it to the collection when it is finished.
  */
 export default class Collection<
-  T extends Record<string, any> = {},
+  T extends Record<string, any> = object,
   O extends Record<string, any> & {
     Model?: typeof Model<T, O>;
     comparator?: comparator;
-  } & CSetOptions = {},
+  } & CSetOptions = object,
 > extends Events {
   lazy?: boolean;
   refetching?: boolean;
   measure?: boolean | ((config: ResourceConfigObj) => boolean);
+  isEmptyModel?: boolean;
 
   Model: typeof Model<T, O>;
 
@@ -403,7 +404,8 @@ export default class Collection<
   fetch(options: SyncOptions & CSetOptions = {}) {
     options = { parse: true, method: "GET", ...options };
 
-    return this.sync(this as Collection, options).then(([json, response]) => {
+    // @ts-ignore
+    return this.sync(this, options).then(([json, response]) => {
       this.reset(json, { silent: true, ...options });
       // sync trigger
       this.triggerUpdate();

@@ -38,8 +38,8 @@ const RESERVED_OPTION_KEYS = [
  *    the methods listed in the first step.
  */
 export default class Model<
-  T extends Record<string, any> = {},
-  O extends Record<string, any> & SetOptions & ConstructorOptions = {},
+  T extends Record<string, any> = object,
+  O extends Record<string, any> & SetOptions & ConstructorOptions = object,
 > extends Events {
   cid: string;
   id: string | number;
@@ -49,6 +49,7 @@ export default class Model<
   lazy?: boolean;
   refetching?: boolean;
   measure?: boolean | ((config: ResourceConfigObj) => boolean);
+  isEmptyModel?: boolean;
 
   /**
    * @param {object} attributes - initial server data representation to be kept on the model
@@ -206,7 +207,8 @@ export default class Model<
       this.triggerUpdate();
 
       if (this.collection && prevId && prevId !== this.id) {
-        this.collection._updateModelReference(this.id, prevId, this as Model<T, O>);
+        // @ts-ignore
+        this.collection._updateModelReference(this.id, prevId, this);
       }
     }
 

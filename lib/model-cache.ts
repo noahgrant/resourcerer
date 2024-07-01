@@ -119,8 +119,8 @@ export default {
  * @param {string} cacheKey - The cache key of the model to be removed.
  */
 function scheduleForRemoval(cacheKey: string) {
-  const timeout =
-    modelCache.get(cacheKey)?.constructor.cacheTimeout || ResourcesConfig.cacheGracePeriod;
+  const Constructor = modelCache.get(cacheKey)?.constructor as typeof Model | typeof Collection;
+  const timeout = Constructor?.cacheTimeout || ResourcesConfig.cacheGracePeriod;
 
   timeouts[cacheKey] = window.setTimeout(() => clearModel(cacheKey), timeout);
 }

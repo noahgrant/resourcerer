@@ -31,6 +31,7 @@ import type {
 const SPREAD_PROVIDES_CHAR = "_";
 
 type ModelInstanceType = Model | Collection;
+type ConstructorTypes = typeof Model | typeof Collection;
 type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
 
 /**
@@ -105,8 +106,8 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // with the ModelCache. it should be constant across renders, sow keep it in a ref.
   const componentRef = useRef({});
   // this reference to previous props allows us to know when resources are changing
-  // important: starts at null so that getResourcesToUpdate marks all initial resources as to-update
-  const prevPropsRef = useRef<Record<string, any> | null>(null);
+  // important: starts undefined so that getResourcesToUpdate marks all initial resources as to-update
+  const prevPropsRef = useRef<Record<string, any>>();
   // this might look confusing but is important. we need to know, before
   // setting any loaded or error states, that a returned resource belongs
   // to the most recent component props. so we use a ref to persist across the closure
@@ -134,8 +135,8 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   //
   // for a similar reason, forced resources get returned here on mount and not afterwards.
   // we prevent them from getting set to a LOADED state which forces them to get fetched.
-  const getResourcesToUpdate = (rsrcs: Resource[]) =>
-    rsrcs
+  const getResourcesToUpdate = () =>
+    resources
       .filter(hasAllDependencies.bind(null, props))
       .filter(not(shouldBypassFetch.bind(null, props)))
       .filter(([name, config]: Resource) => {
@@ -183,7 +184,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     .filter(
       ([, config]) => prevPropsRef.current && hasAllDependencies(prevPropsRef.current, ["", config])
     );
-  const resourcesToUpdate = getResourcesToUpdate(resources);
+  const resourcesToUpdate = getResourcesToUpdate();
   const nextLoadingStates: LoadingStateObj = {
     ...buildResourcesLoadingState(pendingResources, props, "pending"),
     // but resourcesToUpdate should get set to LOADING (or LOADED if in the cache)
@@ -530,11 +531,11 @@ function getEmptyModel({ modelKey, data, options }: InternalResourceConfigObj) {
   const emptyInstance = new Model_(data, options);
 
   // flag to differentiate between other model instances that happen to be empty
-  emptyInstance.isEmptyModel = true;
+  (emptyInstance as ModelInstanceType).isEmptyModel = true;
 
   // ensure that no resourcerer client can modify empty model's data
-  Object.freeze(emptyInstance.attributes);
-  Object.freeze(emptyInstance.models);
+  Object.freeze((emptyInstance as Model).attributes);
+  Object.freeze((emptyInstance as Collection).models);
 
   return emptyInstance;
 }
@@ -562,11 +563,11 @@ export function getCacheKey({
   options = {},
   data = {},
 }: InternalResourceConfigObj) {
+  const Constructor = ModelMap[modelKey] as ConstructorTypes;
   const toKeyValString = ([key, val]: [string, any]) => (val ? `${key}=${val}` : ""),
     dependencies =
-      (ModelMap[modelKey]?.dependencies?.length ?
-        ModelMap[modelKey]?.dependencies
-      : ModelMap[modelKey]?.cacheFields) || [],
+      (Constructor?.dependencies?.length ? Constructor?.dependencies : Constructor?.cacheFields) ||
+      [],
     fields = dependencies
       .map((key) =>
         typeof key === "function" ?
@@ -677,7 +678,7 @@ function buildResourcesLoadingState(
  * @param {{dependsOn: string|object}} resource config entry
  * @return {boolean} whether or not all required props are present
  */
-function hasAllDependencies(props: Props, [, { dependsOn }]: Resource) {
+function hasAllDependencies(props: Props = {}, [, { dependsOn }]: Resource) {
   return !dependsOn || !dependsOn.filter((dep) => !props[dep]).length;
 }
 
@@ -967,7 +968,7 @@ function loaderReducer(
  * @return {boolean} whether a particular request time should be measured
  */
 function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigObj) {
-  const Constructor = ModelMap[modelKey];
+  const Constructor = ModelMap[modelKey] as ConstructorTypes;
 
   if (!Constructor || !window.performance || !window.performance.mark) {
     return false;
@@ -1010,7 +1011,7 @@ function fetchResources(
     onRequestSuccess,
     onRequestFailure,
   }: {
-    component: NonNullable<unknown>;
+    component: Record<string, never>;
     isCurrentResource: (resource: Resource, cacheKey: string) => boolean;
     setResourceState: Dispatch<SetStateAction<Record<string, any>>>;
     onRequestSuccess: (
