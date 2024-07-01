@@ -129,7 +129,6 @@ describe("useResources", () => {
       });
     };
 
-    UserModel.realCacheFields = UserModel.dependencies;
     document.body.appendChild(renderNode);
 
     requestSpy = vi.spyOn(Request, "default");
@@ -152,8 +151,6 @@ describe("useResources", () => {
   });
 
   afterEach(async () => {
-    UserModel.dependencies = UserModel.realCacheFields;
-
     Request.default.mockRestore();
     Model.prototype.fetch.mockRestore();
     Collection.prototype.fetch.mockRestore();
@@ -276,7 +273,7 @@ describe("useResources", () => {
   describe("updates a resource", () => {
     it("when its cache key changes with props", async () => {
       // decisions collection should update when passed `include_deleted`,
-      // since that exists on its cacheFields property
+      // since that exists on its dependencies property
       resources = renderUseResources();
 
       await waitsFor(() => requestSpy.mock.calls.length);
@@ -515,6 +512,8 @@ describe("useResources", () => {
       });
 
       it("can invoke a dependencies function entry", () => {
+        const realDependencies = UserModel.dependencies;
+
         UserModel.dependencies = [
           "userId",
           ({ fraudLevel, lastName }) => ({
@@ -533,6 +532,8 @@ describe("useResources", () => {
             },
           })
         ).toEqual("userfraudLevel=highgrant_lastName=grant_userId=noah");
+
+        UserModel.dependencies = realDependencies;
       });
     });
   });
@@ -812,10 +813,10 @@ describe("useResources", () => {
     });
 
     it("reverts to pending if removed dependent prop does not affect cache key", async () => {
-      var originalCacheFields = DecisionLogsCollection.cacheFields;
+      var originalDependencies = DecisionLogsCollection.dependencies;
 
       await unmountAndClearModelCache();
-      DecisionLogsCollection.cacheFields = [];
+      DecisionLogsCollection.dependencies = [];
 
       dataChild = findDataChild(renderUseResources({ serial: true }));
 
@@ -834,7 +835,7 @@ describe("useResources", () => {
       expect(isPending(dataChild.props.decisionLogsLoadingState)).toBe(true);
       expect(!!dataChild.props.decisionLogsCollection.isEmptyModel).toBe(false);
 
-      DecisionLogsCollection.cacheFields = originalCacheFields;
+      DecisionLogsCollection.dependencies = originalDependencies;
     });
   });
 

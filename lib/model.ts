@@ -99,9 +99,6 @@ export default class Model<
    */
   static dependencies: Array<string | ((attrs: Record<string, any>) => Record<string, any>)> = [];
 
-  // deprecated
-  static cacheFields: Array<string | ((attrs: Record<string, any>) => Record<string, any>)> = [];
-
   /**
    * Use this to override the default library-wide cacheTimeout set in the config.
    */

@@ -552,8 +552,6 @@ function getEmptyModel({ modelKey, data, options }: InternalResourceConfigObj) {
  *   `params` object as a parameter and return a key/value object that gets
  *   flattened to a piece of the cache key.
  *
- * We also support the deprecated `cacheFields` instead.
- *
  * @param {object} config - resource config object (destructured)
  * @return {string} cache key
  */
@@ -565,10 +563,7 @@ export function getCacheKey({
 }: InternalResourceConfigObj) {
   const Constructor = ModelMap[modelKey] as ConstructorTypes;
   const toKeyValString = ([key, val]: [string, any]) => (val ? `${key}=${val}` : ""),
-    dependencies =
-      (Constructor?.dependencies?.length ? Constructor?.dependencies : Constructor?.cacheFields) ||
-      [],
-    fields = dependencies
+    fields = (Constructor?.dependencies || [])
       .map((key) =>
         typeof key === "function" ?
           Object.entries(key(params)).map(toKeyValString).join("_")
