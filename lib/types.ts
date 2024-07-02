@@ -1,6 +1,6 @@
-import Model from "./model";
-import { type ModelMap } from "./config";
-import Collection from "./collection";
+import Model from "./model.js";
+import { type ModelMap } from "./config.js";
+import Collection from "./collection.js";
 
 export type LoadingStates = "error" | "loading" | "loaded" | "pending";
 export type Resource = [string, InternalResourceConfigObj];

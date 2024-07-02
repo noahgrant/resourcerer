@@ -1,4 +1,4 @@
-import type { LoadingStates } from "./types";
+import type { LoadingStates } from "./types.js";
 
 /**
  * Whether or not any loading state has errored. If a state is passed in,

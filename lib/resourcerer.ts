@@ -1,5 +1,5 @@
-import { hasErrored, hasLoaded, isLoading } from "./utils";
-import { ModelMap, ResourcesConfig } from "./config";
+import { hasErrored, hasLoaded, isLoading } from "./utils.js";
+import { ModelMap, ResourcesConfig } from "./config.js";
 import React, {
   type ComponentClass,
   type Dispatch,
@@ -10,12 +10,12 @@ import React, {
   useState,
 } from "react";
 
-import Collection from "./collection";
-import ErrorBoundary from "./error-boundary";
-import Model from "./model";
-import ModelCache from "./model-cache";
+import Collection from "./collection.js";
+import ErrorBoundary from "./error-boundary.js";
+import Model from "./model.js";
+import ModelCache from "./model-cache.js";
 import ReactDOM from "react-dom";
-import request from "./request";
+import request from "./request.js";
 import type {
   ExecutorFunction,
   LoadingStates,
@@ -26,7 +26,7 @@ import type {
   InternalResourceConfigObj,
   ResourceKeys,
   LoadingStateKey,
-} from "./types";
+} from "./types.js";
 
 type ModelInstanceType = Model | Collection;
 type ConstructorTypes = typeof Model | typeof Collection;

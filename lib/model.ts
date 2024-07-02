@@ -1,9 +1,9 @@
-import { isDeepEqual, result, uniqueId, urlError } from "./utils";
+import { isDeepEqual, result, uniqueId, urlError } from "./utils.js";
 
-import Events from "./events";
-import sync, { type SyncOptions } from "./sync";
-import Collection from "./collection";
-import { ResourceConfigObj } from "./types";
+import Events from "./events.js";
+import sync, { type SyncOptions } from "./sync.js";
+import Collection from "./collection.js";
+import { ResourceConfigObj } from "./types.js";
 
 export type ConstructorOptions = {
   collection?: Collection;

@@ -1,8 +1,8 @@
-import { result, urlError } from "./utils";
+import { result, urlError } from "./utils.js";
 
-import { ResourcererConfig, ResourcesConfig } from "./config";
-import Model from "./model";
-import Collection from "./collection";
+import { ResourcererConfig, ResourcesConfig } from "./config.js";
+import Model from "./model.js";
+import Collection from "./collection.js";
 
 const MIME_TYPE_JSON = "application/json";
 

@@ -1,6 +1,6 @@
 import { ModelMap } from "./config";
 import { noOp, once } from "./utils";
-import type { ExecutorFunction, Resource } from "./types";
+import type { ExecutorFunction, Resource } from "./types.js";
 
 import { getCacheKey } from "./resourcerer.js";
 import request from "./request.js";

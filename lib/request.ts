@@ -1,7 +1,7 @@
-import Model from "./model";
-import Collection from "./collection";
-import ModelCache from "./model-cache";
-import { SyncOptions } from "./sync";
+import Model from "./model.js";
+import Collection from "./collection.js";
+import ModelCache from "./model-cache.js";
+import { SyncOptions } from "./sync.js";
 
 interface RequestOptions extends Pick<SyncOptions, "params"> {
   data?: any;

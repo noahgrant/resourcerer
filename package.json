@@ -3,18 +3,8 @@
   "version": "1.2.3",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": [
-    "declarative data-fetching framework",
-    "react"
-  ],
-  "files": [
-    "*.js",
-    "index.d.ts",
-    "lib/*.js",
-    "test/*.js",
-    "*.md",
-    "docs/*.md"
-  ],
+  "keywords": ["declarative data-fetching framework", "react"],
+  "files": ["*.js", "index.d.ts", "lib/*.js", "test/*.js", "*.md", "docs/*.md"],
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "type": "module",
@@ -29,7 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --pool threads --poolOptions.threads.singleThread run"
   },
-  "exports": "./index.js",
+  "exports": "./build/index.js",
   "devDependencies": {
     "@eslint/js": "^9.6.0",
     "@stylistic/eslint-plugin": "^2.1.0",

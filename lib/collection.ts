@@ -2,7 +2,7 @@ import { isDeepEqual, sortBy } from "./utils.js";
 
 import Events from "./events.js";
 import Model, { type ConstructorOptions, type SetOptions } from "./model.js";
-import sync, { type SyncOptions } from "./sync";
+import sync, { type SyncOptions } from "./sync.js";
 import { ResourceConfigObj } from "./types.js";
 
 type CSetOptions = {

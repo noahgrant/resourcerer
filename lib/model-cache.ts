@@ -1,6 +1,6 @@
 import { ResourcesConfig } from "./config.js";
-import Collection from "./collection";
-import Model from "./model";
+import Collection from "./collection.js";
+import Model from "./model.js";
 
 type Component = NonNullable<unknown>;
 
