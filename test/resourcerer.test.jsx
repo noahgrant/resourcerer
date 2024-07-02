@@ -58,10 +58,11 @@ const getResources = (props) => ({
   ...(props.serial ?
     {
       actions: {
-        provides:
-          props.spread ?
-            { _: transformSpy.mockReturnValue({ provides1: "moose", provides2: "theberner" }) }
-          : { serialProp: transformSpy.mockReturnValue(42) },
+        provides: transformSpy.mockReturnValue({
+          serialProp: 42,
+          provides1: "moose",
+          provides2: "theberner",
+        }),
       },
       decisionLogs: {
         path: { logs: props.serialProp },
@@ -73,7 +74,7 @@ const getResources = (props) => ({
     {
       customDecisions: {
         modelKey: "decisions",
-        provides: { sift: () => "science" },
+        provides: () => ({ sift: "science" }),
       },
     }
   : {}),
@@ -843,30 +844,12 @@ describe("resourcerer", () => {
 
       expect(dataChild.props.serialProp).not.toBeDefined();
       await waitsFor(() => transformSpy.mock.calls.length);
-      actionsModel = transformSpy.mock.calls[transformSpy.mock.calls.length - 1][0];
+      actionsModel = transformSpy.mock.calls.at(-1)[0];
       expect(actionsModel instanceof Collection).toBe(true);
       expect(actionsModel.key).toEqual("actions");
 
       await waitsFor(() => dataChild.props.serialProp);
       expect(dataChild.props.serialProp).toEqual(42);
-    });
-
-    it("will set dynamic props if passed the spread character as a key", async () => {
-      var actionsModel;
-
-      dataChild = findDataChild(renderUseResources({ serial: true, spread: true }));
-
-      expect(dataChild.props.provides1).not.toBeDefined();
-      expect(dataChild.props.provides2).not.toBeDefined();
-      expect(transformSpy).toHaveBeenCalled();
-
-      actionsModel = transformSpy.mock.calls[transformSpy.mock.calls.length - 1][0];
-      expect(actionsModel instanceof Collection).toBe(true);
-      expect(actionsModel.key).toEqual("actions");
-
-      await waitsFor(() => dataChild.props.provides1);
-      expect(dataChild.props.provides1).toEqual("moose");
-      expect(dataChild.props.provides2).toEqual("theberner");
     });
   });
 
