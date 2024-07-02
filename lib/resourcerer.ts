@@ -28,8 +28,6 @@ import type {
   LoadingStateKey,
 } from "./types";
 
-const SPREAD_PROVIDES_CHAR = "_";
-
 type ModelInstanceType = Model | Collection;
 type ConstructorTypes = typeof Model | typeof Collection;
 type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
@@ -58,13 +56,9 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *   * options {object} - generic options object passed to the model constructor
  *   * dependsOn {string[]} - prop fields required to be present before the
  *        resource will fetch
- *   * provides {object<string: function>[]} - list of props that a resource
+ *   * provides {(model, props) => Record<string, any>} - list of props that a resource
  *        provides, for example, for dependent resources (serial requests). Each
- *        key in the object is the prop field, and its value is a transform
- *        function that takes the model and props as arguments and should return
- *        a value to be set for the prop. If the key is equal to
- *        SPREAD_PROVIDES_CHAR, then the return value of the transform function
- *        is spread for dynamically-provided props.
+ *        key in the return object is set as state
  *   * force {boolean} - force a fetch request on mount regardless of whether the
  *        model is already in the cache
  *   * prefetch {object} - an individual map of expected future props to fetch
@@ -675,7 +669,7 @@ function buildResourcesLoadingState(
  * @return {boolean} whether or not all required props are present
  */
 function hasAllDependencies(props: Props = {}, [, { dependsOn }]: Resource) {
-  return !dependsOn || !dependsOn.filter((dep) => !props[dep]).length;
+  return !dependsOn || dependsOn.every((dep) => props[dep]);
 }
 
 /**
@@ -1032,7 +1026,7 @@ function fetchResources(
   return Promise.all(
     // nice visual for this promise chain: http://tinyurl.com/y6wt47b6
     resources.map(([name, config]) => {
-      const { modelKey, provides = {}, refetch, ...rest } = config;
+      const { modelKey, provides, refetch, ...rest } = config;
       const cacheKey = getCacheKey(config);
       const shouldMeasure = shouldMeasureRequest(modelKey, config) && !getModelFromCache(config);
 
@@ -1088,23 +1082,11 @@ function fetchResources(
  */
 function provideProps(
   model: Model | Collection,
-  provides: ResourceConfigObj["provides"] = {},
+  provides: ResourceConfigObj["provides"],
   props: Props,
   setResourceState: Dispatch<SetStateAction<Record<string, any>>>
 ) {
-  if (Object.entries(provides).length) {
-    setResourceState((state) => ({
-      ...state,
-      ...Object.entries(provides).reduce(
-        (memo, [provide, transform]) =>
-          Object.assign({
-            memo,
-            ...(provide === SPREAD_PROVIDES_CHAR ?
-              transform(model, props)
-            : { [provide]: transform(model, props) }),
-          }),
-        {}
-      ),
-    }));
+  if (provides) {
+    setResourceState((state) => ({ ...state, ...provides(model, props) }));
   }
 }

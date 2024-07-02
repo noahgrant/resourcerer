@@ -22,7 +22,7 @@ export type ResourceConfigObj = {
   path?: { [key: string]: any };
   params?: { [key: string]: any };
   prefetches?: { [key: string]: any }[];
-  provides?: { [key: string]: (model: Model | Collection, props: Record<string, any>) => any };
+  provides?: (model: Model | Collection, props: Record<string, any>) => { [key: string]: any };
 };
 
 export type InternalResourceConfigObj = ResourceConfigObj & {
