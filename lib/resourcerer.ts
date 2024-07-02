@@ -566,7 +566,7 @@ export function getCacheKey({
       )
       .filter(Boolean);
 
-  return `${modelKey || ""}${fields.sort().join("_")}`;
+  return `${modelKey || ""}${fields.length ? `~${fields.sort().join("_")}` : ""}`;
 }
 
 /**
