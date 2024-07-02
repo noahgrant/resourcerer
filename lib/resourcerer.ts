@@ -369,9 +369,9 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     ...props[ResourcesConfig.queryParamsPropName],
     ...resourceState,
 
-    refetch: (fn: () => ResourceKeys[]) => {
+    refetch: (keys: ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
-        fn().forEach((name) => {
+        keys.forEach((name) => {
           const model = getModelFromCache(findConfig([name, {}], getResources, props));
 
           /**

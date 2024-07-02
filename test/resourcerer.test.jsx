@@ -1086,8 +1086,8 @@ describe("resourcerer", () => {
     await waitsFor(() => dataChild.props.hasLoaded);
 
     expect(requestSpy.mock.calls.length).toEqual(3);
-    dataChild.props.refetch(() => ["decisions", "user"]);
-    dataChild.props.refetch(() => ["decisions", "user"]);
+    dataChild.props.refetch(["decisions", "user"]);
+    dataChild.props.refetch(["decisions", "user"]);
 
     await waitsFor(() => !dataChild.props.hasLoaded);
 
@@ -1131,7 +1131,7 @@ describe("resourcerer", () => {
     await waitsFor(() => dataChild.props.hasLoaded);
 
     expect(secondChild.props.hasLoaded).toBe(true);
-    dataChild.props.refetch(() => ["decisions"]);
+    dataChild.props.refetch(["decisions"]);
 
     await waitsFor(() => dataChild.props.isLoading);
     expect(secondChild.props.isLoading).toBe(true);
