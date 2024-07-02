@@ -1,5 +1,5 @@
-import { ModelMap } from "./config";
-import { noOp, once } from "./utils";
+import { ModelMap } from "./config.js";
+import { noOp, once } from "./utils.js";
 import type { Resource, ResourcesObj } from "./types.js";
 
 import { getCacheKey } from "./resourcerer.js";
