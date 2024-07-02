@@ -15,7 +15,7 @@ import Collection from "../lib/collection";
 import { findRenderedComponentWithType } from "react-dom/test-utils";
 import Model from "../lib/model";
 import ModelCache from "../lib/model-cache";
-import React from "react";
+import React, { useState } from "react";
 import ReactDOM from "react-dom";
 import { waitsFor } from "./test-utils";
 import { vi } from "vitest";
@@ -25,7 +25,7 @@ var measure;
 const transformSpy = vi.fn();
 const renderNode = document.createElement("div");
 
-const getResources = (props) => ({
+const getResources = (props, setResourceState) => ({
   analysts: {
     noncritical: true,
     params: { shouldError: props.analystsError },
@@ -36,7 +36,7 @@ const getResources = (props) => ({
     lazy: props.lazy,
     measure,
   },
-  notes: { data: { pretend: true }, noncritical: true, dependsOn: ["noah"] },
+  notes: { data: { pretend: true }, noncritical: true, dependsOn: !!props.noah },
   user: {
     data: { id: props.withId ? props.userId : null },
     params: {
@@ -50,7 +50,7 @@ const getResources = (props) => ({
     {
       searchQuery: {
         params: { from: props.page },
-        prefetches: [{ page: props.page + 10 }],
+        prefetches: [{ params: { from: props.page + 10 } }],
       },
     }
   : {}),
@@ -58,15 +58,17 @@ const getResources = (props) => ({
   ...(props.serial ?
     {
       actions: {
-        provides: transformSpy.mockReturnValue({
-          serialProp: 42,
-          provides1: "moose",
-          provides2: "theberner",
-        }),
+        provides: transformSpy.mockImplementation(() =>
+          setResourceState({
+            serialProp: 42,
+            provides1: "moose",
+            provides2: "theberner",
+          })
+        ),
       },
       decisionLogs: {
         path: { logs: props.serialProp },
-        dependsOn: ["serialProp"],
+        dependsOn: !!props.serialProp,
       },
     }
   : {}),
@@ -74,7 +76,7 @@ const getResources = (props) => ({
     {
       customDecisions: {
         modelKey: "decisions",
-        provides: () => ({ sift: "science" }),
+        provides: () => setResourceState({ sift: "science" }),
       },
     }
   : {}),
@@ -262,15 +264,6 @@ describe("resourcerer", () => {
     }
   );
 
-  it("returns a setResourceState function that allows it to change resource-related props", async () => {
-    dataChild = findDataChild(renderUseResources());
-    expect(dataChild.props.userId).toEqual("noah");
-
-    dataChild.props.setResourceState({ userId: "alex" });
-    expect(dataChild.props.userId).toEqual("alex");
-    await waitsFor(() => dataChild.props.hasLoaded);
-  });
-
   describe("updates a resource", () => {
     it("when its cache key changes with props", async () => {
       // decisions collection should update when passed `include_deleted`,
@@ -280,7 +273,7 @@ describe("resourcerer", () => {
       await waitsFor(() => requestSpy.mock.calls.length);
       expect(requestSpy.mock.calls.length).toEqual(3);
 
-      findDataChild(resources).props.setResourceState({ includeDeleted: true });
+      resources = renderUseResources({ includeDeleted: true });
       await waitsFor(() => requestSpy.mock.calls.length === 4);
 
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual(
@@ -303,7 +296,7 @@ describe("resourcerer", () => {
       await waitsFor(() => dataChild.props.hasLoaded);
 
       expect(requestSpy.mock.calls.length).toEqual(3);
-      dataChild.props.setResourceState({ noah: true });
+      dataChild = findDataChild(renderUseResources({ noah: true }));
 
       await waitsFor(() => dataChild.props.notesLoadingState !== "pending");
 
@@ -328,7 +321,7 @@ describe("resourcerer", () => {
 
     it("when a dependent resource's prop changes", async () => {
       expect(ModelCache.unregister).not.toHaveBeenCalled();
-      dataChild.props.setResourceState({ userId: "zorah" });
+      dataChild = findDataChild(renderUseResources({ userId: "zorah" }));
 
       await waitsFor(() => ModelCache.unregister.mock.calls.length);
 
@@ -356,7 +349,7 @@ describe("resourcerer", () => {
     expect(requestSpy.mock.calls.length).toEqual(3);
     expect(requestSpy.mock.calls.map((call) => call[0]).includes("signals")).toBe(false);
 
-    findDataChild(resources).props.setResourceState({ fetchSignals: true });
+    renderUseResources({ fetchSignals: true });
 
     await waitsFor(() => requestSpy.mock.calls.length === 4);
 
@@ -801,7 +794,8 @@ describe("resourcerer", () => {
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toMatch("decisionLogs");
 
       await waitsFor(() => hasLoaded(dataChild.props.decisionLogsLoadingState));
-      dataChild.props.setResourceState((state) => ({ ...state, serialProp: null }));
+
+      dataChild = findDataChild(renderUseResources({ serialProp: null, serial: true }));
 
       await waitsFor(() => dataChild.props.decisionLogsLoadingState === "pending");
       expect(!!dataChild.props.serialProp).toBe(false);
@@ -826,7 +820,7 @@ describe("resourcerer", () => {
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toMatch("decisionLogs");
 
       await waitsFor(() => hasLoaded(dataChild.props.decisionLogsLoadingState));
-      dataChild.props.setResourceState((state) => ({ ...state, serialProp: null }));
+      dataChild = findDataChild(renderUseResources({ serialProp: null, serial: true }));
 
       await waitsFor(() => !dataChild.props.serialProp);
       expect(isPending(dataChild.props.decisionLogsLoadingState)).toBe(true);
@@ -880,7 +874,7 @@ describe("resourcerer", () => {
         expect(dataChild.props.searchQueryModel.params).toEqual({ from: 0 });
 
         // move to the next page
-        dataChild.props.setResourceState({ page: 10 });
+        dataChild = findDataChild(renderUseResources({ page: 10, prefetch: true }));
 
         await waitsFor(() => requestSpy.mock.calls.length === 6);
         expect(
@@ -1052,7 +1046,7 @@ describe("resourcerer", () => {
     cachedModel = ModelCache.get("user~fraudLevel=high_userId=noah");
     expect(cachedModel).toBeDefined();
 
-    dataChild.props.setResourceState({ withId: true });
+    dataChild = findDataChild(renderUseResources({ withId: true }));
     await waitsFor(() => dataChild.props.hasLoaded);
     expect(ModelCache.get("user~fraudLevel=high_userId=noah")).not.toBeDefined();
     expect(ModelCache.get("user~fraudLevel=high_id=noah_userId=noah")).toEqual(cachedModel);
@@ -1252,10 +1246,15 @@ class DefaultTestChildren extends React.Component {
 }
 
 function TestComponent(props) {
-  var resources = useResources(getResources, props),
+  var [resourceState, setResourceState] = useState({});
+  var resources = useResources(
+      // put props last here so that we can better orchestrate our tests
+      getResources({ ...resourceState, ...props }, setResourceState),
+      props
+    ),
     { TestChildren = DefaultTestChildren } = props;
 
-  return <TestChildren {...props} {...resources} />;
+  return <TestChildren {...resourceState} {...props} {...resources} />;
 }
 
 class TestWrapper extends React.Component {

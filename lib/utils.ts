@@ -89,7 +89,9 @@ export function once(fn: (...args: any[]) => void) {
 export function pick<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
   return keys.reduce(
     (memo, key) => {
-      memo[key] = obj[key];
+      if (obj[key]) {
+        memo[key] = obj[key];
+      }
 
       return memo;
     },

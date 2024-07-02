@@ -13,7 +13,7 @@ export type LoadingStateObj = { [key: LoadingStateKey]: LoadingStates };
 
 export type ResourceConfigObj = {
   data?: { [key: string]: any };
-  dependsOn?: string[];
+  dependsOn?: boolean;
   force?: boolean;
   lazy?: boolean;
   modelKey?: ResourceKeys;
