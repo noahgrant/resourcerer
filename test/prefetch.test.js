@@ -39,7 +39,7 @@ describe("prefetch", () => {
     prefetch(getResources, expectedProps)(dummyEvt);
     vi.advanceTimersByTime(100);
 
-    expect(Request.default.mock.calls[0][0]).toEqual("usersource=hbase_userId=noah");
+    expect(Request.default.mock.calls[0][0]).toEqual("user~source=hbase_userId=noah");
     expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
     expect(Request.default.mock.calls[0][2]).toEqual({
       path: { userId: "noah" },

@@ -229,7 +229,7 @@ describe("resourcerer", () => {
         userModel = new Model();
 
       ModelCache.put("decisions", decisionsCollection);
-      ModelCache.put("userfraudLevel=high_userId=noah", userModel);
+      ModelCache.put("user~fraudLevel=high_userId=noah", userModel);
       dataChild = findDataChild(renderUseResources());
 
       expect(dataChild.props.hasLoaded).toBe(true);
@@ -238,7 +238,7 @@ describe("resourcerer", () => {
       expect(dataChild.props.userModel).toEqual(userModel);
       await unmountAndClearModelCache();
 
-      ModelCache.remove("userfraudLevel=high_userId=noah");
+      ModelCache.remove("user~fraudLevel=high_userId=noah");
       dataChild = findDataChild(renderUseResources());
       expect(dataChild.props.hasLoaded).toBe(false);
       expect(dataChild.props.hasInitiallyLoaded).toBe(false);
@@ -284,7 +284,7 @@ describe("resourcerer", () => {
       await waitsFor(() => requestSpy.mock.calls.length === 4);
 
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual(
-        "decisionsinclude_deleted=true"
+        "decisions~include_deleted=true"
       );
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1]).toEqual(
         ModelMap.decisions
@@ -334,7 +334,7 @@ describe("resourcerer", () => {
 
       expect(ModelCache.unregister).toHaveBeenCalledWith(
         componentRef,
-        "userfraudLevel=high_userId=noah"
+        "user~fraudLevel=high_userId=noah"
       );
     });
 
@@ -461,13 +461,13 @@ describe("resourcerer", () => {
     await waitsFor(() => requestSpy.mock.calls.length === 5);
 
     expect(requestSpy.mock.calls[0][0]).toEqual("decisions");
-    expect(requestSpy.mock.calls[1][0]).toEqual("userfraudLevel=high_userId=noah");
+    expect(requestSpy.mock.calls[1][0]).toEqual("user~fraudLevel=high_userId=noah");
     expect(requestSpy.mock.calls[2][0]).toEqual("searchQuery");
     expect(requestSpy.mock.calls[2][2].prefetch).not.toBeDefined();
     // noncritical call is second-to-last
     expect(requestSpy.mock.calls[3][0]).toEqual("analysts");
     // prefetch call is last
-    expect(requestSpy.mock.calls[4][0]).toEqual("searchQueryfrom=10");
+    expect(requestSpy.mock.calls[4][0]).toEqual("searchQuery~from=10");
     expect(requestSpy.mock.calls[4][2].prefetch).toBeDefined();
     await waitsFor(() => dataChild.props.hasLoaded);
   });
@@ -487,7 +487,7 @@ describe("resourcerer", () => {
                 lastName: "grant",
               },
             })
-          ).toEqual("userfraudLevel=high_userId=noah");
+          ).toEqual("user~fraudLevel=high_userId=noah");
 
           expect(
             getCacheKey({
@@ -498,7 +498,7 @@ describe("resourcerer", () => {
                 lastName: "lopatron",
               },
             })
-          ).toEqual("userfraudLevel=low_userId=alex");
+          ).toEqual("user~fraudLevel=low_userId=alex");
         }
       );
 
@@ -509,7 +509,7 @@ describe("resourcerer", () => {
             modelKey: "user",
             path: { userId: "theboogieman" },
           })
-        ).toEqual("userfraudLevel=miniscule_userId=theboogieman");
+        ).toEqual("user~fraudLevel=miniscule_userId=theboogieman");
       });
 
       it("can invoke a dependencies function entry", () => {
@@ -532,7 +532,7 @@ describe("resourcerer", () => {
               lastName: "grant",
             },
           })
-        ).toEqual("userfraudLevel=highgrant_lastName=grant_userId=noah");
+        ).toEqual("user~fraudLevel=highgrant_lastName=grant_userId=noah");
 
         UserModel.dependencies = realDependencies;
       });
@@ -561,7 +561,7 @@ describe("resourcerer", () => {
     it("for a cached resource", async () => {
       var userModel = new UserModel({}, { userId: "zorah" });
 
-      ModelCache.put("useruserId=zorah", userModel);
+      ModelCache.put("user~userId=zorah", userModel);
 
       // this test is just to ensure that, when a cached resource is requested
       // on an update, which means it resolves its promise immediately, that the
@@ -579,7 +579,7 @@ describe("resourcerer", () => {
 
       // now assert that we turn back to a loaded state from the cached resource
       await waitsFor(() => dataChild.props.hasLoaded);
-      expect(ModelCache.register).toHaveBeenCalledWith("useruserId=zorah", {});
+      expect(ModelCache.register).toHaveBeenCalledWith("user~userId=zorah", {});
       expect(dataChild.props.userModel).toEqual(userModel);
       ModelCache.register.mockRestore();
     });
@@ -874,7 +874,7 @@ describe("resourcerer", () => {
           requestSpy.mock.calls
             .filter((call) => /^searchQuery/.test(call[0]))
             .map((call) => call[0])
-        ).toEqual(["searchQuery", "searchQueryfrom=10"]);
+        ).toEqual(["searchQuery", "searchQuery~from=10"]);
 
         await waitsFor(() => dataChild.props.hasLoaded);
         expect(dataChild.props.searchQueryModel.params).toEqual({ from: 0 });
@@ -887,7 +887,7 @@ describe("resourcerer", () => {
           requestSpy.mock.calls
             .filter((call) => /^searchQuery/.test(call[0]))
             .map((call) => call[0])
-        ).toEqual(["searchQuery", "searchQueryfrom=10", "searchQueryfrom=20"]);
+        ).toEqual(["searchQuery", "searchQuery~from=10", "searchQuery~from=20"]);
 
         expect(dataChild.props.searchQueryModel.params).toEqual({ from: 10 });
       });
@@ -1028,7 +1028,7 @@ describe("resourcerer", () => {
 
     expect(requestSpy.mock.calls.map((call) => call[0])).toEqual([
       "decisions",
-      "userfraudLevel=high_userId=noah",
+      "user~fraudLevel=high_userId=noah",
       "decisions",
       "analysts",
     ]);
@@ -1049,13 +1049,13 @@ describe("resourcerer", () => {
     dataChild = findDataChild(renderUseResources());
 
     await waitsFor(() => dataChild.props.hasLoaded);
-    cachedModel = ModelCache.get("userfraudLevel=high_userId=noah");
+    cachedModel = ModelCache.get("user~fraudLevel=high_userId=noah");
     expect(cachedModel).toBeDefined();
 
     dataChild.props.setResourceState({ withId: true });
     await waitsFor(() => dataChild.props.hasLoaded);
-    expect(ModelCache.get("userfraudLevel=high_userId=noah")).not.toBeDefined();
-    expect(ModelCache.get("userfraudLevel=high_id=noah_userId=noah")).toEqual(cachedModel);
+    expect(ModelCache.get("user~fraudLevel=high_userId=noah")).not.toBeDefined();
+    expect(ModelCache.get("user~fraudLevel=high_id=noah_userId=noah")).toEqual(cachedModel);
 
     expect(requestSpy.mock.calls.length).toEqual(4);
   });
@@ -1063,7 +1063,7 @@ describe("resourcerer", () => {
   it("cached resources are initialized into a loaded state and not re-fetched", async () => {
     var zorahModel = new UserModel();
 
-    ModelCache.put("userfraudLevel=high_userId=zorah", zorahModel);
+    ModelCache.put("user~fraudLevel=high_userId=zorah", zorahModel);
     dataChild = findDataChild(renderUseResources());
 
     await waitsFor(() => dataChild.props.hasLoaded);
@@ -1150,13 +1150,13 @@ describe("resourcerer", () => {
       userModel = new Model();
 
     ModelCache.put("decisions", decisionsCollection);
-    ModelCache.put("userfraudLevel=high_userId=noah", userModel);
+    ModelCache.put("user~fraudLevel=high_userId=noah", userModel);
     dataChild = findDataChild(renderUseResources({ force: true }));
     await waitsFor(() => dataChild.props.hasLoaded);
     expect(requestSpy.mock.calls.length).toEqual(3);
     expect(requestSpy.mock.calls.map(([name]) => name)).toEqual([
       "decisions",
-      "userfraudLevel=high_userId=noah",
+      "user~fraudLevel=high_userId=noah",
       "analysts",
     ]);
 
@@ -1174,7 +1174,7 @@ describe("resourcerer", () => {
     // lazy
     ModelCache.put("decisions", decisionsCollection);
     // not lazy
-    ModelCache.put("userfraudLevel=high_userId=noah", userModel);
+    ModelCache.put("user~fraudLevel=high_userId=noah", userModel);
 
     dataChild = findDataChild(renderUseResources());
 
