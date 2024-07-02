@@ -6,14 +6,7 @@ export type LoadingStates = "error" | "loading" | "loaded" | "pending";
 export type Resource = [string, InternalResourceConfigObj];
 export type Props = Record<string, any>;
 
-// this will make CONST_CASE a camelCase but also leave camelCase alone
-type Camelize<T extends string> =
-  T extends `${infer A}_${infer B}` ? `${Lowercase<A>}${Camelize<Capitalize<B>>}`
-  : T extends Uppercase<T> ? Capitalize<Lowercase<T>>
-  : T extends `${infer A}${Uppercase<infer B>}` ? Lowercase<T>
-  : T;
-
-export type ResourceKeysType = Camelize<Extract<keyof ModelMap, string>>;
+export type ResourceKeys = Extract<keyof ModelMap, string>;
 
 export type LoadingStateKey = `${string}LoadingState`;
 export type LoadingStateObj = { [key: LoadingStateKey]: LoadingStates };
@@ -23,7 +16,7 @@ export type ResourceConfigObj = {
   dependsOn?: string[];
   force?: boolean;
   lazy?: boolean;
-  modelKey?: ResourceKeysType;
+  modelKey?: ResourceKeys;
   noncritical?: boolean;
   options?: { [key: string]: any };
   path?: { [key: string]: any };
@@ -33,15 +26,13 @@ export type ResourceConfigObj = {
 };
 
 export type InternalResourceConfigObj = ResourceConfigObj & {
-  modelKey: ResourceKeysType;
+  modelKey: ResourceKeys;
   prefetch?: boolean;
   refetch?: boolean;
 };
 
-export type ExecutorFunction = (
-  ResourceKeys: { [key: string]: ResourceKeysType },
-  props: { [key: string]: any }
-  // return type either has a resource key as the object key or is just a string with a modelKey property
-) =>
-  | Partial<Record<ResourceKeysType, ResourceConfigObj>>
-  | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeysType }>>;
+export type ExecutorFunction = (props: {
+  [key: string]: any;
+}) => // return type either has a resource key as the object key or is just a string with a modelKey property
+| Partial<Record<ResourceKeys, ResourceConfigObj>>
+  | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeys }>>;

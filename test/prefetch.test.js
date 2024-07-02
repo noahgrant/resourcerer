@@ -7,7 +7,7 @@ import ReactDOM from "react-dom";
 import { vi } from "vitest";
 
 const renderNode = document.createElement("div");
-const getResources = (_, props) => ({
+const getResources = (props) => ({
   user: {
     params: { home: props.home, source: props.source },
     path: { userId: props.userId },

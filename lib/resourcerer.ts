@@ -1,5 +1,5 @@
 import { hasErrored, hasLoaded, isLoading } from "./utils";
-import { ModelMap, ResourceKeys, ResourcesConfig } from "./config";
+import { ModelMap, ResourcesConfig } from "./config";
 import React, {
   type ComponentClass,
   type Dispatch,
@@ -24,7 +24,7 @@ import type {
   Props,
   ResourceConfigObj,
   InternalResourceConfigObj,
-  ResourceKeysType,
+  ResourceKeys,
   LoadingStateKey,
 } from "./types";
 
@@ -126,7 +126,7 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
   // as state in the first render phase would also be up for update in the next one. so we have
   // to keep track of which models have been updated in state, and then we'll reset this when
   // useEffect is finally called.
-  const cachedModelsSinceLastEffect = useRef<{ [key: ResourceKeysType]: boolean }>({});
+  const cachedModelsSinceLastEffect = useRef<{ [key: ResourceKeys]: boolean }>({});
   const refetchedModelsSinceLastEffect = useRef<{ [key: string]: boolean }>({});
   const forceUpdate = useForceUpdate();
 
@@ -375,9 +375,9 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     ...props[ResourcesConfig.queryParamsPropName],
     ...resourceState,
 
-    refetch: (fn: (keys: typeof ResourceKeys) => string[]) => {
+    refetch: (fn: () => ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
-        fn(ResourceKeys).forEach((name) => {
+        fn().forEach((name) => {
           const model = getModelFromCache(findConfig([name, {}], getResources, props));
 
           /**
@@ -445,7 +445,7 @@ export const withResources = (getResources: ExecutorFunction) => (Component: Com
  *   to be consumed by the useResources with prefetch properties assigned.
  */
 function generateResources(getResources: ExecutorFunction, props: Record<string, any>): Resource[] {
-  return Object.entries(getResources(ResourceKeys, props) || {}).reduce(
+  return Object.entries(getResources(props) || {}).reduce(
     (memo, [name, config = {}]) =>
       memo.concat(
         [
@@ -467,7 +467,7 @@ function generateResources(getResources: ExecutorFunction, props: Record<string,
                 name,
                 {
                   modelKey: config.modelKey || name,
-                  ...getResources(ResourceKeys, { ...props, ...prefetch })[name],
+                  ...getResources({ ...props, ...prefetch })[name],
                   prefetch: true,
                 },
               ] as Resource
@@ -1052,31 +1052,6 @@ function fetchResources(
           }
 
           delete model.refetching;
-
-          // add unfetched resources that a model might provide
-          /*
-          if (ModelMap[modelKey]?.providesModels) {
-            ModelMap[modelKey]?.providesModels(model, ResourceKeys).forEach((uConfig) => {
-              const uCacheKey = getCacheKey(uConfig);
-              const existingModel = ModelCache.get(uCacheKey);
-
-              if (
-                typeof uConfig.shouldCache !== "function" ||
-                uConfig.shouldCache(existingModel, uConfig)
-              ) {
-                // components may be listening to existing models, so only create
-                // new model if one does not currently exist
-                existingModel ?
-                  existingModel.set(uConfig.data)
-                : ModelCache.put(
-                    uCacheKey,
-                    new ModelMap[uConfig.modelKey](uConfig.data, uConfig.options),
-                    component
-                  );
-              }
-            });
-          }
-          */
 
           // don't continue unless component is still mounted and resource is current
           if (isCurrentResource([name, config], cacheKey)) {

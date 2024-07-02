@@ -25,7 +25,7 @@ var measure;
 const transformSpy = vi.fn();
 const renderNode = document.createElement("div");
 
-const getResources = (_, props) => ({
+const getResources = (props) => ({
   analysts: {
     noncritical: true,
     params: { shouldError: props.analystsError },
@@ -797,9 +797,7 @@ describe("resourcerer", () => {
     it("reverts back to pending state if its dependencies are removed", async () => {
       await waitsFor(() => dataChild.props.serialProp);
       expect(isLoading(dataChild.props.decisionLogsLoadingState)).toBe(true);
-      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toMatch(
-        ResourceKeys.DECISION_LOGS
-      );
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toMatch("decisionLogs");
 
       await waitsFor(() => hasLoaded(dataChild.props.decisionLogsLoadingState));
       dataChild.props.setResourceState((state) => ({ ...state, serialProp: null }));
@@ -824,9 +822,7 @@ describe("resourcerer", () => {
 
       await waitsFor(() => dataChild.props.serialProp);
       expect(isLoading(dataChild.props.decisionLogsLoadingState)).toBe(true);
-      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toMatch(
-        ResourceKeys.DECISION_LOGS
-      );
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toMatch("decisionLogs");
 
       await waitsFor(() => hasLoaded(dataChild.props.decisionLogsLoadingState));
       dataChild.props.setResourceState((state) => ({ ...state, serialProp: null }));

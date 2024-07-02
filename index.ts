@@ -5,5 +5,5 @@ export { default as prefetch } from "./lib/prefetch";
 export { default as request } from "./lib/request";
 export { default as ModelCache } from "./lib/model-cache";
 export * as Utils from "./lib/utils";
-export { ModelMap, ResourceKeys, ResourcesConfig } from "./lib/config";
+export { ModelMap, ResourcesConfig } from "./lib/config";
 export { useResources, withResources } from "./lib/resourcerer";
