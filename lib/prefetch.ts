@@ -1,6 +1,6 @@
 import { ModelMap } from "./config";
 import { noOp, once } from "./utils";
-import type { ExecutorFunction, Resource } from "./types.js";
+import type { Resource, ResourcesObj } from "./types.js";
 
 import { getCacheKey } from "./resourcerer.js";
 import request from "./request.js";
@@ -19,9 +19,9 @@ const PREFETCH_TIMEOUT = 50;
  *   would be needed
  * @return {function} callback to be invoked onMouseEnter of appropriate DOM el
  */
-export default (getResources: ExecutorFunction, expectedProps: Record<string, any> = {}) => {
+export default (configObj: ResourcesObj = {}) => {
   let fetched: boolean;
-  const resources = Object.entries(getResources(expectedProps) || {}) as Resource[];
+  const resources = Object.entries(configObj) as Resource[];
 
   return (evt: MouseEvent) => {
     const { target } = evt;

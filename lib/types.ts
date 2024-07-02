@@ -31,10 +31,8 @@ export type InternalResourceConfigObj = ResourceConfigObj & {
   refetch?: boolean;
 };
 
-export type ExecutorFunction = (props: {
-  [key: string]: any;
-}) => // return type either has a resource key as the object key or is just a string with a modelKey property
-| Partial<Record<ResourceKeys, ResourceConfigObj>>
+export type ResourcesObj =
+  | Partial<Record<ResourceKeys, ResourceConfigObj>>
   | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeys }>>;
 
 export interface UseResourcesResponse {

@@ -17,7 +17,6 @@ import ModelCache from "./model-cache.js";
 import ReactDOM from "react-dom";
 import request from "./request.js";
 import type {
-  ExecutorFunction,
   LoadingStates,
   LoadingStateObj,
   Resource,
@@ -27,6 +26,7 @@ import type {
   ResourceKeys,
   LoadingStateKey,
   UseResourcesResponse,
+  ResourcesObj,
 } from "./types.js";
 
 type ModelInstanceType = Model | Collection;
@@ -73,13 +73,10 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *        fetched and cached
  *   * ...any other option that can be passed directly to the `request` function
  */
-export const useResources = (
-  getResources: ExecutorFunction,
-  _props: Record<string, any>
-): UseResourcesResponse => {
+export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseResourcesResponse => {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
-  const resources = generateResources(getResources, props);
+  const resources = generateResources(configObj);
   const initialLoadingStates = buildResourcesLoadingState(resources.filter(withoutPrefetch), props);
 
   // set initial loading states and create loaderDispatch for maintaining them
@@ -106,11 +103,11 @@ export const useResources = (
   const componentRef = useRef({});
   // this reference to previous props allows us to know when resources are changing
   // important: starts undefined so that getResourcesToUpdate marks all initial resources as to-update
-  const prevPropsRef = useRef<Record<string, any>>();
+  const prevConfigRef = useRef<ResourcesObj>();
   // this might look confusing but is important. we need to know, before
   // setting any loaded or error states, that a returned resource belongs
   // to the most recent component props. so we use a ref to persist across the closure
-  const currentPropsRef = useRef(props);
+  const currentConfigRef = useRef(configObj);
   // stash reference to all models with listeners currently attached, since when we return
   // from any updated requests there's no guarantee that the most recent models were a
   // function of the previous props (as opposed to props from two renders ago, for example).
@@ -140,13 +137,13 @@ export const useResources = (
       .filter(not(shouldBypassFetch.bind(null, props)))
       .filter(([name, config]: Resource) => {
         const prevConfig =
-          prevPropsRef.current && findConfig([name, config], getResources, prevPropsRef.current);
+          prevConfigRef.current && findConfig([name, config], prevConfigRef.current);
         const previousCacheKey = prevConfig && getCacheKey(prevConfig);
 
         return (
           !previousCacheKey ||
           previousCacheKey !== getCacheKey(config) ||
-          !hasAllDependencies(prevPropsRef.current, ["", config]) ||
+          !hasAllDependencies(prevConfigRef.current, ["", config]) ||
           // we only want to refetch if the resource is currently in a loaded state. but then
           // we'll move to a loading state and short-circuit the render cycle, and it won't be
           // loaded in the next cycle. that's why we use the ref, as well
@@ -181,7 +178,8 @@ export const useResources = (
   const pendingResources = resources
     .filter(not(hasAllDependencies.bind(null, props)))
     .filter(
-      ([, config]) => prevPropsRef.current && hasAllDependencies(prevPropsRef.current, ["", config])
+      ([, config]) =>
+        prevConfigRef.current && hasAllDependencies(prevConfigRef.current, ["", config])
     );
   const resourcesToUpdate = getResourcesToUpdate();
   const nextLoadingStates: LoadingStateObj = {
@@ -272,9 +270,9 @@ export const useResources = (
     // loaded resources will have already had their models set above, and any loaded prefetched
     // models do not have loading or model states, this should have no practical effect
     if (resourcesToUpdate.length) {
-      if (prevPropsRef.current) {
+      if (prevConfigRef.current) {
         resourcesToUpdate.forEach(([name, config]) => {
-          const prevConfig = findConfig([name, config], getResources, prevPropsRef.current!),
+          const prevConfig = findConfig([name, config], prevConfigRef.current!),
             prevCacheKey = getCacheKey(prevConfig);
           const prevModel = ModelCache.get(prevCacheKey);
 
@@ -296,7 +294,7 @@ export const useResources = (
         isCurrentResource: ([name, config], cacheKey) =>
           isMountedRef.current &&
           !config.prefetch &&
-          cacheKey === findCacheKey([name, config], getResources, currentPropsRef.current),
+          cacheKey === findCacheKey([name, config], currentConfigRef.current),
         setResourceState,
         onRequestSuccess: (model, status, [name, config]) => {
           // to batch these state updates into one, per this comment:
@@ -331,7 +329,7 @@ export const useResources = (
       });
     }
 
-    prevPropsRef.current = props;
+    prevConfigRef.current = configObj;
     // now we can reset these values
     cachedModelsSinceLastEffect.current = {};
     refetchedModelsSinceLastEffect.current = {};
@@ -361,7 +359,7 @@ export const useResources = (
     };
   }, []);
 
-  currentPropsRef.current = props;
+  currentConfigRef.current = configObj;
 
   return {
     ...models,
@@ -375,7 +373,7 @@ export const useResources = (
     refetch: (keys: ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
         keys.forEach((name) => {
-          const model = getModelFromCache(findConfig([name, {}], getResources, props));
+          const model = getModelFromCache(findConfig([name, {}], configObj));
 
           /**
            * Set a refetching flag on the model and re-render. This will cause all components
@@ -418,9 +416,10 @@ export const useResources = (
  * README.
  */
 export const withResources =
-  (getResources: ExecutorFunction) => (Component: ComponentClass<Record<string, any>>) =>
+  (getResources: (props: Props) => ResourcesObj) =>
+  (Component: ComponentClass<Record<string, any>>) =>
     function DataCarrier(props: Record<string, any>) {
-      const resources = useResources(getResources, props);
+      const resources = useResources(getResources(props));
 
       return React.createElement(ErrorBoundary, {
         children: React.createElement(Component, {
@@ -447,8 +446,8 @@ export const withResources =
  * @return {[string, object][]} flattened [name, config] list of resources
  *   to be consumed by the useResources with prefetch properties assigned.
  */
-function generateResources(getResources: ExecutorFunction, props: Record<string, any>): Resource[] {
-  return Object.entries(getResources(props) || {}).reduce(
+function generateResources(configObj: ResourcesObj): Resource[] {
+  return Object.entries(configObj || {}).reduce(
     (memo, [name, config = {}]) =>
       memo.concat(
         [
@@ -470,7 +469,8 @@ function generateResources(getResources: ExecutorFunction, props: Record<string,
                 name,
                 {
                   modelKey: config.modelKey || name,
-                  ...getResources({ ...props, ...prefetch })[name],
+                  ...configObj[name],
+                  ...prefetch,
                   prefetch: true,
                 },
               ] as Resource
@@ -590,11 +590,10 @@ export function getCacheKey({
  */
 function findConfig(
   [name, { prefetch }]: [string, { prefetch?: boolean }],
-  getResources: ExecutorFunction,
-  props: Props
+  configObj: ResourcesObj
 ): InternalResourceConfigObj {
   const [, config = { modelKey: "" }] =
-    generateResources(getResources, props).find(
+    generateResources(configObj).find(
       ([_name, _config = {}]) =>
         name === _name &&
         // cheap deep equals
@@ -621,8 +620,8 @@ function findConfig(
  * @return {string} the cache key for the resource of name `name` and matching
  *   prefetch, if applicable
  */
-function findCacheKey(resource: Resource, getResources: ExecutorFunction, props: Props) {
-  return getCacheKey(findConfig(resource, getResources, props)) || "";
+function findCacheKey(resource: Resource, configObj: ResourcesObj) {
+  return getCacheKey(findConfig(resource, configObj)) || "";
 }
 
 /**

@@ -7,14 +7,13 @@ import ReactDOM from "react-dom";
 import { vi } from "vitest";
 
 const renderNode = document.createElement("div");
-const getResources = (props) => ({
+const configObj = {
   user: {
-    params: { home: props.home, source: props.source },
-    path: { userId: props.userId },
+    params: { home: "sf", source: "hbase" },
+    path: { userId: "noah" },
   },
   decisions: {},
-});
-const expectedProps = { userId: "noah", home: "sf", source: "hbase" };
+};
 const dummyEvt = { target: renderNode };
 
 describe("prefetch", () => {
@@ -36,7 +35,7 @@ describe("prefetch", () => {
 
     UserModel.dependencies = ["userId", "source"];
 
-    prefetch(getResources, expectedProps)(dummyEvt);
+    prefetch(configObj)(dummyEvt);
     vi.advanceTimersByTime(100);
 
     expect(Request.default.mock.calls[0][0]).toEqual("user~source=hbase_userId=noah");
@@ -57,7 +56,7 @@ describe("prefetch", () => {
   it("will fire if the user hovers over the element for longer than the timeout", () => {
     var leaveEvt = new Event("mouseleave");
 
-    prefetch(getResources, expectedProps)(dummyEvt);
+    prefetch(configObj)(dummyEvt);
     vi.advanceTimersByTime(50);
     renderNode.dispatchEvent(leaveEvt);
     expect(Request.default).toHaveBeenCalled();
@@ -66,7 +65,7 @@ describe("prefetch", () => {
   it("will not fetch if the user leaves the element before the timeout", () => {
     var leaveEvt = new Event("mouseleave");
 
-    prefetch(getResources, expectedProps)(dummyEvt);
+    prefetch(configObj)(dummyEvt);
     vi.advanceTimersByTime(25);
     renderNode.dispatchEvent(leaveEvt);
     vi.advanceTimersByTime(25);
