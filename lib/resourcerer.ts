@@ -26,6 +26,7 @@ import type {
   InternalResourceConfigObj,
   ResourceKeys,
   LoadingStateKey,
+  UseResourcesResponse,
 } from "./types.js";
 
 type ModelInstanceType = Model | Collection;
@@ -72,7 +73,10 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *        fetched and cached
  *   * ...any other option that can be passed directly to the `request` function
  */
-export const useResources = (getResources: ExecutorFunction, _props: Record<string, any>) => {
+export const useResources = (
+  getResources: ExecutorFunction,
+  _props: Record<string, any>
+): UseResourcesResponse => {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
   const resources = generateResources(getResources, props);

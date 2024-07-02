@@ -36,3 +36,17 @@ export type ExecutorFunction = (props: {
 }) => // return type either has a resource key as the object key or is just a string with a modelKey property
 | Partial<Record<ResourceKeys, ResourceConfigObj>>
   | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeys }>>;
+
+export interface UseResourcesResponse {
+  isLoading: boolean;
+  hasErrored: boolean;
+  hasLoaded: boolean;
+  hasInitiallyLoaded: boolean;
+  refetch: (keys: ResourceKeys[]) => void;
+  invalidate: (keys: ResourceKeys[]) => void;
+  setResourceState(newState: { [key: string]: any }): void;
+  [key: `${string}LoadingState`]: LoadingStates;
+  [key: `${string}Collection`]: Collection;
+  [key: `${string}Model`]: Model;
+  [key: `${string}Status`]: number;
+}
