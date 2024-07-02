@@ -2,12 +2,12 @@ import { hasErrored, hasLoaded, isLoading } from "./utils.js";
 import { ModelMap, ResourcesConfig } from "./config.js";
 import React, {
   type ComponentClass,
-  type Dispatch,
   type SetStateAction,
   useEffect,
   useReducer,
   useRef,
   useState,
+  Dispatch,
 } from "react";
 
 import Collection from "./collection.js";
@@ -73,9 +73,7 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *        fetched and cached
  *   * ...any other option that can be passed directly to the `request` function
  */
-export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseResourcesResponse => {
-  const [resourceState, setResourceState] = useState<Record<string, any>>({});
-  const props = { ..._props, ...resourceState };
+export const useResources = (configObj: ResourcesObj, props: Props = {}): UseResourcesResponse => {
   const resources = generateResources(configObj);
   const initialLoadingStates = buildResourcesLoadingState(resources.filter(withoutPrefetch), props);
 
@@ -227,8 +225,8 @@ export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseRe
       // cached dependent models will also trigger a setModels call and an additional re-render
       // without a useEffect
 
-      if (model) {
-        provideProps(model, config.provides, props, setResourceState);
+      if (model && config.provides) {
+        config.provides(model, props);
       }
     });
 
@@ -264,12 +262,7 @@ export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseRe
    * because that will re-render our components an additional two times.
    */
   useEffect(() => {
-    // NOTE: changing this to resourcesToFetch causes some inexplicable bugs around cached resources
-    // and a UI that wouldn't update. so this is kept as resourcesToUpdate and fetchResources is
-    // given resourcesToFetch. Because we are still only fetching resourcesToFetch and because any
-    // loaded resources will have already had their models set above, and any loaded prefetched
-    // models do not have loading or model states, this should have no practical effect
-    if (resourcesToUpdate.length) {
+    if (resourcesToFetch.length) {
       if (prevConfigRef.current) {
         resourcesToUpdate.forEach(([name, config]) => {
           const prevConfig = findConfig([name, config], prevConfigRef.current!),
@@ -295,7 +288,6 @@ export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseRe
           isMountedRef.current &&
           !config.prefetch &&
           cacheKey === findCacheKey([name, config], currentConfigRef.current),
-        setResourceState,
         onRequestSuccess: (model, status, [name, config]) => {
           // to batch these state updates into one, per this comment:
           // https://stackoverflow.com/questions/48563650/
@@ -364,12 +356,6 @@ export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseRe
   return {
     ...models,
 
-    // spread url params and merge with state. url should take priority
-    // over passed props (like defaultProps), but state should take
-    // precedence over all
-    ...props,
-    ...resourceState,
-
     refetch: (keys: ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
         keys.forEach((name) => {
@@ -391,8 +377,6 @@ export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseRe
      * For each modelKey, find all entries in the cache and remove them.
      */
     invalidate: (keys: ResourceKeys[]) => keys.forEach((key) => ModelCache.removeAllWithModel(key)),
-
-    setResourceState,
 
     // here we include our model loading states, useful for noncritical resources
     ...loadingStates,
@@ -416,15 +400,24 @@ export const useResources = (configObj: ResourcesObj, _props: Props = {}): UseRe
  * README.
  */
 export const withResources =
-  (getResources: (props: Props) => ResourcesObj) =>
+  (
+    getResources: (
+      props: Props,
+      setState: Dispatch<SetStateAction<Record<string, any>>>
+    ) => ResourcesObj
+  ) =>
   (Component: ComponentClass<Record<string, any>>) =>
     function DataCarrier(props: Record<string, any>) {
-      const resources = useResources(getResources(props));
+      const [resourceState, setResourceState] = useState<Record<string, any>>({});
+      const resources = useResources(
+        getResources({ ...props, ...resourceState }, setResourceState)
+      );
 
       return React.createElement(ErrorBoundary, {
         children: React.createElement(Component, {
           ...props,
           ...resources,
+          setResourceState,
         }),
       });
     };
@@ -995,7 +988,6 @@ function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigOb
  *     isCurrentResource {function} - should true if a returned resource is the
  *       current resource for a component instance (ie, no newer requests were
  *       made in the interim)
- *     setResourceState {function} - updates resource state
  *     onRequestSuccess {function} - called after a request succeeds
  *     onRequestFailure {function} - called after a request fails
  */
@@ -1005,13 +997,11 @@ function fetchResources(
   {
     component,
     isCurrentResource,
-    setResourceState,
     onRequestSuccess,
     onRequestFailure,
   }: {
     component: Record<string, never>;
     isCurrentResource: (resource: Resource, cacheKey: string) => boolean;
-    setResourceState: Dispatch<SetStateAction<Record<string, any>>>;
     onRequestSuccess: (
       model: Model | Collection,
       status: number | undefined,
@@ -1058,7 +1048,7 @@ function fetchResources(
           // don't continue unless component is still mounted and resource is current
           if (isCurrentResource([name, config], cacheKey)) {
             // add any dependencies this resource might provide for other resources
-            provideProps(model, provides, props, setResourceState);
+            provides?.(model, props);
             onRequestSuccess(model, status, [name, config]);
           }
         },
@@ -1078,23 +1068,4 @@ function fetchResources(
       );
     })
   );
-}
-
-/**
- * Add any dependencies that the model provides as resource state.
- *
- * @param {Model|Collection} model
- * @param {object} provides - config provides object
- * @param {object} props - current component props
- * @param {function} setResourceState - updates resource state
- */
-function provideProps(
-  model: Model | Collection,
-  provides: ResourceConfigObj["provides"],
-  props: Props,
-  setResourceState: Dispatch<SetStateAction<Record<string, any>>>
-) {
-  if (provides) {
-    setResourceState((state) => ({ ...state, ...provides(model, props) }));
-  }
 }

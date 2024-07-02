@@ -42,7 +42,6 @@ export interface UseResourcesResponse {
   hasInitiallyLoaded: boolean;
   refetch: (keys: ResourceKeys[]) => void;
   invalidate: (keys: ResourceKeys[]) => void;
-  setResourceState(newState: { [key: string]: any }): void;
   [key: `${string}LoadingState`]: LoadingStates;
   [key: `${string}Collection`]: Collection;
   [key: `${string}Model`]: Model;
