@@ -1145,6 +1145,32 @@ describe("resourcerer", () => {
     expect(requestSpy.mock.calls.length).toEqual(8);
   });
 
+  it("invalidate removes models from the cache immediately", async () => {
+    dataChild = findDataChild(renderUseResources());
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+
+    expect(requestSpy.mock.calls.length).toEqual(3);
+
+    ReactDOM.unmountComponentAtNode(renderNode);
+    dataChild = findDataChild(renderUseResources());
+    // models still in the cache, so nothing needs to be refetched
+    expect(dataChild.props.hasLoaded).toBe(true);
+    expect(requestSpy.mock.calls.length).toEqual(3);
+
+    dataChild.props.invalidate(["user", "decisions"]);
+    ReactDOM.unmountComponentAtNode(renderNode);
+
+    dataChild = findDataChild(renderUseResources());
+    // now models are no longer in the cache
+    expect(dataChild.props.hasLoaded).not.toBe(true);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.mock.calls.length).toEqual(5);
+    expect(requestSpy.mock.calls.at(-1)[0]).toEqual("user~fraudLevel=high_userId=noah");
+    expect(requestSpy.mock.calls.at(-2)[0]).toEqual("decisions");
+  });
+
   it("fetches on mount (but not on updated) even when cached with 'force' option", async () => {
     var decisionsCollection = new Collection(),
       userModel = new Model();

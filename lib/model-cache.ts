@@ -103,6 +103,18 @@ export default {
    */
   remove(cacheKey: string) {
     clearModel(cacheKey);
+    componentManifest.delete(cacheKey);
+  },
+
+  /**
+   * A shortcut to remove all models of a given modelKey.
+   */
+  removeAllWithModel(modelKey: string) {
+    for (const key of modelCache.keys()) {
+      if (key === modelKey || key.startsWith(`${modelKey}~`)) {
+        this.remove(key);
+      }
+    }
   },
 
   // internal only

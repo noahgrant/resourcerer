@@ -386,6 +386,11 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
       });
     },
 
+    /**
+     * For each modelKey, find all entries in the cache and remove them.
+     */
+    invalidate: (keys: ResourceKeys[]) => keys.forEach((key) => ModelCache.removeAllWithModel(key)),
+
     setResourceState,
 
     // here we include our model loading states, useful for noncritical resources
