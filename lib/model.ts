@@ -39,7 +39,7 @@ const RESERVED_OPTION_KEYS = [
  */
 export default class Model<
   T extends Record<string, any> = object,
-  O extends Record<string, any> & SetOptions & ConstructorOptions = object,
+  O extends Record<string, any> = object,
 > extends Events {
   cid: string;
   id: string | number;
@@ -60,7 +60,10 @@ export default class Model<
    *   * collection {Collection} - links this model to a collection, if applicable
    *   * ...any other options that .set() takes
    */
-  constructor(attributes?: T, options: O = {} as O) {
+  constructor(
+    attributes?: T,
+    options: O & SetOptions & ConstructorOptions = {} as O & SetOptions & ConstructorOptions
+  ) {
     super();
 
     this.cid = uniqueId("c");

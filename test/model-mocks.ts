@@ -2,7 +2,7 @@ import Collection from "../lib/collection";
 import Model from "../lib/model";
 import { type SyncOptions } from "../lib/sync";
 
-export class UserModel extends Model {
+export class UserModel extends Model<{ anything: string }, { userId: string }> {
   key = "user";
   userId: string;
 
@@ -31,7 +31,7 @@ export class DecisionsCollection extends Collection {
   static dependencies = ["include_deleted"];
 }
 
-export class NotesModel extends Model {
+export class NotesModel extends Model<{ note: "note" }, { userId: string }> {
   key = "notes";
 
   url({ userId }) {

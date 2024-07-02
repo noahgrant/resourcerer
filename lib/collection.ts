@@ -12,10 +12,9 @@ type CSetOptions = {
 } & SetOptions &
   ConstructorOptions;
 
-type ModelArg<
-  A extends Record<string, any>,
-  O extends Record<string, any> & SetOptions & ConstructorOptions,
-> = Model<A, O> | Record<string, any>;
+type ModelArg<A extends Record<string, any>, O extends Record<string, any>> =
+  | Model<A, O>
+  | Record<string, any>;
 
 type comparator =
   | ((arg: Model) => number | string)
@@ -34,10 +33,7 @@ type comparator =
  */
 export default class Collection<
   T extends Record<string, any> = object,
-  O extends Record<string, any> & {
-    Model?: typeof Model<T, O>;
-    comparator?: comparator;
-  } & CSetOptions = object,
+  O extends Record<string, any> = object,
 > extends Events {
   lazy?: boolean;
   refetching?: boolean;
@@ -65,7 +61,13 @@ export default class Collection<
    *   * comparator {function|string} - dynamically overrides the static comparator property used to
    *     sort the collection
    */
-  constructor(models?: ModelArg<T, O> | ModelArg<T, O>[], options: O = {} as O) {
+  constructor(
+    models?: ModelArg<T, O> | ModelArg<T, O>[],
+    options: O & {
+      Model?: typeof Model<T, O>;
+      comparator?: comparator;
+    } & CSetOptions = {} as O
+  ) {
     super();
 
     const RESERVED_OPTION_KEYS = ["Model", "comparator", "silent", "parse"];
