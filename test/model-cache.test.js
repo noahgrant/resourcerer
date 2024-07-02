@@ -184,4 +184,25 @@ describe("ModelCache", () => {
     // now immediately gone
     expect(ModelCache.get("foo")).not.toBeDefined();
   });
+
+  it("when calling 'removeAllWithModel' removes all models of a specific key", () => {
+    const cacheKeys = [
+      "user~userId=zorah",
+      "user~source=hbase_userId=noah",
+      "user",
+      "users",
+      "users~key=value",
+      "decisions",
+    ];
+
+    cacheKeys.forEach((key) => ModelCache.put(key, {}, {}));
+
+    ModelCache.removeAllWithModel("user");
+    expect(ModelCache.get("user")).not.toBeDefined();
+    expect(ModelCache.get("user~userId=zorah")).not.toBeDefined();
+    expect(ModelCache.get("user~source=hbase_userId=noah")).not.toBeDefined();
+    expect(ModelCache.get("users")).toBeDefined();
+    expect(ModelCache.get("users~key=value")).toBeDefined();
+    expect(ModelCache.get("decisions")).toBeDefined();
+  });
 });
