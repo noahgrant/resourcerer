@@ -38,28 +38,24 @@ describe("Config", () => {
       expect(Config.ResourcesConfig.log).toEqual(noOp);
       expect(Config.ResourcesConfig.prefilter).toEqual(noOp);
       expect(Config.ResourcesConfig.track).toEqual(noOp);
-      expect(Config.ResourcesConfig.queryParamsPropName).toEqual("urlParams");
 
       Config.ResourcesConfig.set({
         cacheGracePeriod: 300000,
         log: logSpy,
         prefilter: prefilterSpy,
         track: trackSpy,
-        queryParamsPropName: "queryPs",
       });
 
       expect(Config.ResourcesConfig.cacheGracePeriod).toEqual(300000);
       expect(Config.ResourcesConfig.log).toEqual(logSpy);
       expect(Config.ResourcesConfig.prefilter).toEqual(prefilterSpy);
       expect(Config.ResourcesConfig.track).toEqual(trackSpy);
-      expect(Config.ResourcesConfig.queryParamsPropName).toEqual("queryPs");
 
       Config.ResourcesConfig.set({
         cacheGracePeriod: 120000,
         log: noOp,
         prefilter: noOp,
         track: noOp,
-        queryParamsPropName: "queryParamsPropName",
       });
     });
   });

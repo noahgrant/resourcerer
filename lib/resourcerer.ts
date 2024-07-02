@@ -366,7 +366,6 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
     // over passed props (like defaultProps), but state should take
     // precedence over all
     ...props,
-    ...props[ResourcesConfig.queryParamsPropName],
     ...resourceState,
 
     refetch: (keys: ResourceKeys[]) => {
@@ -414,17 +413,18 @@ export const useResources = (getResources: ExecutorFunction, _props: Record<stri
  * the comment above useResources for details on the getResources executor function, or check the
  * README.
  */
-export const withResources = (getResources: ExecutorFunction) => (Component: ComponentClass) =>
-  function DataCarrier(props: Record<string, any>) {
-    const resources = useResources(getResources, props);
+export const withResources =
+  (getResources: ExecutorFunction) => (Component: ComponentClass<Record<string, any>>) =>
+    function DataCarrier(props: Record<string, any>) {
+      const resources = useResources(getResources, props);
 
-    return React.createElement(ErrorBoundary, {
-      children: React.createElement(Component, {
-        ...props,
-        ...resources,
-      }),
-    });
-  };
+      return React.createElement(ErrorBoundary, {
+        children: React.createElement(Component, {
+          ...props,
+          ...resources,
+        }),
+      });
+    };
 
 /**
  * Helper method to flatten the hash of resources returned by the `getResources`

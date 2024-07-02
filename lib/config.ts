@@ -7,7 +7,6 @@ import { setRequestPrefilter } from "./sync.js";
 export interface ResourcererConfig {
   cacheGracePeriod: number;
   errorBoundaryChild: ReactElement;
-  queryParamsPropName: string;
   stringify: (
     params: string | URLSearchParams | string[][] | Record<string, string>,
     options: Record<string, any>
@@ -63,13 +62,6 @@ export const ResourcesConfig: ResourcererConfig = {
   log: noOp,
   /** {function}: Calls setRequestPrefilter */
   prefilter: noOp,
-  /**
-   * {string}: the name of the prop object that will contain url query
-   * parameters. This object gets spread to flatten them as individual props
-   * within a withResources client. default 'urlParams'. You can ignore this
-   * if you flatten them yourselves.
-   */
-  queryParamsPropName: "urlParams",
 
   /**
    * Method that should be used to stringify GET requests. By default, this uses URLSearchParams,
