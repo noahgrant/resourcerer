@@ -44,7 +44,7 @@ export default class Model<
   cid: string;
   id: string | number;
   attributes: T;
-  readonly urlOptions: Omit<O, keyof SetOptions> = {} as O;
+  readonly urlOptions: O = {} as O;
   collection?: Collection;
   lazy?: boolean;
   refetching?: boolean;

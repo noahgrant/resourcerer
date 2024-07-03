@@ -1,8 +1,6 @@
 import { noOp } from "./utils.js";
-import Collection from "./collection.js";
-import Model from "./model.js";
 import React, { type ReactElement } from "react";
-import { setRequestPrefilter } from "./sync.js";
+import { type SyncOptions, setRequestPrefilter } from "./sync.js";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;
@@ -13,13 +11,13 @@ export interface ResourcererConfig {
   ) => string;
   track: (...args: any[]) => void;
   log: (...args: any[]) => void;
-  prefilter: (options: Record<string, any>) => Record<string, any> | void;
-  set: (config: Record<keyof ResourcererConfig, any>) => void;
+  prefilter: (options: SyncOptions) => SyncOptions | void;
+  set: (config: Partial<ResourcererConfig>) => void;
 }
 
-export interface ModelMap {
-  [key: string]: (new () => Model) | (new () => Collection);
-}
+// this will be filled out by users
+/* eslint-disable @typescript-eslint/no-empty-interface */
+export interface ModelMap {}
 
 export const register = (models: ModelMap) => {
   Object.assign(ModelMap, models);
