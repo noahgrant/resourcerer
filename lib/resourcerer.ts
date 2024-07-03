@@ -531,7 +531,12 @@ function getResourcePropertyName(baseName: string, modelKey: string) {
  * @return {Model|Collection} empty model or collection instance with frozen
  *   atributes or models, respectively
  */
-function getEmptyModel({ modelKey, data, options, path }: InternalResourceConfigObj) {
+function getEmptyModel<T extends ModelInstanceType>({
+  modelKey,
+  data,
+  options,
+  path,
+}: InternalResourceConfigObj<T>) {
   const Model_ = typeof ModelMap[modelKey] === "function" ? ModelMap[modelKey] : Model;
   // @ts-ignore
   const emptyInstance = new Model_(data, { ...options, ...path });
@@ -561,12 +566,12 @@ function getEmptyModel({ modelKey, data, options, path }: InternalResourceConfig
  * @param {object} config - resource config object (destructured)
  * @return {string} cache key
  */
-export function getCacheKey({
+export function getCacheKey<T extends ModelInstanceType>({
   modelKey,
   params = {},
   path = {},
   data = {},
-}: InternalResourceConfigObj) {
+}: InternalResourceConfigObj<T>) {
   const Constructor = ModelMap[modelKey] as ConstructorTypes;
   const toKeyValString = ([key, val]: [string, any]) => (val ? `${key}=${val}` : ""),
     fields = (Constructor?.dependencies || [])
@@ -847,7 +852,7 @@ function modelAggregator(resources: Resource[]): ModelState {
     (memo, [name, config]) =>
       Object.assign(memo, {
         [getResourcePropertyName(name, config.modelKey)]:
-          getModelFromCache(config) || getEmptyModel(config),
+          getModelFromCache(config) || getEmptyModel<ModelMapType[typeof config.modelKey]>(config),
       }),
     {} as Record<string, ModelInstanceType>
   );
@@ -968,7 +973,7 @@ function loaderReducer(
  * @param {object} config - resource config object for a particular request instance
  * @return {boolean} whether a particular request time should be measured
  */
-function shouldMeasureRequest(modelKey: keyof ModelMapType, config: ResourceConfigObj) {
+function shouldMeasureRequest(modelKey: keyof ModelMapType, config: InternalResourceConfigObj) {
   const Constructor = ModelMap[modelKey] as ConstructorTypes;
 
   if (!Constructor || !window.performance || !window.performance.mark) {
@@ -1091,7 +1096,7 @@ function fetchResources(
  */
 function provideProps(
   model: Model | Collection,
-  provides: ResourceConfigObj["provides"],
+  provides: ResourceConfigObj<typeof model>["provides"],
   props: Props,
   setResourceState: Dispatch<SetStateAction<Record<string, any>>>
 ) {

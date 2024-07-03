@@ -2,11 +2,11 @@ import Collection from "../lib/collection";
 import Model from "../lib/model";
 import { type SyncOptions } from "../lib/sync";
 
-export class UserModel extends Model<{ anything: string }, { userId: string }> {
+export class UserModel extends Model<{ anything: string }> {
   key = "user";
   userId: string;
 
-  url({ userId }) {
+  url({ userId }: { userId: string }) {
     return `/root/users/${userId}`;
   }
 
