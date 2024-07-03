@@ -27,6 +27,7 @@ import type {
   ResourceKeys,
   LoadingStateKey,
   UseResourcesResponse,
+  WithModelSuffix,
 } from "./types.js";
 
 type ModelInstanceType = Model | Collection;
@@ -76,7 +77,12 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
 export const useResources = (
   getResources: ExecutorFunction,
   _props: Record<string, any>
-): UseResourcesResponse => {
+): UseResourcesResponse & {
+  [Key in keyof Required<ReturnType<ExecutorFunction>> as WithModelSuffix<
+    Key,
+    InstanceType<ModelMap[Key]>
+  >]: InstanceType<ModelMap[Key]>;
+} => {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
   const resources = generateResources(getResources, props);
