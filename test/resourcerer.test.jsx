@@ -36,7 +36,7 @@ const getResources = (props) => ({
     lazy: props.lazy,
     measure,
   },
-  notes: { data: { pretend: true }, noncritical: true, dependsOn: ["noah"] },
+  notes: { data: { pretend: true }, noncritical: true, dependsOn: !!props.noah },
   user: {
     data: { id: props.withId ? props.userId : null },
     params: {
@@ -66,7 +66,7 @@ const getResources = (props) => ({
       },
       decisionLogs: {
         path: { logs: props.serialProp },
-        dependsOn: ["serialProp"],
+        dependsOn: !!props.serialProp,
       },
     }
   : {}),

@@ -1,4 +1,4 @@
-import { hasErrored, hasLoaded, isLoading } from "./utils.js";
+import { hasErrored, hasLoaded, isLoading, pick } from "./utils.js";
 import { ModelMap, ResourcesConfig } from "./config.js";
 import React, {
   type ComponentClass,
@@ -21,13 +21,13 @@ import type {
   LoadingStates,
   LoadingStateObj,
   Resource,
+  ModelMap as ModelMapType,
   Props,
   ResourceConfigObj,
   InternalResourceConfigObj,
   ResourceKeys,
   LoadingStateKey,
   UseResourcesResponse,
-  WithModelSuffix,
 } from "./types.js";
 
 type ModelInstanceType = Model | Collection;
@@ -77,12 +77,7 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
 export const useResources = (
   getResources: ExecutorFunction,
   _props: Record<string, any>
-): UseResourcesResponse & {
-  [Key in keyof Required<ReturnType<ExecutorFunction>> as WithModelSuffix<
-    Key,
-    InstanceType<ModelMap[Key]>
-  >]: InstanceType<ModelMap[Key]>;
-} => {
+): UseResourcesResponse => {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
   const resources = generateResources(getResources, props);
@@ -142,7 +137,7 @@ export const useResources = (
   // we prevent them from getting set to a LOADED state which forces them to get fetched.
   const getResourcesToUpdate = () =>
     resources
-      .filter(hasAllDependencies.bind(null, props))
+      .filter(hasAllDependencies)
       .filter(not(shouldBypassFetch.bind(null, props)))
       .filter(([name, config]: Resource) => {
         const prevConfig =
@@ -152,7 +147,7 @@ export const useResources = (
         return (
           !previousCacheKey ||
           previousCacheKey !== getCacheKey(config) ||
-          !hasAllDependencies(prevPropsRef.current, ["", config]) ||
+          !hasAllDependencies(["", prevConfig]) ||
           // we only want to refetch if the resource is currently in a loaded state. but then
           // we'll move to a loading state and short-circuit the render cycle, and it won't be
           // loaded in the next cycle. that's why we use the ref, as well
@@ -185,9 +180,11 @@ export const useResources = (
 
   // this should be for NEW pending resources only, not ones set in initial loading state
   const pendingResources = resources
-    .filter(not(hasAllDependencies.bind(null, props)))
+    .filter(not(hasAllDependencies))
     .filter(
-      ([, config]) => prevPropsRef.current && hasAllDependencies(prevPropsRef.current, ["", config])
+      ([name, config]) =>
+        prevPropsRef.current &&
+        hasAllDependencies(["", findConfig([name, config], getResources, prevPropsRef.current)])
     );
   const resourcesToUpdate = getResourcesToUpdate();
   const nextLoadingStates: LoadingStateObj = {
@@ -372,11 +369,10 @@ export const useResources = (
   return {
     ...models,
 
-    // spread url params and merge with state. url should take priority
-    // over passed props (like defaultProps), but state should take
-    // precedence over all
-    ...props,
     ...resourceState,
+
+    // this will only return any passed-in (bypassed) models so we can override
+    ...pick(props, ...Object.keys(models)),
 
     refetch: (keys: ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
@@ -665,7 +661,7 @@ function buildResourcesLoadingState(
               (getModelFromCache(config) && !getModelFromCache(config)?.lazy))
           ) ?
             defaultState
-          : !hasAllDependencies(props, ["", config]) ? "pending"
+          : !hasAllDependencies(["", config]) ? "pending"
           : config.lazy ?
             // any lazy resource should be considered loaded in its resource state, even
             // though it will temporarily show up in the resourcesToUpdate list
@@ -683,8 +679,8 @@ function buildResourcesLoadingState(
  * @param {{dependsOn: string|object}} resource config entry
  * @return {boolean} whether or not all required props are present
  */
-function hasAllDependencies(props: Props = {}, [, { dependsOn }]: Resource) {
-  return !dependsOn || dependsOn.every((dep) => props[dep]);
+function hasAllDependencies([, config]: Resource) {
+  return !("dependsOn" in config) || !!config.dependsOn;
 }
 
 /**
@@ -972,7 +968,7 @@ function loaderReducer(
  * @param {object} config - resource config object for a particular request instance
  * @return {boolean} whether a particular request time should be measured
  */
-function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigObj) {
+function shouldMeasureRequest(modelKey: keyof ModelMapType, config: ResourceConfigObj) {
   const Constructor = ModelMap[modelKey] as ConstructorTypes;
 
   if (!Constructor || !window.performance || !window.performance.mark) {
@@ -1028,7 +1024,6 @@ function fetchResources(
   }
 ) {
   // ensure critical requests go out first
-  /* eslint-disable id-length */
   resources = resources.concat().sort((a, b) =>
     a[1].prefetch ? 2
     : b[1].prefetch ? -2
@@ -1036,7 +1031,6 @@ function fetchResources(
     : b[1].noncritical ? -1
     : 0
   );
-  /* eslint-enable id-length */
 
   return Promise.all(
     // nice visual for this promise chain: http://tinyurl.com/y6wt47b6

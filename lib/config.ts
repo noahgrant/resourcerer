@@ -1,6 +1,7 @@
 import { noOp } from "./utils.js";
 import React, { type ReactElement } from "react";
 import { type SyncOptions, setRequestPrefilter } from "./sync.js";
+import { type ModelMap as _ModelMap } from "./types.js";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;
@@ -15,11 +16,7 @@ export interface ResourcererConfig {
   set: (config: Partial<ResourcererConfig>) => void;
 }
 
-// this will be filled out by users
-/* eslint-disable @typescript-eslint/no-empty-interface */
-export interface ModelMap {}
-
-export const register = (models: ModelMap) => {
+export const register = (models: _ModelMap) => {
   Object.assign(ModelMap, models);
 };
 
@@ -35,7 +32,7 @@ export const register = (models: ModelMap) => {
  *   and ModelMap for a resource are required in to use a resource with
  *   withResources.
  */
-export const ModelMap: ModelMap = {};
+export const ModelMap: _ModelMap = {};
 
 /**
  * ResourcesConfig {object}: A general config object for a limited amount of
