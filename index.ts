@@ -7,3 +7,4 @@ export { default as ModelCache } from "./lib/model-cache.js";
 export * as Utils from "./lib/utils.js";
 export { register, ModelMap, ResourcesConfig } from "./lib/config.js";
 export { useResources, withResources } from "./lib/resourcerer.js";
+export * from "./lib/types.js";
