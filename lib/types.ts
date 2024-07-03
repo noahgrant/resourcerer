@@ -6,9 +6,8 @@ export type Resource = [string, InternalResourceConfigObj];
 export type Props = Record<string, any>;
 
 // this will be filled out by users
-/* eslint-disable @typescript-eslint/no-empty-interface */
 export interface ModelMap {
-  [key: string]: typeof Model | typeof Collection;
+  [key: string]: new <T extends Model | Collection>() => T;
 }
 
 export type ResourceKeys = Extract<keyof ModelMap, string>;
