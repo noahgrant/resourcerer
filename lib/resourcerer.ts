@@ -21,13 +21,13 @@ import type {
   LoadingStates,
   LoadingStateObj,
   Resource,
+  ModelMap as ModelMapType,
   Props,
   ResourceConfigObj,
   InternalResourceConfigObj,
   ResourceKeys,
   LoadingStateKey,
   UseResourcesResponse,
-  WithModelSuffix,
 } from "./types.js";
 
 type ModelInstanceType = Model | Collection;
@@ -77,12 +77,7 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
 export const useResources = (
   getResources: ExecutorFunction,
   _props: Record<string, any>
-): UseResourcesResponse & {
-  [Key in keyof Required<ReturnType<ExecutorFunction>> as WithModelSuffix<
-    Key,
-    InstanceType<ModelMap[Key]>
-  >]: InstanceType<ModelMap[Key]>;
-} => {
+): UseResourcesResponse => {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
   const resources = generateResources(getResources, props);
@@ -972,7 +967,7 @@ function loaderReducer(
  * @param {object} config - resource config object for a particular request instance
  * @return {boolean} whether a particular request time should be measured
  */
-function shouldMeasureRequest(modelKey: keyof ModelMap, config: ResourceConfigObj) {
+function shouldMeasureRequest(modelKey: keyof ModelMapType, config: ResourceConfigObj) {
   const Constructor = ModelMap[modelKey] as ConstructorTypes;
 
   if (!Constructor || !window.performance || !window.performance.mark) {

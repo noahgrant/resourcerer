@@ -1,10 +1,15 @@
 import Model from "./model.js";
-import { type ModelMap } from "./config.js";
 import Collection from "./collection.js";
 
 export type LoadingStates = "error" | "loading" | "loaded" | "pending";
 export type Resource = [string, InternalResourceConfigObj];
 export type Props = Record<string, any>;
+
+// this will be filled out by users
+/* eslint-disable @typescript-eslint/no-empty-interface */
+export interface ModelMap {
+  [key: string]: typeof Model | typeof Collection;
+}
 
 export type ResourceKeys = Extract<keyof ModelMap, string>;
 
@@ -39,7 +44,7 @@ export type ExecutorFunction = (props: {
 | Partial<Record<ResourceKeys, ResourceConfigObj>>
   | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeys }>>;
 
-export interface UseResourcesResponse {
+export type UseResourcesResponse = {
   isLoading: boolean;
   hasErrored: boolean;
   hasLoaded: boolean;
@@ -51,4 +56,9 @@ export interface UseResourcesResponse {
   [key: `${string}Collection`]: Collection;
   [key: `${string}Model`]: Model;
   [key: `${string}Status`]: number;
-}
+} & {
+  [Key in keyof Required<ReturnType<ExecutorFunction>> as WithModelSuffix<
+    Key,
+    InstanceType<ModelMap[Key]>
+  >]: InstanceType<ModelMap[Key]>;
+};
