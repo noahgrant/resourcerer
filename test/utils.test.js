@@ -172,6 +172,8 @@ describe("Utils", () => {
 
     it("works with defaults", () => {
       expect(pick()).toEqual({});
+      expect(pick({ foo: "foo" }, "bar")).toEqual({});
+      expect("bar" in pick({ foo: "foo" }, "bar")).toBe(false);
     });
   });
 

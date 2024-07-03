@@ -1,4 +1,4 @@
-import { hasErrored, hasLoaded, isLoading } from "./utils.js";
+import { hasErrored, hasLoaded, isLoading, pick } from "./utils.js";
 import { ModelMap, ResourcesConfig } from "./config.js";
 import React, {
   type ComponentClass,
@@ -367,11 +367,10 @@ export const useResources = (
   return {
     ...models,
 
-    // spread url params and merge with state. url should take priority
-    // over passed props (like defaultProps), but state should take
-    // precedence over all
-    ...props,
     ...resourceState,
+
+    // this will only return any passed-in (bypassed) models so we can override
+    ...pick(props, ...Object.keys(models)),
 
     refetch: (keys: ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
