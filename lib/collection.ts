@@ -3,7 +3,7 @@ import { isDeepEqual, sortBy } from "./utils.js";
 import Events from "./events.js";
 import Model, { type ConstructorOptions, type SetOptions } from "./model.js";
 import sync, { type SyncOptions } from "./sync.js";
-import { ResourceConfigObj } from "./types.js";
+import { ModelMap, ResourceConfigObj } from "./types.js";
 
 type CSetOptions = {
   parse?: boolean;
@@ -37,7 +37,7 @@ export default class Collection<
 > extends Events {
   lazy?: boolean;
   refetching?: boolean;
-  measure?: boolean | ((config: ResourceConfigObj) => boolean);
+  measure?: boolean | ((config: ResourceConfigObj<keyof ModelMap>) => boolean);
   isEmptyModel?: boolean;
 
   Model: typeof Model<T, O>;
@@ -125,7 +125,7 @@ export default class Collection<
    * added in the resourcerer configuration file. This can be a boolean or a function that returns a
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
-  static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
+  static measure: boolean | ((config: ResourceConfigObj<keyof ModelMap>) => boolean) = false;
 
   /**
    * Similar to the method for an individual model, this maps through each model in the collection

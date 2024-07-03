@@ -6,7 +6,7 @@ export type Props = Record<string, any>;
 
 // this will be filled out by users
 export interface ModelMap {
-  [key: string]: new <T extends Model | Collection>() => T;
+  [key: string]: new () => any;
 }
 
 export type Resource<K extends keyof ModelMap> = [string, InternalResourceConfigObj<K>];

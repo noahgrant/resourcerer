@@ -3,7 +3,7 @@ import { isDeepEqual, result, uniqueId, urlError } from "./utils.js";
 import Events from "./events.js";
 import sync, { type SyncOptions } from "./sync.js";
 import Collection from "./collection.js";
-import { ResourceConfigObj } from "./types.js";
+import { ModelMap, ResourceConfigObj } from "./types.js";
 
 export type ConstructorOptions = {
   collection?: Collection;
@@ -48,7 +48,7 @@ export default class Model<
   collection?: Collection;
   lazy?: boolean;
   refetching?: boolean;
-  measure?: boolean | ((config: ResourceConfigObj) => boolean);
+  measure?: boolean | ((config: ResourceConfigObj<keyof ModelMap>) => boolean);
   isEmptyModel?: boolean;
 
   /**
@@ -117,7 +117,7 @@ export default class Model<
    * in the resourcerer configuration file. This can be a boolean or a function that returns a
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
-  static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
+  static measure: boolean | ((config: ResourceConfigObj<keyof ModelMap>) => boolean) = false;
 
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire

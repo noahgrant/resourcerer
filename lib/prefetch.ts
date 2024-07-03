@@ -1,6 +1,6 @@
 import { ModelMap } from "./config.js";
 import { noOp, once } from "./utils.js";
-import type { ExecutorFunction, Resource } from "./types.js";
+import type { ExecutorFunction } from "./types.js";
 
 import { getCacheKey } from "./resourcerer.js";
 import request from "./request.js";
@@ -21,7 +21,9 @@ const PREFETCH_TIMEOUT = 50;
  */
 export default (getResources: ExecutorFunction, expectedProps: Record<string, any> = {}) => {
   let fetched: boolean;
-  const resources = Object.entries(getResources(expectedProps) || {}) as Resource[];
+  const resources = Object.entries(
+    (getResources(expectedProps) || {}) as ReturnType<ExecutorFunction>
+  );
 
   return (evt: MouseEvent) => {
     const { target } = evt;
@@ -32,7 +34,7 @@ export default (getResources: ExecutorFunction, expectedProps: Record<string, an
       // to click on the link
       prefetchTimeout = window.setTimeout(() => {
         resources.forEach(([name, config]) => {
-          const modelKey = config.modelKey || name;
+          const modelKey = config?.modelKey || name;
 
           // @ts-ignore
           request(getCacheKey({ modelKey, ...config }), ModelMap[modelKey], config)
