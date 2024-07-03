@@ -9,7 +9,7 @@ export interface ModelMap {
   [key: string]: new <T extends Model | Collection>() => T;
 }
 
-export type Resource<T extends ModelMap[keyof ModelMap]> = [string, InternalResourceConfigObj<T>];
+export type Resource<K extends keyof ModelMap> = [string, InternalResourceConfigObj<K>];
 
 export type ResourceKeys = Extract<keyof ModelMap, string>;
 
@@ -18,32 +18,35 @@ export type LoadingStateObj = { [key: LoadingStateKey]: LoadingStates };
 export type WithModelSuffix<K extends string, C> =
   C extends Collection ? `${K}Collection` : `${K}Model`;
 
-export type ResourceConfigObj<T extends ModelMap[keyof ModelMap]> = {
+export type ResourceConfigObj<K extends keyof ModelMap> = {
   data?: { [key: string]: any };
   dependsOn?: boolean;
   force?: boolean;
   lazy?: boolean;
-  modelKey?: ResourceKeys;
+  modelKey?: K;
   noncritical?: boolean;
   options?: { [key: string]: any };
-  path?: ConstructorParameters<T>[1];
+  path?: ConstructorParameters<ModelMap[K]>[1];
   params?: { [key: string]: any };
   prefetches?: { [key: string]: any }[];
-  provides?: (model: InstanceType<T>, props: Record<string, any>) => { [key: string]: any };
+  provides?: (
+    model: InstanceType<ModelMap[K]>,
+    props: Record<string, any>
+  ) => { [key: string]: any };
 };
 
-export type InternalResourceConfigObj<T extends ModelMap[keyof ModelMap]> = ResourceConfigObj<T> & {
+export type InternalResourceConfigObj<K extends keyof ModelMap> = ResourceConfigObj<K> & {
   modelKey: ResourceKeys;
   prefetch?: boolean;
   refetch?: boolean;
 };
 
 type ResponseObj = {
-  [Key in keyof ModelMap]?: ResourceConfigObj<ModelMap[Key]>;
+  [Key in keyof ModelMap]?: ResourceConfigObj<Key>;
 };
 
 type AlternateResponseObj = {
-  [Key in keyof ModelMap as string]?: ResourceConfigObj<ModelMap[Key]> & {
+  [Key in keyof ModelMap as string]?: ResourceConfigObj<Key> & {
     modelKey: Key;
   };
 };
