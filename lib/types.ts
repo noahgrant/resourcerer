@@ -20,7 +20,7 @@ export type WithModelSuffix<K extends string, C> =
 
 export type ResourceConfigObj = {
   data?: { [key: string]: any };
-  dependsOn?: string[];
+  dependsOn?: boolean;
   force?: boolean;
   lazy?: boolean;
   modelKey?: ResourceKeys;
