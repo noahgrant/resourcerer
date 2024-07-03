@@ -17,7 +17,7 @@ export type LoadingStateObj = { [key: LoadingStateKey]: LoadingStates };
 export type WithModelSuffix<K extends string, C> =
   C extends Collection ? `${K}Collection` : `${K}Model`;
 
-export type ResourceConfigObj = {
+export type ResourceConfigObj<T extends Model | Collection = Model> = {
   data?: { [key: string]: any };
   dependsOn?: boolean;
   force?: boolean;
@@ -28,20 +28,30 @@ export type ResourceConfigObj = {
   path?: { [key: string]: any };
   params?: { [key: string]: any };
   prefetches?: { [key: string]: any }[];
-  provides?: (model: Model | Collection, props: Record<string, any>) => { [key: string]: any };
+  provides?: (model: T, props: Record<string, any>) => { [key: string]: any };
 };
 
-export type InternalResourceConfigObj = ResourceConfigObj & {
-  modelKey: ResourceKeys;
-  prefetch?: boolean;
-  refetch?: boolean;
+export type InternalResourceConfigObj<T extends Model | Collection = Model> =
+  ResourceConfigObj<T> & {
+    modelKey: ResourceKeys;
+    prefetch?: boolean;
+    refetch?: boolean;
+  };
+
+type ResponseObj = {
+  [Key in Extract<keyof ModelMap, string>]?: ResourceConfigObj<InstanceType<ModelMap[Key]>>;
 };
 
-export type ExecutorFunction = (props: {
-  [key: string]: any;
-}) => // return type either has a resource key as the object key or is just a string with a modelKey property
-| Partial<Record<ResourceKeys, ResourceConfigObj>>
-  | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeys }>>;
+type AlternateResponseObj = {
+  [Key in Extract<keyof ModelMap, string> as string]?: ResourceConfigObj<
+    InstanceType<ModelMap[Key]>
+  > & {
+    modelKey: Key;
+  };
+};
+
+// return type either has a resource key as the object key or is just a string with a modelKey property
+export type ExecutorFunction = (props: Props) => ResponseObj | AlternateResponseObj;
 
 export type UseResourcesResponse = {
   isLoading: boolean;
