@@ -103,7 +103,7 @@ export default class Collection<
    * if you're not defining your own custom Model class but still need to index by a different field
    * than the default ('id').
    */
-  static modelIdAttribute: "string";
+  static idAttribute: "string";
 
   /**
    * This is a list of keys (could be attribute keys, but also keys passed in from the options
@@ -472,14 +472,14 @@ export default class Collection<
    * This function gets called when the collection is instantiated, and its return value is set to
    * its Model property (and used to instantiate all its models). It's only used if a `Model`
    * option isn't passed to the constructor, and by default it returns the Model base class. But
-   * if the collection has a `modelIdAttribute` static property, it will create a new Model class
+   * if the collection has an `idAttribute` static property, it will create a new Model class
    * with the corresponding `idAttribute` property and return that.
    *
    * @return {Model} model class associated with the collection
    */
   _getModelClass<T extends Record<string, any>, O extends Record<string, any>>() {
-    if ((this.constructor as typeof Collection).modelIdAttribute) {
-      let attr = (this.constructor as typeof Collection).modelIdAttribute;
+    if ((this.constructor as typeof Collection).idAttribute) {
+      let attr = (this.constructor as typeof Collection).idAttribute;
 
       return class extends Model<T, O> {
         static idAttribute = attr;

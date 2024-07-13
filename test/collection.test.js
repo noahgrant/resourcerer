@@ -643,7 +643,7 @@ describe("Collection", () => {
 
     it("on the collection sets the id attribute for its models", () => {
       class _Collection extends Collection {
-        static modelIdAttribute = "name";
+        static idAttribute = "name";
       }
 
       collection = new _Collection();
