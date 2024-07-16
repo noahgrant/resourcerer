@@ -6,7 +6,7 @@
   "keywords": ["declarative data-fetching framework", "react"],
   "files": ["*.js", "index.d.ts", "lib/*.js", "test/*.js", "*.md", "docs/*.md"],
   "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "types": "resourcerer.d.ts",
   "type": "module",
   "scripts": {
     "checks": "npm typecheck && npm test && npm run lint",

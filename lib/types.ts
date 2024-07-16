@@ -42,7 +42,7 @@ export type ExecutorFunction<T extends ResourceKeys> = (props: { [key: string]: 
   [Key in T | string]: Key extends T ? ResourceConfigObj : ResourceConfigObj & { modelKey: T };
 };
 */
-export type ExecutorFunction<T extends ResourceKeys | string = ResourceKeys> = (props: {
+export type ExecutorFunction<T extends ResourceKeys = ResourceKeys> = (props: {
   [key: string]: any;
 }) => {
   [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj : ResourceConfigObj & { modelKey: T };

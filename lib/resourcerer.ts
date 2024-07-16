@@ -76,7 +76,9 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *   * ...any other option that can be passed directly to the `request` function
  */
 export function useResources<T extends ResourceKeys>(
-  getResources: ExecutorFunction<T>,
+  getResources: (props: Record<string, any>) => {
+    [Key in T]?: ResourceConfigObj;
+  },
   _props: Record<string, any>
 ): UseResourcesResponse & {
   [Key in T as WithModelSuffix<Key, InstanceType<(typeof ModelMap)[Key]>>]: InstanceType<
