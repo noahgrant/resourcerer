@@ -7,7 +7,7 @@ export type Props = Record<string, any>;
 
 // this will be filled out by users
 export interface ModelMap {
-  [key: string]: new <T extends Model | Collection>() => T;
+  [key: string]: new (...args: any[]) => any;
 }
 
 export type ResourceKeys = Extract<keyof ModelMap, string>;
@@ -37,11 +37,16 @@ export type InternalResourceConfigObj = ResourceConfigObj & {
   refetch?: boolean;
 };
 
-export type ExecutorFunction = (props: {
+/*
+export type ExecutorFunction<T extends ResourceKeys> = (props: { [key: string]: any }) => {
+  [Key in T | string]: Key extends T ? ResourceConfigObj : ResourceConfigObj & { modelKey: T };
+};
+*/
+export type ExecutorFunction<T extends ResourceKeys | string = ResourceKeys> = (props: {
   [key: string]: any;
-}) => // return type either has a resource key as the object key or is just a string with a modelKey property
-| Partial<Record<ResourceKeys, ResourceConfigObj>>
-  | Partial<Record<string, ResourceConfigObj & { modelKey: ResourceKeys }>>;
+}) => {
+  [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj : ResourceConfigObj & { modelKey: T };
+};
 
 export type UseResourcesResponse = {
   isLoading: boolean;
@@ -55,9 +60,4 @@ export type UseResourcesResponse = {
   [key: `${string}Collection`]: Collection;
   [key: `${string}Model`]: Model;
   [key: `${string}Status`]: number;
-} & {
-  [Key in keyof Required<ReturnType<ExecutorFunction>> as WithModelSuffix<
-    Key,
-    InstanceType<ModelMap[Key]>
-  >]: InstanceType<ModelMap[Key]>;
 };

@@ -28,6 +28,7 @@ import type {
   ResourceKeys,
   LoadingStateKey,
   UseResourcesResponse,
+  WithModelSuffix,
 } from "./types.js";
 
 type ModelInstanceType = Model | Collection;
@@ -74,10 +75,14 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *        fetched and cached
  *   * ...any other option that can be passed directly to the `request` function
  */
-export const useResources = (
-  getResources: ExecutorFunction,
+export function useResources<T extends ResourceKeys>(
+  getResources: ExecutorFunction<T>,
   _props: Record<string, any>
-): UseResourcesResponse => {
+): UseResourcesResponse & {
+  [Key in T as WithModelSuffix<Key, InstanceType<(typeof ModelMap)[Key]>>]: InstanceType<
+    (typeof ModelMap)[Key]
+  >;
+} {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };
   const resources = generateResources(getResources, props);
@@ -366,6 +371,7 @@ export const useResources = (
 
   currentPropsRef.current = props;
 
+  // @ts-ignore
   return {
     ...models,
 
@@ -412,7 +418,7 @@ export const useResources = (
      */
     hasInitiallyLoaded,
   };
-};
+}
 
 /**
  * HOC version of useResources, returning all of the same props otherwise returned by the hook. See

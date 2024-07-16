@@ -5,6 +5,6 @@ export { default as prefetch } from "./lib/prefetch.js";
 export { default as request } from "./lib/request.js";
 export { default as ModelCache } from "./lib/model-cache.js";
 export * as Utils from "./lib/utils.js";
-export { register, ResourcesConfig } from "./lib/config.js";
+export { register, ModelMap, ResourcesConfig } from "./lib/config.js";
 export { useResources, withResources } from "./lib/resourcerer.js";
 export * from "./lib/types.js";
