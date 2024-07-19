@@ -4,7 +4,7 @@ export * from "./build/index.js";
 
 declare module "resourcerer" {
   type WithModelSuffix<K extends ResourceKeys, C> =
-    C extends Collection ? `${K}Collection` : `${K}Model`;
+    C extends Collection<any, any> ? `${K}Collection` : `${K}Model`;
   export type LoadingStates = "error" | "loading" | "loaded" | "pending";
   export type ResourceConfigObj<K extends ResourceKeys> = {
     data?: { [key: string]: any };

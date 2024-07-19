@@ -15,7 +15,7 @@ export type ResourceKeys = Extract<keyof ModelMap, string>;
 export type LoadingStateKey = `${string}LoadingState`;
 export type LoadingStateObj = { [key: LoadingStateKey]: LoadingStates };
 export type WithModelSuffix<K extends string, C> =
-  C extends Collection ? `${K}Collection` : `${K}Model`;
+  C extends Collection<any, any> ? `${K}Collection` : `${K}Model`;
 
 export type ResourceConfigObj = {
   data?: { [key: string]: any };
