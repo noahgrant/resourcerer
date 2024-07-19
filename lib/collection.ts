@@ -44,7 +44,7 @@ export default class Collection<
 
   comparator?: comparator;
 
-  models: Model<T, O>[] = [];
+  models: InstanceType<this["Model"]>[] = [];
 
   length: number;
 
@@ -133,14 +133,14 @@ export default class Collection<
    *
    * @return {object[]} list of all models' data representations
    */
-  toJSON() {
+  toJSON(): T[] {
     return this.map((model) => model.toJSON());
   }
 
   /**
    * Proxies the `sync` module by default, but this can be overridden for custom behavior.
    */
-  sync(...args: Parameters<typeof sync>) {
+  sync(...args: Parameters<typeof sync>): Promise<[any, Response]> {
     return sync.call(this, ...args);
   }
 
@@ -204,7 +204,7 @@ export default class Collection<
       if (this.get(model)) {
         let attrs = this._isModel(model) ? model.attributes : model;
 
-        this.get(model).set(options.parse ? this.get(model).parse(attrs, options) : attrs);
+        this.get(model)!.set(options.parse ? this.get(model)!.parse(attrs, options) : attrs);
         // otherwise add it to the collection
       } else {
         model = this._prepareModel(model, options);
@@ -241,7 +241,7 @@ export default class Collection<
    */
   reset(models: ModelArg<T, O> | ModelArg<T, O>[] = [], options: CSetOptions = {}) {
     for (let i = 0; i < this.models.length; i++) {
-      this._removeReference(this.models[i] as Model<T, O>);
+      this._removeReference(this.models[i] as InstanceType<this["Model"]>);
     }
 
     this._reset();
@@ -265,7 +265,7 @@ export default class Collection<
    *   id, or an object containing either
    * @return {Model} collection's model, if found
    */
-  get(obj: Model<T, O>["id"] | ModelArg<T, O>) {
+  get(obj: Model<T, O>["id"] | ModelArg<T, O>): InstanceType<this["Model"]> | undefined {
     if (!obj && typeof obj !== "number") {
       return undefined;
     }
@@ -285,6 +285,7 @@ export default class Collection<
    * @return {boolean} whether the model is in the collection
    */
   has(obj: Model<T, O>["id"] | ModelArg<T, O>) {
+    // @ts-ignore
     return ![undefined, null].includes(this.get(obj));
   }
 
@@ -294,7 +295,7 @@ export default class Collection<
    * @param {number} index
    * @return {Model}
    */
-  at(index: number) {
+  at(index: number): InstanceType<this["Model"]> | undefined {
     if (index < 0) {
       index += this.length;
     }
@@ -307,7 +308,7 @@ export default class Collection<
    * @param {function} predicate - mapping function taking each model as an argument
    * @return {any[]}
    */
-  map(predicate: (model: Model<T, O>) => any) {
+  map(predicate: (model: InstanceType<this["Model"]>) => any) {
     return this.models.map(predicate);
   }
 
@@ -315,7 +316,7 @@ export default class Collection<
    * @param {function} predicate - function taking each model as an argument and returning a boolean
    * @return {Model?} the first model where the predicate returned true
    */
-  find(predicate: (model: Model<T, O>) => boolean) {
+  find(predicate: (model: InstanceType<this["Model"]>) => boolean) {
     return this.models.find(predicate);
   }
 
@@ -323,7 +324,7 @@ export default class Collection<
    * @param {function} predicate - function taking each model as an argument and returning a boolean
    * @return {Model[]} the list of models where the predicate returned true
    */
-  filter(predicate: (model: Model<T, O>) => boolean) {
+  filter(predicate: (model: InstanceType<this["Model"]>) => boolean) {
     return this.models.filter(predicate);
   }
 
@@ -340,8 +341,11 @@ export default class Collection<
    * @param {boolean} first - whether to take all matched models or just the first
    * @return {Model[]} list of models found with the matched properties in `attrs`
    */
-  where(attrs: Partial<T>, first: boolean) {
-    const predicate = (model: Model<T, O>) => {
+  where<B extends boolean>(
+    attrs: Partial<T>,
+    first: B
+  ): B extends true ? InstanceType<this["Model"]> | undefined : InstanceType<this["Model"]>[] {
+    const predicate = (model: InstanceType<this["Model"]>) => {
       for (let [attr, val] of Object.entries(attrs)) {
         if (!isDeepEqual(model.get(attr), val)) {
           return false;
@@ -351,14 +355,18 @@ export default class Collection<
       return true;
     };
 
-    return this[first ? "find" : "filter"](predicate);
+    if (first === true) {
+      return this.find(predicate) as any;
+    }
+
+    return this.filter(predicate) as any;
   }
 
   /**
    * @param {string} attr - an attribute to get from each model in the collectionn
    * @return {string[]} list of that attribute's values in the collection
    */
-  pluck(attr: keyof T) {
+  pluck<K extends keyof T>(attr: K): T[K][] {
     return this.map((model) => model.get(attr));
   }
 
@@ -423,7 +431,10 @@ export default class Collection<
    *   to wait to add the model to the collection until after the save request succeeds
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  create(model: ModelArg<T, O>, options: { wait?: boolean } & SyncOptions & CSetOptions = {}) {
+  create(
+    model: ModelArg<T, O>,
+    options: { wait?: boolean } & SyncOptions & CSetOptions = {}
+  ): Promise<[InstanceType<this["Model"]>, Response]> {
     model = this._prepareModel(model, options);
 
     if (!options.wait) {
@@ -432,7 +443,7 @@ export default class Collection<
 
     return model
       .save(null, options)
-      .then((...args: [Model<T, O>, Response]) => {
+      .then((...args: [InstanceType<this["Model"]>, Response]) => {
         if (options.wait) {
           // note that this is NOT silent because even though we are already triggering an update
           // after the model sync, because the model isn't added, the collection doesn't also get
@@ -441,7 +452,7 @@ export default class Collection<
         }
 
         // model should now have an id property if it didn't previously
-        this._addReference(model as Model<T, O>);
+        this._addReference(model as InstanceType<this["Model"]>);
 
         return args[0];
       })

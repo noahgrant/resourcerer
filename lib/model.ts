@@ -125,14 +125,14 @@ export default class Model<
    *
    * @return {object} model attributes
    */
-  toJSON() {
+  toJSON(): T {
     return { ...this.attributes };
   }
 
   /**
    * Proxies the `sync` module by default, but this can be overridden for custom behavior.
    */
-  sync(...args: Parameters<typeof sync>) {
+  sync(...args: Parameters<typeof sync>): Promise<[any, Response]> {
     return sync.call(this, ...args);
   }
 
@@ -142,7 +142,7 @@ export default class Model<
    * @param {string} attr - attribute key
    * @return {any} data attribute at that key
    */
-  get(attr: keyof T) {
+  get<K extends keyof T>(attr: K): T[K] {
     return this.attributes[attr];
   }
 
@@ -152,10 +152,10 @@ export default class Model<
    * @param {string[]} attrs - attribute keys for which to get values
    * @return {object} subsection of model data containing the specified keys
    */
-  pick(...attrs: (keyof T)[]) {
+  pick<K extends keyof T>(...attrs: K[]): Pick<T, K> {
     return attrs.reduce(
       (memo, attr) => Object.assign(memo, this.has(attr) ? { [attr]: this.get(attr) } : {}),
-      {}
+      {} as Pick<T, K>
     );
   }
 
@@ -165,7 +165,7 @@ export default class Model<
    * @param {string} attr - attribute key
    * @return {boolean} whether the model has a value at that key
    */
-  has(attr: keyof T) {
+  has(attr: keyof T): boolean {
     return ![undefined, null].includes(this.get(attr));
   }
 
@@ -182,7 +182,7 @@ export default class Model<
    *   silent: {boolean} if true, skips the triggerUpdate() call after setting the attributes
    * @return {Model} model instance
    */
-  set(attrs: Partial<T> = {}, options: SetOptions = {}) {
+  set(attrs: Partial<T> = {}, options: SetOptions = {}): this {
     const prevId = this.id;
     let hasSomethingChanged = false;
 
@@ -222,7 +222,7 @@ export default class Model<
    * @param {object} options - set options
    * @return {Model} model instance
    */
-  unset(attr: keyof T, options?: SetOptions) {
+  unset(attr: keyof T, options?: SetOptions): this {
     return this.set({ [attr]: undefined } as Partial<T>, { unset: true, ...options });
   }
 
@@ -232,7 +232,7 @@ export default class Model<
    * @param {object} options - set options
    * @return {Model} model instance
    */
-  clear(options: SetOptions) {
+  clear(options: SetOptions): this {
     const attrs: T = {} as T;
 
     for (let key of Object.keys(this.attributes)) {
@@ -278,7 +278,7 @@ export default class Model<
   save(
     attrs: Partial<T>,
     options: { wait?: boolean; patch?: boolean } & SyncOptions & SetOptions = {}
-  ) {
+  ): Promise<[this, Response]> {
     const previousAttributes = this.toJSON();
 
     options = { parse: true, ...options };
@@ -313,7 +313,7 @@ export default class Model<
         // sync update
         this.triggerUpdate();
 
-        return [this, response];
+        return [this, response] as [this, Response];
       })
       .catch((response) => {
         if (!options.wait) {
@@ -336,7 +336,7 @@ export default class Model<
    *   to wait to set properties on the model until after the request succeeds
    * @return {promise} - resolves with a tuple of the instance and response object
    */
-  destroy(options: { wait?: boolean } & SyncOptions & SetOptions = {}) {
+  destroy(options: { wait?: boolean } & SyncOptions & SetOptions = {}): Promise<[this, Response]> {
     const request =
         this.isNew() ? Promise.resolve([]) : this.sync(this, { method: "DELETE", ...options }),
       collection = this.collection;
@@ -353,7 +353,7 @@ export default class Model<
           this.collection?.remove(this, { silent: true });
         }
 
-        return [this, response];
+        return [this, response] as [this, Response];
       })
       .catch((response) => {
         if (!options.wait && !this.isNew()) {
@@ -371,7 +371,7 @@ export default class Model<
    *
    * @return {string} the url endpoint to request for this particular model instance
    */
-  url(options = this.urlOptions) {
+  url(options = this.urlOptions): string {
     const base =
       result(this, "urlRoot", options) || result(this.collection, "url", options) || urlError();
 
