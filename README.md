@@ -17,9 +17,10 @@ Additional features include:
 * smart client-side caching
 * lazy fetching
 * refetching
+* forced cache invalidation
 * updating a component when a resource updates
 * zero dependencies
-* < 10kB!
+* < 6kB!
 
 Getting started is easy:
 
@@ -40,11 +41,11 @@ export default class TodosCollection extends Collection {
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap} from 'resourcerer';
+import {register} from 'resourcerer';
 import TodosCollection from 'js/models/todos-collection';
 
 // choose any string as its key, which becomes its ResourceKey
-ModelMap.add({TODOS: TodosCollection});
+register({todos: TodosCollection});
 ```
 
 ```js
@@ -59,7 +60,8 @@ import 'js/core/resourcerer-config';
         ```jsx
         import {useResources} from 'resourcerer';
 
-        const getResources = ({TODOS}, props) => ({[TODOS]: {}});
+        // tell resourcerer which resource you want to fetch in your component
+        const getResources = (props) => ({todos: {}});
         
         function MyComponent(props) {
           const {
@@ -95,7 +97,8 @@ import 'js/core/resourcerer-config';
         import React from 'react';
         import {withResources} from 'resourcerer';
 
-        @withResources(({TODOS}, props) => ({[TODOS]: {}}))
+        // tell resourcerer which resource you want to fetch in your component
+        @withResources((props) => ({todos: {}}))
         class MyComponent extends React.Component {
           render() {
             // when MyComponent is mounted, the todosCollection is fetched and available
@@ -158,12 +161,12 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 # Installation
 
-`$ npm i resourcerer`
+`$ npm i resourcerer` or `yarn add resourcerer`
 
 `resourcerer` requires on React >= 16.8 but has no external dependencies.
 
-Note that Resourcerer uses ESNext in its source and does no transpiling&mdash;including import/export (Local babel configuration is for testing, only).
-This means that if you're not babelifying your `node_modules` folder, you'll need to make an exception for this package, ie:
+Note: Resourcerer is written in TypeScript and is compiled to ESNext. It does no further transpiling&mdash;including `import`/`export`.
+If you are using TypeScript yourself, this won't be a problem. If you're not, and you're not babelifying (or similar) your `node_modules` folder, you'll need to make an exception for this package, ie:
 
 ```js
 // webpack.config.js or similar
@@ -180,7 +183,7 @@ module: {
 
 1. **Props**. Going forward in this tutorial, we'll try to describe behavior of both the `useResources` hook and the `withResources` HOC at once; we'll also rotate between the two in examples. Note that if we talking about a passed prop of, for example `isLoading`, that that corresponds to an `isLoading` property returned from the hook and a `this.props.isLoading` prop passed down from the HOC. 
   
-1. **ResourceKeys**. These are the keys added to the `ModelMap` (discussed above in the introduction) that link to your model constructors. They are passed to the executor functions and are used to tell the hook or HOC which resources to request.
+1. **ResourceKeys**. These are the keys of the object passed to the `register` function in your top-level `resourcerer-config.js` file (discussed above in the introduction). The object is of type `Record<ResourceKeys, new () => Model | new () => Collection>`. These keys are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
 1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. In these docs you'll often see it assigned to a variable called `getResources`. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
 
