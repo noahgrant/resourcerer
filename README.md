@@ -185,20 +185,20 @@ module: {
   
 1. **ResourceKeys**. These are the keys of the object passed to the `register` function in your top-level `resourcerer-config.js` file (discussed above in the introduction). The object is of type `Record<ResourceKeys, new () => Model | new () => Collection>`. These keys are passed to the executor functions and are used to tell the hook or HOC which resources to request.
 
-1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. In these docs you'll often see it assigned to a variable called `getResources`. It accepts `ResourceKeys` and `props` as arguments and may look like, as we'll explore in an example later:
+1. **Executor Function**. The executor function is a function that both the hook and HOC accept that declaratively describes which resources to request and with what config options. In these docs you'll often see it assigned to a variable called `getResources`. It accepts `props` as arguments and may look like, as we'll explore in an example later:
 
     ```js
-    const getResources = ({USER}, props) => ({[USER]: {options: {userId: props.id}}});
+    const getResources = (props) => ({user: {path: {userId: props.id}}});
     ```
 
     or
 
     ```js
-    const getResources = ({USER_TODOS}, props) => {
+    const getResources = (props) => {
       const now = Date.now();
       
       return {
-        [USER_TODOS]: {
+        userTodos: {
           params: {
             limit: 20,
             end_time: now,
@@ -212,17 +212,15 @@ module: {
 
     It returns an object whose keys represent the resources to fetch and whose values are **Resource Configuration Objects** that we'll discuss later (and is highlighted below).
     
-1. **Resource Configuration Object (resource config)**. In the object returned by our executor function, each entry has a key equal to one of the `ResourceKeys` and whose value we will refer to in this document as a Resource Configuration Object. It holds the declarative instructions that `useResources` and `withResources` will use to request the resource.
+1. **Resource Configuration Object**. In the object returned by our executor function, each entry has a key equal to one of the `ResourceKeys` and whose value we will refer to in this document as a Resource Configuration Object, or Resource Config for short. It holds the declarative instructions that `useResources` and `withResources` will use to request the resource.
 
 # Tutorial
 
 Okay, back to the initial example. Let's take a look at our `useResources` usage in the component:
 
 ```js
-// Note: in these docs, you will see a combination of `ResourceKeys` in the executor
-// function as well as its more common destructured version, ie:
-// `@withResources(({TODOS}, props) => ({[TODOS]: {}}))`
-const getResources = (ResourceKeys, props) => ({[ResourceKeys.TODOS]: {}});
+// `@withResources((props) => ({todos: {}}))`
+const getResources = (props) => ({todos: {}});
 
 export default function MyComponent(props) {
   const resources = useResources(getResources, props);
@@ -232,19 +230,16 @@ export default function MyComponent(props) {
 ```
 
 You see that `useResources` takes an executor function that returns an object. The executor function
-takes two arguments: an object of `ResourceKeys` and the current props. Where does `ResourceKeys` come
-from? From the ModelMap in the config file we added to earlier!
+takes a single argument: the current props, which are component props when you use `withResources`, but can be anything when you use `useResources`. The executor function returns an object whose keys are `ResourceKeys` and whose values are Resource Config objects. Where do `ResourceKeys` come from? From the object passed to the `register` method in the config file we added earlier!
 
 ```js
 // js/core/resourcerer-config.js
-import {ModelMap} from 'resourcerer';
+import {register} from 'resourcerer';
 import TodosCollection from 'js/models/todos-collection';
 
-// after adding this key, resourcerer will add an identical key to the `ResourceKeys` object with a
-// camelCased version as its value. `ResourceKeys.TODOS` can then be used in our executor functions to reference
-// the Todos resource. The camelCased 'todos' string value will be the default prefix added to all todos-related
+// after adding this key, `todos` can then be used in our executor functions to reference the Todos resource. The 'todos' string value will also be the default prefix for each Toadded to all return todos-related
 // props passed from the HOC to the wrapped component. That's why we have `props.todosCollection`!
-ModelMap.add({TODOS: TodosCollection});
+register({todos: TodosCollection});
 ```
 
 (We can also pass custom prefixes for our prop names in a component, but [we'll get to that later](#custom-resource-names).)  
