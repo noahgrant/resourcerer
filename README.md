@@ -153,6 +153,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     8. [Tracking Request Times](#tracking-request-times)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
+1. [Migrating to v2.0](#migrating-to-v20)
 
 
 # Installation
@@ -1165,3 +1166,7 @@ ResourcesConfig.set(configObj);
 * Semver?  
 
     Yes. Releases will adhere to [semver](https://semver.org/#semantic-versioning-200) rules.
+
+# Migrating to v2.0
+
+See the [Migrating to v2.0](/docs/migrating_to_2.0.md) doc.
