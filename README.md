@@ -809,25 +809,25 @@ Again, it’s unlikely that you’ll use `ModelCache` directly while using `reso
 
 As alluded to previously, `resourcerer` relies on the model classes themselves to tell it how it should be cached. This is accomplished via a static `dependencies` array, where each entry can be either:
 
-1. A string, where each string is the name of a property that the model receives whose value should take part in the cache key. The model can receive this property either from the [options](#options) hash, the [data](#data) hash, or the [params](#params) hash, in that order.
+1. A string, where each string is the name of a property that the model receives whose value should take part in the cache key. The model can receive this property either from the [path](#path) hash, the [data](#data) hash, or the [params](#params) hash, in that order.
 
 2. A function, whose return value is an object of keys and values that should both contribute to the cache key.
 
-Let's take a look at the USER_TODOS resource from above, where we want to request some top number of todos for a user sorted by some value over some time range. The resource declaration might look like this:
+Let's take a look at the `userTodos` resource from above, where we want to request some top number of todos for a user sorted by some value over some time range. The resource declaration might look like this:
 
 ```js
-const getResources = (ResourceKeys, props) => {
+const getResources = (props) => {
   const now = Date.now();
       
   return {
-    [ResourceKeys.USER_TODOS]: {
+    userTodos: {
       params: {
         limit: props.limit,
         end_time: now,
         start_time: now - props.timeRange,
         sort_field: props.sortField
       },
-      options: {userId: props.userId}
+      path: {userId: props.userId}
     }
   };
 };
@@ -851,37 +851,37 @@ export class UserTodosCollection extends Collection {
 };
 ```
 
-We can see that `limit` and `sort_field` as specified in `dependencies` are taken straight from the `params` object that `resourcerer` transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `params` object, which is why it's stored as an instance property. But `resourcerer` will see its value within the `options` hash that is passed and use it for the cache key.  
+We can see that `limit` and `sort_field` as specified in `dependencies` are taken straight from the `params` object that `resourcerer` transforms into url query parameters. `userId` is part of the `/users/{userId}/todos` path, so it can't be part of the `params` object, which is why it gets passed in the `path` object instead.
 
 The time range is a little tougher to cache, though. We're less interested the spcecific `end_time`/`start_time` values to the millisecond&mdash;it does us little good to cache an endpoint tied to `Date.now()` when it will never be the same for the next request. We're much more interested in the difference between `end_time` and `start_time`. This is a great use-case for a function entry in `dependencies`, which takes the `params` object passed an argument. In the case above, the returned object will contribute a key called `range` and a value equal to the time range to the cache key.
 
-The generated cache key would be something like `userTodos_limit=50_$range=86400000_sort_field=importance_userId=noah`. Again, note that:
+The generated cache key would be something like `userTodos~limit=50_$range=86400000_sort_field=importance_userId=noah`. Again, note that:
 
-- the `userId` value is taken from the `options` hash
+- the `userId` value is taken from the `path` hash
 - the `limit` and `sort_field` values are taken from the `params` hash
 - the `range` value is taken from a function that takes `start_millis`/`end_millis` from the `params` hash into account.
 
 
 ## Prefetch on Hover
 
-You can use `resourcerer`'s executor function to optimistically prefetch resources when a user hovers over an element. For example, if a user hovers over a link to their TODOS page, you may want to get a head start on fetching their TODOS resource so that perceived loading time goes down or gets eliminated entirely. We can do this with the top-level `prefetch` function:
+You can use `resourcerer`'s executor function to optimistically prefetch resources when a user hovers over an element. For example, if a user hovers over a link to their TODOS page, you may want to get a head start on fetching their `todos` resource so that perceived loading time goes down or gets eliminated entirely. We can do this with the top-level `prefetch` function:
 
 ```jsx
 import {prefetch} from 'resourcerer';
 
 // here's our executor function just as we pass to useResources or withResources
-const getTodos = (ResourceKeys, props) => {
+const getTodos = (props) => {
   const now = Date.now();
       
   return {
-    [ResourceKeys.USER_TODOS]: {
+    userTodos: {
       params: {
         limit: props.limit,
         end_time: now,
         start_time: now - props.timeRange,
         sort_field: props.sortField
       },
-      options: {userId: props.userId}
+      path: {userId: props.userId}
     }
   };
 };
@@ -901,19 +901,19 @@ Note, as mentioned in the comment above, that `expectedProps` should take the fo
 1. A request timed out and you want to give the user the option of retrying.
 2. You have made a change to one resource that may render an auxiliary resource stale, and you want to bring the auxiliary resource up-to-date.
 
-It takes a function that is passed `ResourceKeys` and should return a list of `ResourceKeys`. Each entry will get refetched.
+The function takes a list of `ResourceKeys`. Each entry will get refetched.
 
 ```js
 function MyComponent(props) {
-  const {todosCollection, refetch} = useResources(({TODOS}, {start_time}) => ({[TODOS]: {params: {start_time}}}), props);
+  const {todosCollection, refetch} = useResources(({start_time}) => ({todos: {params: {start_time}}}), props);
       
   // ...
   
-  return <Button onClick={() => refetch(({TODOS}) => [TODOS])}>Refetch me</Button>;
+  return <Button onClick={() => refetch(["todos"])}>Refetch me</Button>;
 ```
 
 **NOTE:**
-* The list returned by the function should only include keys that are currently returned by the executor function. In the example above, returning `USER_TODOS` would not fetch anything because it is not part of the current executor function. To conditionally fetch another resource, add it to the executor function with [dependsOn](#serial-requests).
+* The list returned by the function should only include keys that are currently returned by the executor function. In the example above, returning `userTodos` would not fetch anything because it is not part of the current executor function. To conditionally fetch another resource, add it to the executor function with [dependsOn](#serial-requests).
 * The resource that will be refetched is the version returned by the executor function with the current props. To fetch a different version, use the standard props flow instead of refetching.
 
 ## Tracking Request Times
@@ -936,7 +936,7 @@ When the static `measure` property is/returns true, `resourcerer` will record th
 
 # Configuring `resourcerer`
 
-The same config file used to add to `ResourceKeys` and `ModelMap` also allows you to set custom configuration properties for your own application:
+The same config file used to `register` your models also allows you to set custom configuration properties for your own application:
 
 ```js
 import {ResourcesConfig} from 'resourcerer';
@@ -995,7 +995,6 @@ ResourcesConfig.set(configObj);
     });
     ```
 
-* `queryParamsPropName` (string): the name of the prop representing url query parameters that `withResources` will look for and flatten for its children. If your application already flattens query parameters, you can ignore this property. Otherwise, when a url search string of, for example, `?end_time=1558100000000&start_time=1555508000000` is turned into an object prop of `{end_time: 1558100000000, start_time: 1555508000000}`, `withResources`-wrapped components will see `props.end_time` and `props.start_time`, and `useResources` will return `end_time` and `start_time` for ease of use in your executor function. **Default:** `'urlParams'`.
 
 * `track` (function): method invoked when [a `measure` property is added to a Model or Collection](#tracking-request-times). Use this hook to send the measured data to your application analytics tracker. **Default:** noop. The method is invoked with two arguments:
 
@@ -1056,12 +1055,12 @@ ResourcesConfig.set(configObj);
 
   // component1
   function MyComponent({category, ...props}) {
-    const {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+    const {todosCollection} = useResources(() => ({todos: {path: {category}}));
   }
 
   // component2--identical to the first
   function MyComponent({category, ...props}) {
-    const {todosCollection} = useResources(({TODOS}) => ({[TODOS]: {options: {category}}));
+    const {todosCollection} = useResources(() => ({todos: {path: {category}}));
   }
   ```
 
@@ -1078,48 +1077,6 @@ ResourcesConfig.set(configObj);
     1. passes instantiated models directly through the app before calling `renderToString`  
     2. provides those models within a top-level `<script>` element that adds them directly to the [ModelCache](#caching-resources-with-modelcache).
 
-        
-* Can the `withResources` HOC be used with both function components and class components?
-
-    Yes! The docs don't show it, but this is totally valid:
-    
-    ```jsx
-    const UserTodos = (props) => (
-      <div className='MyClassWithTodosAndUsers'>
-        {props.isLoading ? <Loader /> : null}
-          
-        {props.hasLoaded ? (
-          <ul>
-            {props.userTodosCollection.map((todoModel) => (
-              <li key={todoModel.id}>
-                {todoModel.get('name')}
-              </li>
-            )}
-          </ul>
-        ) : null}
-          
-        {props.hasErrored ? <ErrorMessage /> : null}
-      </div>
-    );
-    
-    export withResources((ResourceKeys, props) => {
-      const now = Date.now();
-      
-      return {
-        [ResourceKeys.USER_TODOS]: {
-          params: {
-            limit: 20,
-            end_time: now,
-            start_time: now - props.timeRange,
-            sort_field: props.sortField
-          },
-          options: {userId: props.userId}
-        }
-      };
-    })(UserTodos)
-    ```
-    
-    There is one caveat, though&mdash;function components should not be wrapped in `React.memo` or they won't be updated when the resource updates.
 
 * Can `resourcerer` do anything other than `GET` requests?
 
