@@ -83,9 +83,9 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
 Another way to effectively have a dependent resource is to use a conditional in your `getResources` method:
     
 ```js
-const getResources = (ResourceKeys, props) => ({
-  [ResourceKeys.TODOS]: {},
-  ...(props.todoId ? {[ResourceKeys.TODO_ITEM]: {data: {id: props.todoId}} : {})
+const getResources = (props) => ({
+  todoos: {},
+  ...(props.todoId ? {todoItem: {data: {id: props.todoId}} : {})
 });
 ```
 
@@ -101,10 +101,10 @@ In general, using `dependsOn` is much more preferable, both in terms of semantic
 That doesn’t mean that the conditional can’t be useful&mdash;it’s just that its use should be relegated to components that have two discrete forms&mdash;one in which the dependent prop is always present, and one in which the dependent prop is never present. If you’re unsure whether a prop might exist, notably because it comes from a providing resource, you should use `dependsOn`. A good example of when to use a conditional is in this fake component that sometimes fetches a user model and sometimes fetches an order model depending on the presence of an `orderId` prop:
 
 ```js
-const getResources = (ResourceKeys, {userId, orderId}) => ({
-  ...userId ? {[ResourceKeys.USER]: {options: {userId}} : {},
+const getResources = ({userId, orderId}) => ({
+  ...userId ? {user: {path: {userId}} : {},
   ...!userId && orderId ? {
-    [ResourceKeys.ORDER]: {
+    order: {
       noncritical: true,
       data: {id: orderId}
     }
@@ -117,74 +117,6 @@ In this case, when the component is used as an order component (denoted by the p
 For all other uses of dependent resources, we should use `dependsOn`.
 
 
-## Unfetched Resources
-
-You may find, at some point in your application, that you have a `PUT` endpoint for a resource but no `GET`; the 'read portion' of the resource is received as part of some parent resource. For example, imagine you have an accounts resource at `/accounts/{account_id}`, whose response has a `config` property with some account configuration settings. To update the configuration, you make a `PUT` to `/accounts/{account_id}/config`. But reading comes from the parent resource. `resourcerer` supports this via a `providesModels` static property on the model:
-
-```js
-// resources_conifg.js
-import {ResourceKeys, UnfetchedResources} from 'resourcerer';
-
-ResourceKeys.add({
-  ACCOUNT: 'account',
-  ACCOUNT_CONFIG: 'accountConfig'
-});
-
-// add the ACCOUNT_CONFIG key to our set of UnfetchedResources
-UnfetchedResources.add(ResourceKeys.ACCOUNT_CONFIG);
-
-
-// account_model.js
-export default class AccountModel extends Model {
-  url() {
-    return `/accounts/${this.accountId}`;
-  }
-
-  static dependencies = ['accountId'];
-  
-  static providesModels = (accountModel, ResourceKeys) => [{
-    data: accountModel.get('config'),
-    modelKey: ResourceKeys.ACCOUNT_CONFIG,
-    options: {accountModel}
-  }]
-})
-```
-
-The `providesModels` property is a function that takes the parent model and the `ResourceKeys` as arguments and returns an array of resource configs. The resource configs have the same schema as the those used in our general executor functions. What this tells `resourcerer` to do is, after the parent model returns, instantiate the child model(s) and place them into the `ModelCache`. In other components, you can then access the model you know to exist in a `withResources` or `useResources` declaration:
-
-```js
-// child_component.jsx, rendered only after the account model is known to return
-@withResources((ResourceKeys, props) => ({[ResourceKeys.ACCOUNT_CONFIG]: {}}))
-class ChildComponent extends React.Component {
-  // component has this.props.accountConfigModel from the cache!
-  onClickSomething() {
-    // and now you can update the config directly :)
-    this.props.accountConfigModel.save();
-  }
-}
-```
-
-In general, this should be used in cases where you can ascertain that the parent model has returned before trying to access the child model. However, if by chance it has not, and the child is not found in the cache, `resourcerer` will still not attempt to fetch it, because it is listed within the `UnfetchedResources` set. In that case, the model will get instantiated with no seed data and passed as a prop.
-
-Also, note that the `modelKey` property is required here instead of optionally being inferred from the resource config's object property, as is the case in our general `useResources`/`withResources` declarations. This is because here, in contrast, the models are simply placed in the cache and not actually used as props for any component, so they don't need to be named. Accordingly, resource configs are also returned as a list here instead of an object.
-
-The resource config objects within `providesModels` have the same schema, as mentioned, as normal. But they also accept an additional optional property, `shouldCache`, which is a function that takes the parent model and the resource config as an argument. If the function exists and returns false, the model will not get instantiated nor placed in the cache:
-
-```js
-// account_model.js
-export default class AccountModel extends Model {
-  // ...
-  static dependencies = ['accountId'];
-  
-  static providesModels = (accountModel, ResourceKeys) => [{
-    data: accountModel.get('config'),
-    modelKey: ResourceKeys.ACCOUNT_CONFIG,
-    options: {accountModel},
-    // if this returns false, account config won't get instantiated and placed in the ModelCache
-    shouldCache: (accountModel, config) => accountModel.get('state') === 'ACTIVE'
-  }]
-})
-```
 
 ## Loading Overlays
 
@@ -198,7 +130,7 @@ Use it like:
 ```jsx
 import {useResources} from 'resourcerer';
 
-const getResources = ({TODOS}, props) => ({[TODOS]: {}});
+const getResources = (props) => ({todos: {}});
 
 export default function UserTodos(props) {
   const {isLoading, hasInitiallyLoaded, todosCollection} = useResources(getResources, props);
@@ -235,8 +167,8 @@ this:
 ```jsx
 import {useResources} from 'resourcerer';
 
-const getResources = ({TODO}, props) => ({
-  [TODO]: {
+const getResources = (props) => ({
+  todo: {
     data: {id: props.id},
     fetch: !!props.id
   }
