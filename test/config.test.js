@@ -11,8 +11,8 @@ const { register } = Config;
 /* eslint-disable max-nested-callbacks */
 describe("Config", () => {
   afterEach(() => {
-    Object.keys(Config.ModelMap).forEach((modelKey) => {
-      delete Config.ModelMap[modelKey];
+    Object.keys(Config.ModelMap).forEach((resourceKey) => {
+      delete Config.ModelMap[resourceKey];
     });
   });
 

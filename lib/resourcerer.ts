@@ -48,7 +48,7 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  * getResources is a function that takes props as an argument and should return
  * a map of resources. Each resource map key is the name of the resource (which
  * should be a ResourceKeys entry that also has an entry in ModelMap, but can be a
- * custom name if passed a modelKey config property), and each map value is a
+ * custom name if passed a resourceKey config property), and each map value is a
  * config object that may contain any of the following properties:
  *
  *   * noncritical {boolean} - whether the resource should not be taken into
@@ -70,7 +70,7 @@ type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
  *   * prefetches {object[]} - a list of objects whose properties represent the
  *        expected future values of props. these get turned into new cache keys
  *        and new requests.
- *   * modelKey {ResourceKeys} - use this when adding a custom name for the resource,
+ *   * resourceKey {ResourceKeys} - use this when adding a custom name for the resource,
  *        so the props use the custom name, but the correct resource type is
  *        fetched and cached
  *   * ...any other option that can be passed directly to the `request` function
@@ -353,7 +353,7 @@ export function useResources<T extends ResourceKeys>(
   useEffect(() => {
     const bypassedModels = resources
       .filter(shouldBypassFetch.bind(null, props))
-      .map(([name, { modelKey }]) => props[getResourcePropertyName(name, modelKey)])
+      .map(([name, { resourceKey }]) => props[getResourcePropertyName(name, resourceKey)])
       .filter(Boolean);
 
     bypassedModels.forEach((model) => model.onUpdate(forceUpdate, componentRef.current));
@@ -400,7 +400,7 @@ export function useResources<T extends ResourceKeys>(
     },
 
     /**
-     * For each modelKey, find all entries in the cache and remove them.
+     * For each resourceKey, find all entries in the cache and remove them.
      */
     invalidate: (keys: ResourceKeys[]) => keys.forEach((key) => ModelCache.removeAllWithModel(key)),
 
@@ -446,10 +446,10 @@ export const withResources =
  * objects that may also contain a `prefetches` property containing a list of
  * additional `props` configurations used to prefetch that resource; those are
  * given a `prefetch` property set to those changed props. Finally, each
- * resource is given a `modelKey` property equal to its ResourceKey name if not
- * passed in directly. `modelKey` is then used for all things fetch- and cache-
+ * resource is given a `resourceKey` property equal to its ResourceKey name if not
+ * passed in directly. `resourceKey` is then used for all things fetch- and cache-
  * related, while `name` is used for model, loading state, and status props. If
- * no `modelKey` property is passed in, then it is identical to the resource's
+ * no `resourceKey` property is passed in, then it is identical to the resource's
  * `name`.
  *
  * @param {function} getResources - resources executor fn
@@ -465,8 +465,8 @@ function generateResources(getResources: ExecutorFunction, props: Record<string,
           [
             name,
             {
-              modelKey: config.modelKey || name,
-              refetch: !!getModelFromCache({ ...config, modelKey: config.modelKey || name })
+              resourceKey: config.resourceKey || name,
+              refetch: !!getModelFromCache({ ...config, resourceKey: config.resourceKey || name })
                 ?.refetching,
               ...config,
             },
@@ -479,7 +479,7 @@ function generateResources(getResources: ExecutorFunction, props: Record<string,
               [
                 name,
                 {
-                  modelKey: config.modelKey || name,
+                  resourceKey: config.resourceKey || name,
                   ...getResources({ ...props, ...prefetch })[name],
                   prefetch: true,
                 },
@@ -512,12 +512,12 @@ function getResourceStatus(name: string) {
  * this.props.todosCollection and this.props.todoItemModel.
  *
  * @param {string} baseName - string name of the resource
- * @param {ResourceKeys} modelKey - if the resource is not given a custom name,
+ * @param {ResourceKeys} resourceKey - if the resource is not given a custom name,
  *   this is the same as `baseName`
  * @return {string} name of the resource prop passed to the child component
  */
-function getResourcePropertyName(baseName: string, modelKey: string) {
-  const Constructor = ModelMap[modelKey];
+function getResourcePropertyName(baseName: string, resourceKey: string) {
+  const Constructor = ModelMap[resourceKey];
 
   return Constructor?.prototype instanceof Collection ?
       `${baseName}Collection`
@@ -528,7 +528,7 @@ function getResourcePropertyName(baseName: string, modelKey: string) {
  * When a resource is not found in the ModelCache, resourcerer returns a
  * default empty resource so that clients can assume the model is defined
  * without needing to be defensive. This method freezes an empty instance of
- * the model associated with the modelKey and returns it.
+ * the model associated with the resourceKey and returns it.
  *
  * We seed the empty model with any attributes or models it intends on having
  * just in case this is a model given an `options.fetch` of `false`, in which
@@ -539,8 +539,8 @@ function getResourcePropertyName(baseName: string, modelKey: string) {
  * @return {Model|Collection} empty model or collection instance with frozen
  *   atributes or models, respectively
  */
-function getEmptyModel({ modelKey, data, options, path }: InternalResourceConfigObj) {
-  const Model_ = typeof ModelMap[modelKey] === "function" ? ModelMap[modelKey] : Model;
+function getEmptyModel({ resourceKey, data, options, path }: InternalResourceConfigObj) {
+  const Model_ = typeof ModelMap[resourceKey] === "function" ? ModelMap[resourceKey] : Model;
   // @ts-ignore
   const emptyInstance = new Model_(data, { ...options, ...path });
 
@@ -570,12 +570,12 @@ function getEmptyModel({ modelKey, data, options, path }: InternalResourceConfig
  * @return {string} cache key
  */
 export function getCacheKey({
-  modelKey,
+  resourceKey,
   params = {},
   path = {},
   data = {},
 }: InternalResourceConfigObj) {
-  const Constructor = ModelMap[modelKey] as ConstructorTypes;
+  const Constructor = ModelMap[resourceKey] as ConstructorTypes;
   const toKeyValString = ([key, val]: [string, any]) => (val ? `${key}=${val}` : ""),
     fields = (Constructor?.dependencies || [])
       .map((key) =>
@@ -585,11 +585,11 @@ export function getCacheKey({
       )
       .filter(Boolean);
 
-  return `${modelKey || ""}${fields.length ? `~${fields.sort().join("_")}` : ""}`;
+  return `${resourceKey || ""}${fields.length ? `~${fields.sort().join("_")}` : ""}`;
 }
 
 /**
- * Finds the current config object given a set of props based on the modelKey and whether it is a
+ * Finds the current config object given a set of props based on the resourceKey and whether it is a
  * prefetched resource
  *
  * @param {[name: string, {prefetch: object}]} resource name and config tuple
@@ -603,7 +603,7 @@ function findConfig(
   getResources: ExecutorFunction,
   props: Props
 ): InternalResourceConfigObj {
-  const [, config = { modelKey: "" }] =
+  const [, config = { resourceKey: "" }] =
     generateResources(getResources, props).find(
       ([_name, _config = {}]) =>
         name === _name &&
@@ -745,8 +745,8 @@ function withoutForced([, config]: Resource) {
  * @param {array[]} resources - list of resource config entries for fetching
  * @return {boolean} whether the component should make the fetch calls
  */
-function shouldBypassFetch(props: Props, [name, { modelKey }]: Resource) {
-  return !!(getResourcePropertyName(name, modelKey) in props);
+function shouldBypassFetch(props: Props, [name, { resourceKey }]: Resource) {
+  return !!(getResourcePropertyName(name, resourceKey) in props);
 }
 
 /**
@@ -854,7 +854,7 @@ function modelAggregator(resources: Resource[]): ModelState {
   const newModels = resources.reduce(
     (memo, [name, config]) =>
       Object.assign(memo, {
-        [getResourcePropertyName(name, config.modelKey)]:
+        [getResourcePropertyName(name, config.resourceKey)]:
           getModelFromCache(config) || getEmptyModel(config),
       }),
     {} as Record<string, ModelInstanceType>
@@ -972,12 +972,12 @@ function loaderReducer(
  * will track all requests for this model, or a function that takes its resource config
  * object to only track requests that meet a specific condition.
  *
- * @param {ResourceKeys} modelKey - key representing model to be measured
+ * @param {ResourceKeys} resourceKey - key representing model to be measured
  * @param {object} config - resource config object for a particular request instance
  * @return {boolean} whether a particular request time should be measured
  */
-function shouldMeasureRequest(modelKey: keyof ModelMapType, config: ResourceConfigObj) {
-  const Constructor = ModelMap[modelKey] as ConstructorTypes;
+function shouldMeasureRequest(resourceKey: keyof ModelMapType, config: ResourceConfigObj) {
+  const Constructor = ModelMap[resourceKey] as ConstructorTypes;
 
   if (!Constructor || !window.performance || !window.performance.mark) {
     return false;
@@ -1043,15 +1043,15 @@ function fetchResources(
   return Promise.all(
     // nice visual for this promise chain: http://tinyurl.com/y6wt47b6
     resources.map(([name, config]) => {
-      const { modelKey, provides, refetch, ...rest } = config;
+      const { resourceKey, provides, refetch, ...rest } = config;
       const cacheKey = getCacheKey(config);
-      const shouldMeasure = shouldMeasureRequest(modelKey, config) && !getModelFromCache(config);
+      const shouldMeasure = shouldMeasureRequest(resourceKey, config) && !getModelFromCache(config);
 
       if (shouldMeasure) {
         window.performance.mark(name);
       }
 
-      return request(cacheKey, ModelMap[modelKey]!, {
+      return request(cacheKey, ModelMap[resourceKey]!, {
         component,
         force: refetch,
         ...rest,

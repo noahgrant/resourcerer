@@ -22,7 +22,7 @@ export type ResourceConfigObj = {
   dependsOn?: boolean;
   force?: boolean;
   lazy?: boolean;
-  modelKey?: ResourceKeys;
+  resourceKey?: ResourceKeys;
   noncritical?: boolean;
   options?: { [key: string]: any };
   path?: { [key: string]: any };
@@ -32,21 +32,21 @@ export type ResourceConfigObj = {
 };
 
 export type InternalResourceConfigObj = ResourceConfigObj & {
-  modelKey: ResourceKeys;
+  resourceKey: ResourceKeys;
   prefetch?: boolean;
   refetch?: boolean;
 };
 
 /*
 export type ExecutorFunction<T extends ResourceKeys> = (props: { [key: string]: any }) => {
-  [Key in T | string]: Key extends T ? ResourceConfigObj : ResourceConfigObj & { modelKey: T };
+  [Key in T | string]: Key extends T ? ResourceConfigObj : ResourceConfigObj & { resourceKey: T };
 };
 */
 export type ExecutorFunction<
   T extends ResourceKeys = ResourceKeys,
   O extends { [key: string]: any } = any,
 > = (props: O) => {
-  [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj : ResourceConfigObj & { modelKey: T };
+  [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj : ResourceConfigObj & { resourceKey: T };
 };
 
 export type UseResourcesResponse = {
