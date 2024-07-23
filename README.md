@@ -904,7 +904,7 @@ Note, as mentioned in the comment above, that `expectedProps` should take the fo
 1. A request timed out and you want to give the user the option of retrying.
 2. You have made a change to one resource that may render an auxiliary resource stale, and you want to bring the auxiliary resource up-to-date.
 
-The function takes a list of `ResourceKeys`. Each entry will get refetched.
+The function takes a single or a list of `ResourceKeys`. Each entry will get refetched.
 
 ```js
 function MyComponent(props) {
@@ -912,7 +912,7 @@ function MyComponent(props) {
       
   // ...
   
-  return <Button onClick={() => refetch(["todos"])}>Refetch me</Button>;
+  return <Button onClick={() => refetch("todos")}>Refetch me</Button>;
 ```
 
 **NOTE:**
@@ -921,7 +921,7 @@ function MyComponent(props) {
 
 ## Cache Invalidation
 
-In some cases you may want to imperatively remove a resource from the cache. For example, you may make a change to a related resource that renders a resource invalid. For those cases, `useResources` returns an `invalidate` function that takes a list of `ResourceKeys`:
+In some cases you may want to imperatively remove a resource from the cache. For example, you may make a change to a related resource that renders a resource invalid. For those cases, `useResources` returns an `invalidate` function that takes a single or a list of `ResourceKeys`:
 
 ```js
 function MyComponent(props) {
