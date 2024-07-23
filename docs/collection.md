@@ -3,12 +3,12 @@
 A collection is a client-side abstraction for the latest-saved server state of a list of objects (a model, by contrast, represents a single persisted object in that resource). A collection _must_ have one thing:
 a `url`. This instance property can be a string literal or a function.
 
-```js
-class MyTodos extends Collection {
+```ts
+class MyTodos extends Collection<ModelType> {
   url = '/todos'
 }
 
-class MyTodos extends Collection {
+class MyTodos extends Collection<ModelType> {
   url({subtype}) {
     return `/todos/${subtype}`;
   }
@@ -47,17 +47,17 @@ This property tells resourcerer how to determine whether to make a new request o
 The number of milliseconds to keep all collections of this class in the cache after all client components stop referencing it. Note that this is on a collection _class_ basis and not an _instance_ basis because the latter can introduce race conditions into your application.
 
 ### `static` measure
-`boolean|function`
+`boolean | (obj: ResourceConfigObject) => boolean`
 
 A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this collection's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
-### `static` modelIdAttribute
+### `static` idAttribute
 
 Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`), ie:
 
 ```js
 // the collection will index its models based on the `name` property instead of the default `id` property
-static modelIdAttribute = 'name'
+static idAttribute = 'name'
 ``` 
 
 
@@ -67,13 +67,13 @@ static modelIdAttribute = 'name'
 ### constructor
 
 ```js
-constructor: void (models: Array<Object|Model>, options: object)
+constructor: (models: Array<Record<string, any> | Model>, options: object) => void
 ```
 
-The Collection's constructor gets passed any initial models, as well as the [options](https://github.com/noahgrant/resourcerer#options) from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
+The Collection's constructor gets passed any initial models, as well as the [options](https://github.com/noahgrant/resourcerer#path) from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
-class MyCollection extends Collection {
+class MyCollection extends Collection<ModelType> {
   constructor(models, options={}) {
     super(models, options);
     
@@ -87,19 +87,19 @@ class MyCollection extends Collection {
 }
 ```
 
-Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `options` fields (the ones passed from the executor function [options](https://github.com/noahgrant/resourcerer#options) property) are passed to the `url` as shown in the example above.
+Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `path` fields (the ones passed from the executor function [options](https://github.com/noahgrant/resourcerer#path) property) are passed to the `url` as shown in the example above.
 
 
 ### add
 ```js
-add: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
+add: (models: Record<string, any> | Model | Array<Record<string, any> | Model>, options: Object) => this
 ```
 
 Add a new entry or list of entries into the collection. Each entry can be an object of data or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse](/docs/model.md#parse) method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
 
 ### create
 ```js
-create: Promise<[Model, Response]> (model: (Object|Model), options: Object)
+create: (model: Record<string, any> | Model, options: Object) => Promise<[Model, Response]>
 ```
 
 Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. Because it also instantiates the new model, be sure to pass any path params you need in your url as the options argument (the same [options](https://github.com/noahgrant/resourcerer#options) in the resource config object). The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
@@ -108,7 +108,7 @@ Adds a new entry to the collection and persists it to the server. This is litera
 
 ### fetch
 ```js
-fetch: Promise<[Collection, Response]> (options: Object)
+fetch: (options: object) => Promise<[this, Response]> 
 ```
 
 This is the method that `resourcerer` uses internally to get server data and set its parsed response as models on the collection. This should rarely need to be used in your application. Subscribed components will update when the request returns.
@@ -118,21 +118,21 @@ This is the method that `resourcerer` uses internally to get server data and set
 
 ### get
 ```js
-get: Model? (identifier: string|number)
+get: (identifier: string | number) => Model | undefined
 ```
 
 Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or, equivalently as a shortcut, by the collection's own static [`modelIdAttribute`](#static-modelidattribute) property. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
 
 ### has  
 ```js
-has: boolean (identifier: string|number|Model|object)
+has: (identifier: string |number | Model | object) => boolean
 ```
 
 Returns whether or not a model exists in a collection. You can pass the model instance itself, a model's data, or a model's id.
 
 ### parse
 ```js
-parse: Array<Object> (response: any)
+parse: (response: any) => Array<Object>
 ```
 
 This method takes in the raw server data response and should return the data in the form that should be set on the Collection. It defaults to the identity function, which might suffice for many endpoints. Override this for your custom needs. For example, for some search results with some metadata (in an API that returns a JSON object), we want to set the results as the collection:
@@ -149,21 +149,21 @@ parse(response) {
 
 ### remove
 ```js
-remove: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
+remove: (models: Record<string, any> | Model | Array<Record<string, any> | Model>, options: Object) => this
 ```
 
 Use this to remove a model or models from the collection, which should not often be needed. You can pass in anything or a list of anything that can be accepted via [.get()](#get). Pass in `silent: true` for subscribed components _not_ to get rerendered.
 
 ### reset
 ```js
-reset: Collection (models: Array<Object|Model>, options: Object)
+reset: (models: Array<Record<string, any> | Model>, options: Object) => this
 ```
 
 Removes all models and their references from a collection and replaces them with the models passed in. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data get parsed before being set on their respective models.
 
 ### set
 ```js
-set: Collection (models: (Object|Model)|Array<Object|Model>, options: Object)
+set: (models: Record<string, any> | Model | Array<Record<string, any> | Model>, options: Object) => this
 ```
 
 This is the method that many other write methods (`add`, `remove`, `save`, `reset`, etc) use under the hood, and it should _rarely if ever_ need to be used directly in your application. Sets new data as models and merges existing data with their models, and sorts as necessary. Pass in `silent: true` for subscribed components _not_ to get rerendered, and `parse: true` to have data get parsed before being set on their respective models.  
@@ -182,7 +182,7 @@ Collection.sync = Model.sync = function(model, options) {
 
 ### toJSON
 ```js
-toJSON: Array<Object> ()
+toJSON: () => ModelType[]
 ```
 
 Returns each model's data objects in a new array.
@@ -191,56 +191,56 @@ Returns each model's data objects in a new array.
 
 ### at
 ```js
-at: Model (index: number)
+at: (index: number) => Model
 ```
 
 Returns the model at a given index in the collection. Index can be negative to count backwards from the end.
 
 ### filter
 ```js
-filter: Array<Model> (predicate: function)
+filter: (predicate: (Model) => boolean) Model[]
 ```
 
 Same signature as Array.prototype.filter across a collection's models.  
 
 ### find
 ```js
-find: Model? (predicate: function)
+find: (predicate: (Model) => boolean) => Model | undefined
 ```
 
 Same signature as Array.prototype.find across a collection's models.  
 
 ### findWhere
 ```js
-findWhere: Model? (attrs: object)
+findWhere: (attrs: Partial<ModelType>) => Model | undefined
 ```
 
 Returns the model matching the attributes passed in, or undefined if no match is found. Like `.find` but a shorthand that uses matching attribute values instead of a predicate function.
 
 ### map
 ```js
-map: Array<any> (predicate: function)
+map: (predicate: (Model) => any) => any[]
 ```
 
 Same signature as Array.prototype.map across a collection's models.
 
 ### pluck
 ```js
-pluck: Array<any> (attribute: string)
+pluck: (attribute: string) => any[]
 ```
 
 Returns a list of the specified attribute value for all models.
 
 ### slice
 ```js
-slice: Array<Model> (startIndex:number[, endIndex: number])
+slice: (startIndex: number[, endIndex: number]) => Model[]
 ```
 
 Same signature as Array.prototype.slice across a collection's models.
 
 ### where
 ```js
-where: Array<Model> (attrs: object)
+where: (attrs: Partial<ModelType>) => Model[]
 ```
 
 Returns a list of models matching the data values passed in. Like `.filter` but a shorthand that uses matching data values instead of a predicate function.
