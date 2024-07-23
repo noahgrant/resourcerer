@@ -73,7 +73,7 @@ const getResources = (props) => ({
   ...(props.customName ?
     {
       customDecisions: {
-        modelKey: "decisions",
+        resourceKey: "decisions",
         provides: () => ({ sift: "science" }),
       },
     }
@@ -480,7 +480,7 @@ describe("resourcerer", () => {
         () => {
           expect(
             getCacheKey({
-              modelKey: "user",
+              resourceKey: "user",
               params: {
                 userId: "noah",
                 fraudLevel: "high",
@@ -491,7 +491,7 @@ describe("resourcerer", () => {
 
           expect(
             getCacheKey({
-              modelKey: "user",
+              resourceKey: "user",
               params: {
                 userId: "alex",
                 fraudLevel: "low",
@@ -506,7 +506,7 @@ describe("resourcerer", () => {
         expect(
           getCacheKey({
             params: { fraudLevel: "miniscule" },
-            modelKey: "user",
+            resourceKey: "user",
             path: { userId: "theboogieman" },
           })
         ).toEqual("user~fraudLevel=miniscule_userId=theboogieman");
@@ -526,7 +526,7 @@ describe("resourcerer", () => {
         expect(
           getCacheKey({
             data: { userId: "noah" },
-            modelKey: "user",
+            resourceKey: "user",
             params: {
               fraudLevel: "high",
               lastName: "grant",

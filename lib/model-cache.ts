@@ -107,11 +107,11 @@ export default {
   },
 
   /**
-   * A shortcut to remove all models of a given modelKey.
+   * A shortcut to remove all models of a given resourceKey.
    */
-  removeAllWithModel(modelKey: string) {
+  removeAllWithModel(resourceKey: string) {
     for (const key of modelCache.keys()) {
-      if (key === modelKey || key.startsWith(`${modelKey}~`)) {
+      if (key === resourceKey || key.startsWith(`${resourceKey}~`)) {
         this.remove(key);
       }
     }

@@ -35,7 +35,7 @@ declare module "resourcerer" {
     [key: string]: any;
   }) => {
     [Key in T]: Key extends ResourceKeys ? ResourceConfigObj<Key>
-    : ResourceConfigObj & { modelKey: ResourceKeys };
+    : ResourceConfigObj & { resourceKey: ResourceKeys };
   };
     */
 

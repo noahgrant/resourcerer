@@ -32,10 +32,10 @@ export default (getResources: ExecutorFunction, expectedProps: Record<string, an
       // to click on the link
       prefetchTimeout = window.setTimeout(() => {
         resources.forEach(([name, config]) => {
-          const modelKey = config.modelKey || name;
+          const resourceKey = config.resourceKey || name;
 
           // @ts-ignore
-          request(getCacheKey({ modelKey, ...config }), ModelMap[modelKey], config)
+          request(getCacheKey({ resourceKey, ...config }), ModelMap[resourceKey], config)
             // Prefetch is only opportunistic so if we error now,
             // we'll retry and handle the error in withResources
             .catch(noOp);
