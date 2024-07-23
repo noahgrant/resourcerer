@@ -1103,6 +1103,13 @@ describe("resourcerer", () => {
     expect(requestSpy.mock.calls.length).toEqual(5);
 
     await waitsFor(() => dataChild.props.hasLoaded);
+
+    // takes single key as arg
+    dataChild.props.refetch("decisions");
+
+    await waitsFor(() => !dataChild.props.hasLoaded);
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.mock.calls.length).toEqual(6);
   });
 
   it("refetching in one component sets loading states in another", async () => {
@@ -1169,6 +1176,18 @@ describe("resourcerer", () => {
     expect(requestSpy.mock.calls.length).toEqual(5);
     expect(requestSpy.mock.calls.at(-1)[0]).toEqual("user~fraudLevel=high_userId=noah");
     expect(requestSpy.mock.calls.at(-2)[0]).toEqual("decisions");
+
+    // also accepts a single key as an arg
+    dataChild.props.invalidate("decisions");
+    ReactDOM.unmountComponentAtNode(renderNode);
+
+    dataChild = findDataChild(renderUseResources());
+    // now models are no longer in the cache
+    expect(dataChild.props.hasLoaded).not.toBe(true);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
+    expect(requestSpy.mock.calls.length).toEqual(6);
+    expect(requestSpy.mock.calls.at(-1)[0]).toEqual("decisions");
   });
 
   it("fetches on mount (but not on updated) even when cached with 'force' option", async () => {
