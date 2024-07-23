@@ -21,7 +21,6 @@ import type {
   LoadingStates,
   LoadingStateObj,
   Resource,
-  ModelMap as ModelMapType,
   Props,
   ResourceConfigObj,
   InternalResourceConfigObj,
@@ -454,11 +453,6 @@ export const withResources =
  * related, while `name` is used for model, loading state, and status props. If
  * no `resourceKey` property is passed in, then it is identical to the resource's
  * `name`.
- *
- * @param {function} getResources - resources executor fn
- * @param {object} props - current component props
- * @return {[string, object][]} flattened [name, config] list of resources
- *   to be consumed by the useResources with prefetch properties assigned.
  */
 function generateResources(getResources: ExecutorFunction, props: Record<string, any>): Resource[] {
   return Object.entries(getResources(props) || {}).reduce(
@@ -537,10 +531,6 @@ function getResourcePropertyName(baseName: string, resourceKey: string) {
  * just in case this is a model given an `options.fetch` of `false`, in which
  * case we expect that the model should not have a loading state and should
  * appear as expected immediately.
- *
- * @param {string} config - resource config object
- * @return {Model|Collection} empty model or collection instance with frozen
- *   atributes or models, respectively
  */
 function getEmptyModel({ resourceKey, data, options, path }: InternalResourceConfigObj) {
   const Model_ = typeof ModelMap[resourceKey] === "function" ? ModelMap[resourceKey] : Model;
@@ -568,9 +558,6 @@ function getEmptyModel({ resourceKey, data, options, path }: InternalResourceCon
  *   preferred. `dependencies` entries can be functions, too, which take the
  *   `params` object as a parameter and return a key/value object that gets
  *   flattened to a piece of the cache key.
- *
- * @param {object} config - resource config object (destructured)
- * @return {string} cache key
  */
 export function getCacheKey({
   resourceKey,
@@ -594,12 +581,6 @@ export function getCacheKey({
 /**
  * Finds the current config object given a set of props based on the resourceKey and whether it is a
  * prefetched resource
- *
- * @param {[name: string, {prefetch: object}]} resource name and config tuple
- * @param {function} getResources - resources executor fn
- * @param {object} props - props with which to find the cache key for a given resource
- * @return {string} the resource config for the resource of name `name` and matching
- *   prefetch, if applicable
  */
 function findConfig(
   [name, { prefetch }]: [string, { prefetch?: boolean }],
@@ -627,12 +608,6 @@ function findConfig(
  * getResources() return value). So we can find the current cache key by
  * regenerating the config a given set of props and matching it with its name
  * and prefetch value.
- *
- * @param {[name: string, config: object]} resource name and config tuple
- * @param {function} getResources - resources executor fn
- * @param {object} props - props with which to find the cache key for a given resource
- * @return {string} the cache key for the resource of name `name` and matching
- *   prefetch, if applicable
  */
 function findCacheKey(resource: Resource, getResources: ExecutorFunction, props: Props) {
   return getCacheKey(findConfig(resource, getResources, props)) || "";
@@ -644,17 +619,13 @@ function findCacheKey(resource: Resource, getResources: ExecutorFunction, props:
  * Resources with dependencies that are not all present are put into a
  * 'PENDING' state.
  *
- * @param {array[]} resources - list of resource config entries for fetching
- * @param {object} props - current component props
- * @param {LoadingStates} defaultState - state to return if resource already exists in cache;
- *   in most circumstances, this should be the LOADED state as you might expect. However, when we
- *   prep resources to be re-fetched, they should get put into a loading state. Because we use
- *   render bailouts to immediately update our loading states, a cached resource that no longer has
- *   its dependent props will go back to a PENDING state, but that could be just momentarily if the
- *   dependent prop gets added in a bailout, triggering an immediate re-render phase with no
- *   painting to screen. Lazy models should always be considered LOADED.
- * @return {object} state object with resource state keys as keys and the loading
- *    state as values
+ * `defaultState` is the state to return if resource already exists in cache;
+ * in most circumstances, this should be the LOADED state as you might expect. However, when we
+ * prep resources to be re-fetched, they should get put into a loading state. Because we use
+ * render bailouts to immediately update our loading states, a cached resource that no longer has
+ * its dependent props will go back to a PENDING state, but that could be just momentarily if the
+ * dependent prop gets added in a bailout, triggering an immediate re-render phase with no
+ * painting to screen. Lazy models should always be considered LOADED.
  */
 function buildResourcesLoadingState(
   resources: Resource[],
@@ -698,12 +669,6 @@ function hasAllDependencies([, config]: Resource) {
  * Convenience wrapper method for getting a model from the cache. Has the same
  * function signature as `getCacheKey`. ModelCache will return undefined if it
  * doesn't find a model at the given key.
- *
- * @param {string} baseKey - model resource type key
- * @param {string[]|object[]} fields - list of property names whose values determine
- *    which flavor of resource is requested
- * @param {object} props - current component props
- * @return {Model|Collection?} model from the cache
  */
 function getModelFromCache(...args: Parameters<typeof getCacheKey>) {
   return ModelCache.get(getCacheKey(...args));
@@ -711,9 +676,6 @@ function getModelFromCache(...args: Parameters<typeof getCacheKey>) {
 
 /**
  * Filter predicate to remove prefetched resources from a resources list.
- *
- * @param {[, object]} config - resources config entry
- * @return {boolean} true if a resource is not prefetched
  */
 function withoutPrefetch([, config]: Resource) {
   return !config.prefetch;
@@ -731,22 +693,14 @@ function withoutNoncritical([, config]: Resource) {
 
 /**
  * Filter predicate to remove forced resources from a resources list.
- *
- * @param {[, object]} config - resources config entry
- * @return {boolean} true if a resource is not forced
  */
 function withoutForced([, config]: Resource) {
   return !config.force;
 }
 
 /**
- * This method determines if props with the resource names have been
- * passed to the component directly, in which case we'll skip the
- * fetching.
- *
- * @param {object} props - current component props
- * @param {array[]} resources - list of resource config entries for fetching
- * @return {boolean} whether the component should make the fetch calls
+ * This method determines if props with the resource names have been passed to
+ * the component directly, in which case we'll skip the fetching.
  */
 function shouldBypassFetch(props: Props, [name, { resourceKey }]: Resource) {
   return !!(getResourcePropertyName(name, resourceKey) in props);
@@ -754,9 +708,6 @@ function shouldBypassFetch(props: Props, [name, { resourceKey }]: Resource) {
 
 /**
  * Negates the return value of an input function
- *
- * @param {function} fn - input function to negate
- * @return {function} a function that negates the return value of the input function
  */
 function not(fn: (...args: any[]) => boolean) {
   return (...args: any[]) => !fn(...args);
@@ -765,9 +716,6 @@ function not(fn: (...args: any[]) => boolean) {
 /**
  * Hook to force a component update for a functional component by assigning a
  * new blank object reference every time.
- *
- * @return {function} function that, on every invocation, sets a new object as
- *   state and causes a re-render.
  */
 function useForceUpdate() {
   const [, forceUpdate] = useState({});
@@ -796,9 +744,6 @@ function useIsMounted() {
 /**
  * Measures the duration of the request and calls the `track` config method
  * before clearing the performance markers.
- *
- * @param {string} name - resource name
- * @param {object<params: object, options: object>} fetch params and props
  */
 function trackRequestTime(
   name: string,
@@ -828,9 +773,6 @@ function trackRequestTime(
  * Dynamically gathers a list of loading states for the component's critical
  * resources so that we can pass down the correct values for the hasLoaded,
  * isLoading, and hasErrored props.
- *
- * @param {array[]} resources - list of resource config entries for fetching
- * @return {string[]} a list of critical loading states for the component
  */
 function getCriticalLoadingStates(
   loadingStates: LoadingStateObj,
@@ -848,10 +790,6 @@ function getCriticalLoadingStates(
  * state in the useResources hook. Pulls model from the cache or assigns the
  * empty model if one does not exist. If no models have actually changed from
  * current state, we don't set a new object as state to avoid rerendering.
- *
- * @param {array[]} resources - list of resource config entries
- * @return {function} function that can be passed to a state-setting function
- *   that returns models keyed by name
  */
 function modelAggregator(resources: Resource[]): ModelState {
   const newModels = resources.reduce(
@@ -882,11 +820,6 @@ function modelAggregator(resources: Resource[]): ModelState {
  * refetched, and lazy resources get added to those that are loading so that the request gets made.
  * Since prefetched models don't factor into loading states, there's no concern that they get passed
  * to fetchResources even if they have been cached.
- *
- * @param {array[]} resourcesToUpdate - resource configs to partition
- * @param {object} loadingStates - contains upcoming loading states for each resource
- * @return {[array[], array[]]} partitioned tuple of resources that have been loaded and resources
- *   that should be passed to fetchResources
  */
 function partitionResources(
   resourcesToUpdate: Resource[],
@@ -974,12 +907,8 @@ function loaderReducer(
  * on the model itself (and not the request). `measure` can be a boolean, which if true
  * will track all requests for this model, or a function that takes its resource config
  * object to only track requests that meet a specific condition.
- *
- * @param {ResourceKeys} resourceKey - key representing model to be measured
- * @param {object} config - resource config object for a particular request instance
- * @return {boolean} whether a particular request time should be measured
  */
-function shouldMeasureRequest(resourceKey: keyof ModelMapType, config: ResourceConfigObj) {
+function shouldMeasureRequest(resourceKey: ResourceKeys, config: ResourceConfigObj) {
   const Constructor = ModelMap[resourceKey] as ConstructorTypes;
 
   if (!Constructor || !window.performance || !window.performance.mark) {
@@ -998,20 +927,16 @@ function shouldMeasureRequest(resourceKey: keyof ModelMapType, config: ResourceC
  * from the fetch's catch method, so that even if a request fails, Promise.all
  * will not reject.
  *
- * @param {array[]} resources - list of resource config entries for fetching
- * @param {object} props - current component props
- * @param {object} options - object whose properties allow us to shim any
- *   differences between the withResources HOC and the useResources hook.
- *   contains properties:
- *     component {object} - reference to the component instance, or in the case of
- *       function components, a unique and consistent object reference to associate
- *       with the component instance.
- *     isCurrentResource {function} - should true if a returned resource is the
- *       current resource for a component instance (ie, no newer requests were
- *       made in the interim)
- *     setResourceState {function} - updates resource state
- *     onRequestSuccess {function} - called after a request succeeds
- *     onRequestFailure {function} - called after a request fails
+ * A note about the properties of the last argument, the options object:
+ *   component {object} - reference to the component instance, or in the case of
+ *     function components, a unique and consistent object reference to associate
+ *     with the component instance.
+ *   isCurrentResource {function} - should true if a returned resource is the
+ *     current resource for a component instance (ie, no newer requests were
+ *     made in the interim)
+ *   setResourceState {function} - updates resource state
+ *   onRequestSuccess {function} - called after a request succeeds
+ *   onRequestFailure {function} - called after a request fails
  */
 function fetchResources(
   resources: Resource[],
@@ -1094,11 +1019,6 @@ function fetchResources(
 
 /**
  * Add any dependencies that the model provides as resource state.
- *
- * @param {Model|Collection} model
- * @param {object} provides - config provides object
- * @param {object} props - current component props
- * @param {function} setResourceState - updates resource state
  */
 function provideProps(
   model: Model | Collection,

@@ -58,7 +58,8 @@ export default class Model<
    *   * parse {boolean} - if true, runs the initial attributes through the parse function beefore
    *     setting on the model
    *   * collection {Collection} - links this model to a collection, if applicable
-   *   * ...any other options that .set() takes
+   *   * ...any other options that .set() takes, as well as any other key-value pair that can be
+   *     passed to the `url` function
    */
   constructor(
     attributes?: T,
@@ -122,8 +123,6 @@ export default class Model<
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire
    * server data representation.
-   *
-   * @return {object} model attributes
    */
   toJSON(): T {
     return { ...this.attributes };
@@ -138,9 +137,6 @@ export default class Model<
 
   /**
    * Gets the value of an attribute.
-   *
-   * @param {string} attr - attribute key
-   * @return {any} data attribute at that key
    */
   get<K extends keyof T>(attr: K): T[K] {
     return this.attributes[attr];
@@ -148,9 +144,6 @@ export default class Model<
 
   /**
    * Gets the value of multiple attributes.
-   *
-   * @param {string[]} attrs - attribute keys for which to get values
-   * @return {object} subsection of model data containing the specified keys
    */
   pick<K extends keyof T>(...attrs: K[]): Pick<T, K> {
     return attrs.reduce(
@@ -161,9 +154,6 @@ export default class Model<
 
   /**
    * Returns true if there is a defined value at a given attribute key.
-   *
-   * @param {string} attr - attribute key
-   * @return {boolean} whether the model has a value at that key
    */
   has(attr: keyof T): boolean {
     return ![undefined, null].includes(this.get(attr));
@@ -174,13 +164,6 @@ export default class Model<
    * the request fires, and when we call .fetch(), this happens after the request returns. Unless
    * called with a {silent: true} flag, this will trigger an update for all subscribed components
    * to reflect the new changes.
-   *
-   * @param {object} attrs - key-value map of new attributes to set on the model
-   * @param {object} options - map including the following options:
-   *   unset: {boolean} whether to delete the given attributes keys from the model
-   *          instead of set them
-   *   silent: {boolean} if true, skips the triggerUpdate() call after setting the attributes
-   * @return {Model} model instance
    */
   set(attrs: Partial<T> = {}, options: SetOptions = {}): this {
     const prevId = this.id;
@@ -217,10 +200,6 @@ export default class Model<
 
   /**
    * Removes a model's attribute at a given key.
-   *
-   * @param {string} attr - attribute key
-   * @param {object} options - set options
-   * @return {Model} model instance
    */
   unset(attr: keyof T, options?: SetOptions): this {
     return this.set({ [attr]: undefined } as Partial<T>, { unset: true, ...options });
@@ -228,9 +207,6 @@ export default class Model<
 
   /**
    * Removes all attributes for a model.
-   *
-   * @param {object} options - set options
-   * @return {Model} model instance
    */
   clear(options: SetOptions): this {
     const attrs: T = {} as T;
@@ -246,9 +222,6 @@ export default class Model<
    * Main method that preps a GET request at this model's url. This is the method the request module
    * uses to sync server data after instantiating a model. Upon returning, an update is triggered
    * for all registered components.
-   *
-   * @param {object} options - can include any property used by the sync module
-   * @return {promise} - resolves with a tuple of the instance and response object
    */
   fetch(options: SyncOptions & SetOptions = {}) {
     options = { parse: true, method: "GET", ...options };
@@ -268,12 +241,6 @@ export default class Model<
    * Whereas fetching data is handled declaratively by resourcerer, creates and updates occur
    * imperatively in your app via model.save(). It first sets the new properties on the model,
    * triggering an update (unless {wait: true} is passed). Then it preps a sync write request.
-   *
-   * @param {object} attrs - new attributes to set on the model and send as a POST/PUT/PATCH body.
-   *   if null then the current model attributes are used.
-   * @param {object} options - can include any property used by the sync module. pass {wait: true}
-   *   to wait to set properties on the model until after the save request succeeds
-   * @return {promise} - resolves with a tuple of the instance and response object
    */
   save(
     attrs: Partial<T>,
@@ -331,10 +298,6 @@ export default class Model<
    * Method used to send a DELETE request to the server. If part of a collection, also removes the
    * model from the collection. Pass {wait: true} for that to happen (along with an update) after
    * the request returns.
-   *
-   * @param {object} options - can include any property used by the sync module. pass {wait: true}
-   *   to wait to set properties on the model until after the request succeeds
-   * @return {promise} - resolves with a tuple of the instance and response object
    */
   destroy(options: { wait?: boolean } & SyncOptions & SetOptions = {}): Promise<[this, Response]> {
     const request =
@@ -368,8 +331,6 @@ export default class Model<
    * Default url method on a model. This should only be invoked if the model belongs to a collection
    * or has a urlRoot method, both of which this method uses to append the model's id. Otherwise,
    * for models outside of a collection, they should have their own overriding url method defined.
-   *
-   * @return {string} the url endpoint to request for this particular model instance
    */
   url(options = this.urlOptions): string {
     const base =
@@ -389,11 +350,6 @@ export default class Model<
    * By default, parse() is the identity function. Override this if you need special business logic
    * to transform the server response into a different form for your application that will be set
    * as attributes on the model.
-   *
-   * @param {any} response - server response data
-   * @param {object} options - options map
-   * @return {object} data object transformed from the server response to be applied as the model's
-   *   data attributes
    */
   parse(response: any, options: SyncOptions & SetOptions): T {
     return response;
@@ -403,8 +359,6 @@ export default class Model<
    * A model by default is considered new if it doesn't have an id property, which makes sense--it
    * hasn't been saved to the server yet. Practically, this can also be overridden to get desired
    * behavior, ie forcing a request to be POST instead of PUT or vice versa.
-   *
-   * @return {boolean}
    */
   isNew() {
     return !this.has((this.constructor as typeof Model).idAttribute);

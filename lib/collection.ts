@@ -148,10 +148,6 @@ export default class Collection<
    * Adds a model or models to the collection. If a comparator exists, the collection will be
    * re-sorted, as well. This will also create a reference on the collection to the model and apply
    * listeners on the collection to events on the new model.
-   *
-   * @param {object|object[]} models - model or list of models to be added to the collection
-   * @param {object} options - .set() options hash
-   * @return {Collection} collection instance
    */
   add(models: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
     return this.set(models, options);
@@ -160,10 +156,6 @@ export default class Collection<
   /**
    * Removes a model or list of models from the collection, which will also remove any references
    * as well as any listeners.
-   *
-   * @param {object|object[]} models - model or list of models to be removed to the collection
-   * @param {object} options - .set() options hash
-   * @return {Collection} collection instance
    */
   remove(models: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
     const removed = this._removeModels(!Array.isArray(models) ? [models] : models);
@@ -181,13 +173,6 @@ export default class Collection<
    * Sets a model or list of models on the collection, adding new ones and updating existing ones,
    * as appropriate. Note that this is NOT for removing models. That should be done exclusively
    * via the .remove() method (or effectively the .reset() method).
-   *
-   * @param {object|object[]} models - model or list of models to be set on the collection
-   * @param {object} options - map with the following options:
-   *   * parse {boolean} - whether to run the models through the parse method (both the collection's
-   *     parse method as well each model's) before setting them.
-   *   * silent {boolean} - if true, does not trigger an update after setting
-   * @return {Collection} collection instance
    */
   set(models?: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
     let shouldSort = false;
@@ -234,10 +219,6 @@ export default class Collection<
   /**
    * Sets a model or list of models on the collection after completely removing all references and
    * listeners to previous models.
-   *
-   * @param {object|object[]} models - model or list of models to be set on the collection
-   * @param {object} options - .set() options hash
-   * @return {Collection} collection instance
    */
   reset(models: ModelArg<T, O> | ModelArg<T, O>[] = [], options: CSetOptions = {}) {
     for (let i = 0; i < this.models.length; i++) {
@@ -260,10 +241,6 @@ export default class Collection<
   /**
    * When adding a model to a collection, the collection makes shorthand references to it, and it
    * does it both by its idAttribute as well as its client id attribute.
-   *
-   * @param {string} obj - identifier to lookup a model, which can be its id attribute, its client
-   *   id, or an object containing either
-   * @return {Model} collection's model, if found
    */
   get(obj: Model<T, O>["id"] | ModelArg<T, O>): InstanceType<this["Model"]> | undefined {
     if (!obj && typeof obj !== "number") {
@@ -279,10 +256,6 @@ export default class Collection<
   /**
    * Looks up by id/client id/object containing either whether the collection has a model in its
    * collection.
-   *
-   * @param {string} obj - identifier to lookup a model, which can be its id attribute, its client
-   *   id, or an object containing either
-   * @return {boolean} whether the model is in the collection
    */
   has(obj: Model<T, O>["id"] | ModelArg<T, O>) {
     // @ts-ignore
@@ -291,9 +264,6 @@ export default class Collection<
 
   /**
    * Retuns a model at the given collection index, which can be negative.
-   *
-   * @param {number} index
-   * @return {Model}
    */
   at(index: number): InstanceType<this["Model"]> | undefined {
     if (index < 0) {
@@ -304,34 +274,18 @@ export default class Collection<
   }
 
   /** COLLECTION HELPER METHODS */
-  /**
-   * @param {function} predicate - mapping function taking each model as an argument
-   * @return {any[]}
-   */
   map(predicate: (model: InstanceType<this["Model"]>) => any) {
     return this.models.map(predicate);
   }
 
-  /**
-   * @param {function} predicate - function taking each model as an argument and returning a boolean
-   * @return {Model?} the first model where the predicate returned true
-   */
   find(predicate: (model: InstanceType<this["Model"]>) => boolean) {
     return this.models.find(predicate);
   }
 
-  /**
-   * @param {function} predicate - function taking each model as an argument and returning a boolean
-   * @return {Model[]} the list of models where the predicate returned true
-   */
   filter(predicate: (model: InstanceType<this["Model"]>) => boolean) {
     return this.models.filter(predicate);
   }
 
-  /**
-   * @param {object} attrs - object of properties and values to match models against
-   * @return {Model?} the first model found with the matched properties in `attrs`
-   */
   findWhere(attrs: Partial<T>) {
     return this.where(attrs, true);
   }
@@ -362,18 +316,10 @@ export default class Collection<
     return this.filter(predicate) as any;
   }
 
-  /**
-   * @param {string} attr - an attribute to get from each model in the collectionn
-   * @return {string[]} list of that attribute's values in the collection
-   */
   pluck<K extends keyof T>(attr: K): T[K][] {
     return this.map((model) => model.get(attr));
   }
 
-  /**
-   * @param {any[]} args - same args for an array's .slice() method
-   * @return {Model[]} collection model subset
-   */
   slice(...args: number[]) {
     return this.models.slice(...args);
   }
@@ -404,9 +350,6 @@ export default class Collection<
    * Main method that preps a GET request at this collection's url. This is the method the request
    * module uses to sync server data after instantiating a collection. Upon returning, an update is
    * triggered for all registered components.
-   *
-   * @param {object} options - can include any property used by the sync module
-   * @return {promise} - resolves with a tuple of the instance and response object
    */
   fetch(options: SyncOptions & CSetOptions = {}) {
     options = { parse: true, method: "GET", ...options };
@@ -424,12 +367,6 @@ export default class Collection<
   /**
    * This method is shorthand for adding a new model to the collection and then calling .save() on
    * it.
-   *
-   * @param {object|Model} model - new model to be added to the collection and synced with the
-   *   server
-   * @param {object} options - can include any property used by the sync module. pass {wait: true}
-   *   to wait to add the model to the collection until after the save request succeeds
-   * @return {promise} - resolves with a tuple of the instance and response object
    */
   create(
     model: ModelArg<T, O>,
@@ -469,11 +406,6 @@ export default class Collection<
    * By default, parse() is the identity function. Override this if you need special business logic
    * to transform the server response into a different form for your application that will be set
    * as models on the collection.
-   *
-   * @param {any} response - server response data
-   * @param {object} options - options map
-   * @return {object} data object transformed from the server response to be applied as the
-   *   collections' models' data attributes
    */
   parse(response: any, options: SyncOptions & CSetOptions): T[] {
     return response;
@@ -485,8 +417,6 @@ export default class Collection<
    * option isn't passed to the constructor, and by default it returns the Model base class. But
    * if the collection has an `idAttribute` static property, it will create a new Model class
    * with the corresponding `idAttribute` property and return that.
-   *
-   * @return {Model} model class associated with the collection
    */
   _getModelClass<T extends Record<string, any>, O extends Record<string, any>>() {
     if ((this.constructor as typeof Collection).idAttribute) {
@@ -513,10 +443,6 @@ export default class Collection<
   /**
    * Turns a set of attributes into an instance of the collection's model. If it is already a model,
    * it assigns the collection instance to the model's `collection` property and returns the model.
-   *
-   * @param {object|Model} attrs - attributes to turn into a model
-   * @param {object} options - options to be passed to the model's constructor
-   * @return {Model}
    */
   _prepareModel(attrs: ModelArg<T, O>, options: CSetOptions = {}): Model<T, O> {
     if (this._isModel(attrs)) {
@@ -534,10 +460,6 @@ export default class Collection<
   /**
    * Internal method called by .remove() that, in addition to taking models out of the collection,
    * also removes their references in the collection as well as their listeners.
-   *
-   * @param {Model[]} models - list of models to be removed from the collection
-   * @return {Model[]} list of models actually removed, since they won't get removed if they don't
-   *   exist in the collection in the first place
    */
   _removeModels(models: (Model<T, O>["id"] | ModelArg<T, O>)[]) {
     const removed = [];
@@ -569,9 +491,6 @@ export default class Collection<
 
   /**
    * Helper method to determine whether an object is a Model.
-   *
-   * @param {any} model - object in question
-   * @return {boolean} whether the object is an instance of Model
    */
   _isModel(model: any): boolean {
     return model instanceof Model;
@@ -582,8 +501,6 @@ export default class Collection<
    * on the collection for direct access to the model and subscribes the collection to model
    * updates. This allows components to listen only on a collection and not an individual model and
    * still see the updates they expect.
-   *
-   * @param {Model} model
    */
   _addReference(model: Model<T, O>) {
     this._byId[model.cid] = model;
@@ -601,8 +518,6 @@ export default class Collection<
    * Internal method used by .remove() when removing a model from a collection. Basically the
    * inverse of _addReference: it removes reference properties on the collection and unsubscribes
    * listeners on model updates.
-   *
-   * @param {Model} model
    */
   _removeReference(model: Model<T, O>) {
     delete this._byId[model.cid];
