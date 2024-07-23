@@ -118,12 +118,12 @@ export function ajax(
             : ResourcesConfig.stringify(options.params, options),
         }
       : {}),
-      // catch block here handles the case where the response isn't valid json,
-      // like for example a 204 no content
     })
     .then((res) =>
       res
         .json()
+        // catch block here handles the case where the response isn't valid json,
+        // like for example a 204 no content
         .catch(() => ({}))
         .then((json) => onRequestComplete(json, res))
     );

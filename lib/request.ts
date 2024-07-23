@@ -21,10 +21,6 @@ const loadingCache: Record<
 /**
  * Retrieves a model from the ModelCache. If needed, best to use this in an
  * application instead of importing the ModelCache directly.
- *
- * @param {string} key - cache lookup key
- * @return {Model?|Collection?} model instance from
- *   cache at the cache key if it exists
  */
 export const getFromCache = (key: string) => ModelCache.get(key);
 
@@ -32,9 +28,6 @@ export const getFromCache = (key: string) => ModelCache.get(key);
  * Return whether or not a model exists within ModelCache for the given key. If
  * needed, best to use this in an application instead of importing the
  * ModelCache directly.
- *
- * @param {string} key - The cache key of the model to check for existence.
- * @return {boolean}
  */
 export const existsInCache = (key: string) => !!ModelCache.get(key);
 
@@ -46,17 +39,8 @@ export const existsInCache = (key: string) => !!ModelCache.get(key);
  * way, we can attach multiple .then()s to a promise that will all be
  * executed when the promise is fulfilled.
  *
- * @param {string} key - cache lookup key
- * @param {function} Model - the model constructor
- * @param {object} options - options object used for fetching that can include:
- *
- *   * data {object|object[]} - attributes or models to pass a Model or Collection instance, resp.
- *   * params {object} - query params to pass into the fetch method
- *   * fetch {boolean} - whether fetch the model after creation
- *   * force {boolean} - force the fetch to be made if the model is already cached
- *   * options {object} - options to pass to the Model constructor
- *
- * @return {promise} a promise that will resolve with the new Model/Collection instance
+ * @return {promise} a promise that will resolve with a tuple of the new Model/Collection instance
+ *   and an optional status code
  */
 export default (
   key: string,

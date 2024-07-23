@@ -6,7 +6,7 @@ type Component = NonNullable<unknown>;
 
 // this is where all of our cached resources are stored
 const modelCache = new Map<string, Model | Collection>();
-// this map is {{string: Set<React.Component>}} where each property is a cache
+// this map is Map<string: Set<React.Component>> where each property is a cache
 // key. this is how we keep track all components that have requested a resource.
 // when a cache key's set is empty, we schedule that resource for cache removal
 const componentManifest = new Map<string, Set<Component>>();
@@ -37,10 +37,6 @@ export default {
    * In this case, the user may never actually click on the component, so we
    * preemptively schedule for removal. The timeout will be overridden when
    * an additional component is registered to the model.
-   *
-   * @param {string} cacheKey - The cache key of the model to be removed.
-   * @param {Model | Collection} model - model to be cached
-   * @param {{}} object instance assigned to the component
    */
   put(cacheKey: string, model: Model | Collection, component?: Component) {
     modelCache.set(cacheKey, model);
@@ -55,9 +51,6 @@ export default {
   /**
    * Registers a component with a resource in the component manifest. Clears any
    * currently-scheduled cache removal timeout.
-   *
-   * @param {string} cacheKey
-   * @param {{}} object instance assigned to the component
    */
   register(cacheKey: string, component?: Component) {
     if (component) {
@@ -74,10 +67,6 @@ export default {
    *
    * If, after the component is unregistered, a resource no longer has any
    * components registered, it will be scheduled for removal from the cache.
-   *
-   * @param {React.Component} component
-   * @param {...<string>} cacheKeys - list of keys from which to unregister
-   *    the component
    */
   unregister(component: Component, ...cacheKeys: string[]) {
     cacheKeys = cacheKeys.length ? cacheKeys : [...componentManifest.keys()];
@@ -98,8 +87,6 @@ export default {
   /**
    * Direct removal of a cache key from the cache. Should be used sparingly,
    * since it shortcuts the unregistration process and timeout.
-   *
-   * @param {string} cacheKey - The cache key of the model to be removed.
    */
   remove(cacheKey: string) {
     clearModel(cacheKey);
@@ -127,8 +114,6 @@ export default {
 /**
  * Sets a timeout for clearing the model from the model cache and stores the
  * timeout id in the timeouts object.
- *
- * @param {string} cacheKey - The cache key of the model to be removed.
  */
 function scheduleForRemoval(cacheKey: string) {
   const Constructor = modelCache.get(cacheKey)?.constructor as typeof Model | typeof Collection;
@@ -139,8 +124,6 @@ function scheduleForRemoval(cacheKey: string) {
 
 /**
  * Remove a model from the cache.
- *
- * @param {string} cacheKey - The cache key of the model to be removed.
  */
 function clearModel(cacheKey: string) {
   window.clearTimeout(timeouts[cacheKey]);

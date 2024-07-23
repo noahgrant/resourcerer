@@ -11,13 +11,6 @@ const PREFETCH_TIMEOUT = 50;
 /**
  * Call this as with a resources config function and a component's props.
  * The returned function should be applied to an onMouseEnter callback.
- *
- * @param {function} getResources - function that takes props as an argument
- *   and should return a map of resources. Identical to those used in
- *   `useResources`/`withResources`
- * @param {object} expectedProps - props in the form expected when the resource
- *   would be needed
- * @return {function} callback to be invoked onMouseEnter of appropriate DOM el
  */
 export default (getResources: ExecutorFunction, expectedProps: Record<string, any> = {}) => {
   let fetched: boolean;
@@ -53,8 +46,6 @@ export default (getResources: ExecutorFunction, expectedProps: Record<string, an
 /**
  * If user swipes quickly over the DOM el of interest, cancel the timeout
  * to avoid spamming the API.
- *
- * @param {number} timeout - timeout to clear so that prefetch doesn't happen
  */
 function _onMouseLeave(timeout: number) {
   window.clearTimeout(timeout);
