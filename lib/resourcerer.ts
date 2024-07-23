@@ -382,10 +382,8 @@ export function useResources<T extends ResourceKeys>(
     // this will only return any passed-in (bypassed) models so we can override
     ...pick(props, ...Object.keys(models)),
 
-    refetch: (keys: ResourceKeys | ResourceKeys[]) => {
+    refetch: (keys: ResourceKeys[]) => {
       ReactDOM.unstable_batchedUpdates(() => {
-        keys = Array.isArray(keys) ? keys : [keys];
-
         keys.forEach((name) => {
           const model = getModelFromCache(findConfig([name, {}], getResources, props));
 
@@ -404,8 +402,7 @@ export function useResources<T extends ResourceKeys>(
     /**
      * For each resourceKey, find all entries in the cache and remove them.
      */
-    invalidate: (keys: ResourceKeys | ResourceKeys[]) =>
-      (Array.isArray(keys) ? keys : [keys]).forEach((key) => ModelCache.removeAllWithModel(key)),
+    invalidate: (keys: ResourceKeys[]) => keys.forEach((key) => ModelCache.removeAllWithModel(key)),
 
     setResourceState,
 
