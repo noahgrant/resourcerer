@@ -153,7 +153,8 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     5. [Declarative Cache Keys](#declarative-cache-keys)
     6. [Prefetch on Hover](#prefetch-on-hover)
     7. [Refetching](#refetching)
-    8. [Tracking Request Times](#tracking-request-times)
+    8. [Cache Invalidation](#cache-invalidation)
+    9. [Tracking Request Times](#tracking-request-times)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 1. [Migrating to v2.0](#migrating-to-v20)
@@ -508,6 +509,8 @@ Sometimes you want the latest of a resource, bypassing whatever model has alread
 ```
 
 The resource will only get force-requested when the component mounts; the `force` flag will get ignored on subsequent updates. If you need to refetch after mounting to get the latest resource, use [refetch](#refetching).
+
+This behavior is similar to the behavior you get with [cache invalidation](#cache-invalidation).
 
 
 ### Custom Resource Names
@@ -915,6 +918,21 @@ function MyComponent(props) {
 **NOTE:**
 * The list returned by the function should only include keys that are currently returned by the executor function. In the example above, returning `userTodos` would not fetch anything because it is not part of the current executor function. To conditionally fetch another resource, add it to the executor function with [dependsOn](#serial-requests).
 * The resource that will be refetched is the version returned by the executor function with the current props. To fetch a different version, use the standard props flow instead of refetching.
+
+## Cache Invalidation
+
+In some cases you may want to imperatively remove a resource from the cache. For example, you may make a change to a related resource that renders a resource invalid. For those cases, `useResources` returns an `invalidate` function that takes a list of `ResourceKeys`:
+
+```js
+function MyComponent(props) {
+  const {todosCollection, invalidate} = useResources(({start_time}) => ({todos: {params: {start_time}}}), props);
+      
+  // ...
+  
+  return <Button onClick={() => invalidate(["todos"])}>Invalidate me</Button>;
+```
+
+* Unlike [`refetching`](#refetching), the ResourceKeys passed to `invalidate` do not need to be from those returned by the executor function. They can any resource key.
 
 ## Tracking Request Times
 
