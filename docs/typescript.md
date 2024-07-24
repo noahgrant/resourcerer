@@ -51,7 +51,7 @@ export default TodosCollection extends Collection<Todo> {
 and now you can use it in your components!
 
 ```tsx
-import {type ExecutorFunction, useResources} from 'resourcerer';
+import {useResources} from 'resourcerer';
 
 const getResources = (props) => ({todos: {}});
 
@@ -82,3 +82,61 @@ function MyComponent(props) {
   );
 }
 ```
+
+
+3. You get the best built-in type hints when you inline the `getResources` function:
+
+    ```tsx
+    function MyComponent() {
+      const {
+        isLoading,
+        hasErrored,
+        hasLoaded,
+        // ERROR: property tdoosCollection does not exist on...
+        tdoosCollection
+      // ERROR Property ogrdI does not exist on type...
+      } = useResources(({orgId}) => ({todos: {params: {orgId}}}), {ogrdI: "oops"});
+    ```
+
+   But inlining executor functions leaves you susceptible to [the subtle bug where you are always reading from current props](https://github.com/noahgrant/resourcerer/tree/typescript?tab=readme-ov-file#differences-between-useresources-and-withresources). Executor functions can also get pretty involved, so it's nice to extract it. You still get good type hints, but you'll need to type out your props:
+
+    ```tsx
+    // type out these props
+    const getResources = (props: {orgId: string}) => ({todos: {params: {orgId}}});
+    
+    function MyComponent() {
+      const {
+        isLoading,
+        hasErrored,
+        hasLoaded,
+        // ERROR: property tdoosCollection does not exist on...
+        tdoosCollection
+      // ERROR no overload matches this call...
+      // since ogrdI is being passed when we expect orgId
+      } = useResources(getResources, {ogrdI: "oops"});
+    ```
+
+    Using this method, the only drawback is that you don't get type hints for the ResourceKeys like `todos`. If you want to add those, you'll have to import the `ExecutorFunction` type and pass the list of ResourceKeys:
+
+     ```tsx
+    import {type ExecutorFunction, useResources} from 'resourcerer';
+
+    // "todos" and "todoItem" will come up as type hints, both as the type parameters and the Resource Config Object keys
+    const getResources: ExecutorFunction<"todos" | "todoItem"> = (props: {orgId: string}) => ({
+       todos: {params: {orgId}},
+       todoItem: {}
+    });
+    
+    function MyComponent() {
+      const {
+        isLoading,
+        hasErrored,
+        hasLoaded,
+        // ERROR: property tdoosCollection does not exist on...
+        tdoosCollection
+      // ERROR no overload matches this call...
+      // since ogrdI is being passed when we expect orgId
+      } = useResources(getResources, {ogrdI: "oops"});
+    ```
+
+     Up to you how you want your types!
