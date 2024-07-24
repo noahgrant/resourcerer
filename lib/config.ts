@@ -1,7 +1,7 @@
 import { noOp } from "./utils.js";
 import React, { type ReactElement } from "react";
 import { type SyncOptions, setRequestPrefilter } from "./sync.js";
-import { ResourceConfigObj, type ModelMap as _ModelMap } from "./types.js";
+import { type ModelMap as _ModelMap } from "./types.js";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;
