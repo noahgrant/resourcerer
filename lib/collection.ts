@@ -17,6 +17,7 @@ type ModelArg<A extends Record<string, any>, O extends Record<string, any>> =
   | Record<string, any>;
 
 type comparator =
+  | string
   | ((arg: Model) => number | string)
   | ((arg1: Model, arg2?: Model) => number | undefined);
 
