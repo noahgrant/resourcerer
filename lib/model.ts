@@ -38,8 +38,8 @@ const RESERVED_OPTION_KEYS = [
  *    the methods listed in the first step.
  */
 export default class Model<
-  T extends Record<string, any> = object,
-  O extends Record<string, any> = object,
+  T extends Record<string, any> = Record<string, any>,
+  O extends Record<string, any> = Record<string, any>,
 > extends Events {
   cid: string;
   id: string | number;
