@@ -10,7 +10,15 @@ export interface ResourcererConfig {
     params: string | URLSearchParams | string[][] | Record<string, string>,
     options: Record<string, any>
   ) => string;
-  track: (...args: any[]) => void;
+  track: (
+    name: string,
+    options: {
+      Resource: string;
+      params: Record<string, any> | void;
+      path: Record<string, any> | void;
+      duration: number;
+    }
+  ) => void;
   log: (...args: any[]) => void;
   prefilter: (options: SyncOptions) => SyncOptions | void;
   set: (config: Partial<ResourcererConfig>) => void;

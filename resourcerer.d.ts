@@ -44,8 +44,8 @@ declare module "resourcerer" {
     hasErrored: boolean;
     hasLoaded: boolean;
     hasInitiallyLoaded: boolean;
-    refetch: (keys: ResourceKeys[]) => void;
-    invalidate: (keys: ResourceKeys[]) => void;
+    refetch: (keys: ResourceKeys | ResourceKeys[]) => void;
+    invalidate: (keys: ResourceKeys | ResourceKeys[]) => void;
     setResourceState(newState: { [key: string]: any }): void;
     [key: `${string}LoadingState`]: LoadingStates;
     [key: `${string}Status`]: number;

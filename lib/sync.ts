@@ -15,6 +15,7 @@ export type SyncOptions = {
   url?: string;
   minDuration?: number;
   error?: (response: Response) => any;
+  headers?: Record<string, string>;
   // they are free to add any other options they like
   [key: string]: any;
 };
