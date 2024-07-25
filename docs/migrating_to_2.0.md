@@ -65,7 +65,7 @@ The core methodology and functionality of `resourcerer` has not changed in versi
     provides: (queueItemModel) => ({userId: queueItemModel.get('userId')})
     ```
 
-  As such, the special spread character has been removed.
+    As such, the special spread character has been removed.
 
 1. `providesModels`, which turned arbitraray data into a listenable model, has been removed.
 
