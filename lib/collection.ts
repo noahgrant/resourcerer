@@ -158,7 +158,10 @@ export default class Collection<
    * Removes a model or list of models from the collection, which will also remove any references
    * as well as any listeners.
    */
-  remove(models: ModelArg<T, O> | ModelArg<T, O>[], options: CSetOptions = {}) {
+  remove(
+    models: Model<T, O>["id"] | Model<T, O>["id"][] | ModelArg<T, O> | ModelArg<T, O>[],
+    options: CSetOptions = {}
+  ) {
     const removed = this._removeModels(!Array.isArray(models) ? [models] : models);
 
     if (!options.silent && removed.length) {
@@ -296,9 +299,9 @@ export default class Collection<
    * @param {boolean} first - whether to take all matched models or just the first
    * @return {Model[]} list of models found with the matched properties in `attrs`
    */
-  where<B extends boolean>(
+  where<B extends boolean = false>(
     attrs: Partial<T>,
-    first: B
+    first?: B
   ): B extends true ? InstanceType<this["Model"]> | undefined : InstanceType<this["Model"]>[] {
     const predicate = (model: InstanceType<this["Model"]>) => {
       for (let [attr, val] of Object.entries(attrs)) {
