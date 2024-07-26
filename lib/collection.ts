@@ -104,7 +104,7 @@ export default class Collection<
    * if you're not defining your own custom Model class but still need to index by a different field
    * than the default ('id').
    */
-  static idAttribute: "string";
+  static idAttribute: string;
 
   /**
    * This is a list of keys (could be attribute keys, but also keys passed in from the options
