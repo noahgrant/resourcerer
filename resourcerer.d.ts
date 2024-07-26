@@ -29,16 +29,6 @@ declare module "resourcerer" {
     [Key in T]?: ResourceConfigObj<Key>;
   };
 
-  /**
-   * Figure this out for the case where we accept random strings.
-  export type ExecutorFunction<T extends ResourceKeys | string> = (props: {
-    [key: string]: any;
-  }) => {
-    [Key in T]: Key extends ResourceKeys ? ResourceConfigObj<Key>
-    : ResourceConfigObj & { resourceKey: ResourceKeys };
-  };
-    */
-
   export type UseResourcesResponse = {
     isLoading: boolean;
     hasErrored: boolean;
@@ -52,7 +42,6 @@ declare module "resourcerer" {
   };
 
   export function useResources<T extends ResourceKeys, O extends Record<string, any>>(
-    // TODO: how to pass O to ExecutorFn
     getResources: ExecutorFunction<T, O>,
     _props: O
   ): UseResourcesResponse & {
