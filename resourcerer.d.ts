@@ -25,7 +25,7 @@ declare module "resourcerer" {
   export interface ModelMap {}
   export type ResourceKeys = Extract<keyof ModelMap, string>;
 
-  export type ExecutorFunction<T extends ResourceKeys, O = any> = (props: O) => {
+  export type ExecutorFunction<T extends ResourceKeys, O> = (props: O) => {
     [Key in T]?: ResourceConfigObj<Key>;
   };
 

@@ -122,7 +122,7 @@ function MyComponent(props) {
     import {type ExecutorFunction, useResources} from 'resourcerer';
 
     // "todos" and "todoItem" will come up as type hints, both as the type parameters and the Resource Config Object keys
-    const getResources: ExecutorFunction<"todos" | "todoItem"> = (props: {orgId: string}) => ({
+    const getResources: ExecutorFunction<"todos" | "todoItem", {orgId: string}> = (props) => ({
        todos: {params: {orgId}},
        todoItem: {}
     });
