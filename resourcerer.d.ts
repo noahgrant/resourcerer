@@ -1,6 +1,12 @@
+import Model from "./build/lib/model.js";
 import Collection from "./build/lib/collection.js";
 
 export * from "./build/index.js";
+
+type GetPathOptions<C> =
+  C extends Model<infer A, infer O> ? O
+  : C extends Collection<infer M, infer CO> ? CO
+  : never;
 
 declare module "resourcerer" {
   type WithModelSuffix<K extends ResourceKeys, C> =
@@ -13,7 +19,7 @@ declare module "resourcerer" {
     lazy?: boolean;
     noncritical?: boolean;
     options?: { [key: string]: any };
-    path?: { [key: string]: any };
+    path?: GetPathOptions<InstanceType<ModelMap[K]>>;
     params?: { [key: string]: any };
     prefetches?: { [key: string]: any }[];
     provides?: (
