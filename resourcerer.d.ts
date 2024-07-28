@@ -3,9 +3,9 @@ import Collection from "./build/lib/collection.js";
 
 export * from "./build/index.js";
 
-type GetPathOptions<C> =
-  C extends Model<infer A, infer O> ? O
-  : C extends Collection<infer M, infer CO> ? CO
+type GetModelOptions<C> =
+  C extends Model<infer A, infer O> ? [A, O]
+  : C extends Collection<infer M, infer O> ? [M, O]
   : never;
 
 declare module "resourcerer" {
@@ -13,13 +13,13 @@ declare module "resourcerer" {
     C extends Collection<any, any> ? `${K}Collection` : `${K}Model`;
   export type LoadingStates = "error" | "loading" | "loaded" | "pending";
   export type ResourceConfigObj<K extends ResourceKeys> = {
-    data?: { [key: string]: any };
+    data?: Partial<GetModelOptions<InstanceType<ModelMap[K]>>[0]>;
     dependsOn?: boolean;
     force?: boolean;
     lazy?: boolean;
     noncritical?: boolean;
     options?: { [key: string]: any };
-    path?: GetPathOptions<InstanceType<ModelMap[K]>>;
+    path?: GetModelOptions<InstanceType<ModelMap[K]>>[1];
     params?: { [key: string]: any };
     prefetches?: { [key: string]: any }[];
     provides?: (
