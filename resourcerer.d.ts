@@ -19,7 +19,9 @@ declare module "resourcerer" {
     lazy?: boolean;
     noncritical?: boolean;
     options?: { [key: string]: any };
-    path?: GetModelOptions<InstanceType<ModelMap[K]>>[1];
+    // ts is not happy with this but this will make our typings easier
+    // @ts-ignore
+    path?: Parameters<InstanceType<ModelMap[K]>["url"]>[0];
     params?: { [key: string]: any };
     prefetches?: { [key: string]: any }[];
     provides?: (
