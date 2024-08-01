@@ -5,16 +5,16 @@ a `url`. This can come in several forms:
 
 * a string literal
 
-```js
-class MyModel extends Model {
+```ts
+class MyModel extends Model<ModelType> {
   url = '/endpoint'
 }
 ```
 
 * a function
 
-```js
-class MyModel extends Model {
+```ts
+class MyModel extends Model<ModelType> {
   url() {
     return '/endpoint';
   }
@@ -41,7 +41,7 @@ that you might find useful in rendering your data-hydrated components.
 ## Properties
 
 ### `static` dependencies
-`Array<string|function>`
+`Array<string | function>`
 
 This property tells resourcerer how to determine whether to make a new request or to take a model out of the cache. It is an array of strings or functions from which its cache key is calculated. See the [cacheKey](https://github.com/noahgrant/resourcerer#caching-resources-with-modelcache) section for more info.
 
@@ -56,12 +56,12 @@ The number of milliseconds to keep all models of this class in the cache after a
 Override this to be the property name of the Model's unique identifier if it something other than `'id'`. Each model instance will get an `id` instance property that will be equal to that value. i.e. if the Model class has `static idAttribute = 'email'` and the Model is instantiated with `{email: 'noah@gmail.com'}`, then `model.id === 'noah@gmail.com'`.
 
 ### `static` defaults
-`object|function`
+`Record<string, any>` | () => Record<string, any>`
 
 An object or function that returns object with attribute keys and their default values. If set, then when the model is instantiated, any missing data get set to these values.
 
 ### `static` measure
-`boolean|function`
+`boolean | (obj: ResourceConfigObject) => boolean)`
 
 A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this model's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
@@ -72,13 +72,13 @@ A boolean or function that accepts a [resource configuration object](https://git
 ### constructor
 
 ```js
-constructor: void (initialData: Object, options: object)
+constructor: (initialData: object, options: object) => void
 ```
 
 The Model's constructor gets passed any initial data, as well as the [options](https://github.com/noahgrant/resourcerer#options) from the executor function. Override this to add some custom logic or instance variables for the model&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
-```js
-class MyModel extends Model {
+```ts
+class MyModel extends Model<ModelType> {
   constructor(initialData, options={}) {
     super(initialData, options);
     
@@ -103,21 +103,21 @@ Returns the model's data in a new object.
 
 ### get
 ```js
-get: any (attribute: string)
+get: (attribute: keyof ModelType) => ModelType[keyof ModelType]
 ```
 
 Returns the value at the given attribute key.
 
 ### has
 ```js
-has: boolean (attribute: string)
+has: (attribute: string) => boolean
 ```
 
 Returns true if the model has a defined value at the given attribute key
 
 ### isNew
 ```js
-isNew: boolean ()
+isNew: () => boolean
 ```
 
 By default, a model is considered 'new' if it does not have an id (or a value at the [`idAttribute`](#static-idattribute) proeprty. It is used to determine:
@@ -136,7 +136,7 @@ isNew() {
 
 ### parse
 ```js
-parse: object (response: any)
+parse: (response: any) => ModelType
 ```
 
 This method takes in the raw server data response and should return the data in the form that should be set on the Model. It defaults to the identity function, which might suffice for many endpoints. Override this for your custom needs. For example, maybe your server overly-nests the resource in a `schema` property:
@@ -149,35 +149,35 @@ parse(response) {
 
 ### set
 ```js
-set: Model (data: object, options: object)
+set: (data: object, options: object) => this
 ```
 
 This is the main avenue by which a model's properties get values assigned. It's called internally by several public methods, including `save`, `unset`, and `clear`. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
 
 ### unset
 ```js
-unset: Model (attribute: string, options: object)
+unset: (attribute: string, options?: {silent: boolean}) => this
 ```
 
 Removes the attribute from the model's data. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
 
 ### clear
 ```js
-clear: Model (options: object)
+clear: (options?: {silent: boolean}) => this
 ```
 
 Removes all data from the model. Pass a `silent: true` option for this not to trigger a re-render for subscribed components.
 
 ### pick
 ```js
-pick: object (...data: Array<string>)
+pick: <K extends keyof ModelType>(...data: K[]) => Record<K, ModelType[K]>
 ```
 
 Handy helper method to only return a subset of a model's data, as opposed to the whole thing like [`.toJSON()`](#tojson) does.
 
 ### save
 ```js
-save: Promise<[Model, Response]> (data: object, options: object)
+save: (attrs: Partial<ModelType>, options?: {wait?: boolean; patch?: boolean}) => Promise<[Model, Response]>
 ```
 
 Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is true, the request will be sent as a POST. Otherwise, it will be sent as a PUT with the whole resource, or a PATCH with only `data` sent over if the `patch: true` option is passed. When the request returns, the server data is passed through the [`.parse()`](#parse) method before being set on the model. Pass the `wait: true` option to wait to add the data until after the server responds. Subscribed components will update when the new entry is added as well as when the request returns. If the request errors, all changes will be reverted and components updated.
@@ -186,7 +186,7 @@ Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is tru
 
 ### destroy
 ```js
-destroy: Promise<[Model, Response]> (options: object)
+destroy: (options?: {wait: true; silent: true}) => Promise<[Model, Response]> 
 ```
 
 Use this to remove the send a DELETE request at this model's url to the server. The model is removed from its collection if it belongs to one. If [`.isNew()`](#isnew) is false (signifying that the model was never persisted in the first place), a request is not sent, but the model is still removed from its collection. Pass the `wait: true` option to wait to remove the model until after the server responds. Subscribed components will update when the model is removed. If the request errors, the model will get added back to its collection and components will get updated.
@@ -195,7 +195,7 @@ Use this to remove the send a DELETE request at this model's url to the server. 
 
 ### fetch
 ```js
-fetch: Promise<[Model, Response]> (options: Object)
+fetch: (options: Object) => Promise<[Model, Response]> 
 ```
 
 This is the method that `resourcerer` uses internally to get server data and set its parsed response as models on the collection. This should rarely need to be used in your application. Subscribed components will update when the request returns.

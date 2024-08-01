@@ -1,101 +1,75 @@
-import * as Request from '../lib/request';
-import {DecisionsCollection, UserModel} from './model-mocks';
+import * as Request from "../lib/request";
+import { DecisionsCollection, UserModel } from "./model-mocks";
 
-import Collection from '../lib/collection';
-import prefetch from '../lib/prefetch';
-import ReactDOM from 'react-dom';
+import Collection from "../lib/collection";
+import prefetch from "../lib/prefetch";
+import ReactDOM from "react-dom";
+import { vi } from "vitest";
 
-const renderNode = document.createElement('div');
-const getResources = ({DECISIONS, USER}, props) => ({
-  [USER]: {
-    params: {home: props.home, source: props.source},
-    options: {userId: props.userId}
+const renderNode = document.createElement("div");
+const getResources = (props) => ({
+  user: {
+    params: { home: props.home, source: props.source },
+    path: { userId: props.userId },
   },
-  [DECISIONS]: {}
+  decisions: {},
 });
-const expectedProps = {userId: 'noah', home: 'sf', source: 'hbase'};
-const dummyEvt = {target: renderNode};
+const expectedProps = { userId: "noah", home: "sf", source: "hbase" };
+const dummyEvt = { target: renderNode };
 
-describe('prefetch', () => {
+describe("prefetch", () => {
   beforeEach(() => {
     document.body.appendChild(renderNode);
-    jest.spyOn(Request, 'default').mockResolvedValue(new Collection([]));
-    jest.useFakeTimers();
+    vi.spyOn(Request, "default").mockResolvedValue(new Collection([]));
+    vi.useFakeTimers();
   });
 
   afterEach(() => {
     ReactDOM.unmountComponentAtNode(renderNode);
     Request.default.mockRestore();
     renderNode.remove();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
-  it('correctly turns the config object into cache key, params, and options', () => {
+  it("correctly turns the config object into cache key, params, and options", () => {
     var oldFields = UserModel.dependencies;
 
-    UserModel.dependencies = ['userId', 'source'];
+    UserModel.dependencies = ["userId", "source"];
 
     prefetch(getResources, expectedProps)(dummyEvt);
-    jest.advanceTimersByTime(100);
+    vi.advanceTimersByTime(100);
 
-    expect(Request.default.mock.calls[0][0]).toEqual('usersource=hbase_userId=noah');
+    expect(Request.default.mock.calls[0][0]).toEqual("user~source=hbase_userId=noah");
     expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
     expect(Request.default.mock.calls[0][2]).toEqual({
-      options: {userId: 'noah'},
-      params: {home: 'sf', source: 'hbase'},
-      prefetch: true
+      path: { userId: "noah" },
+      params: { home: "sf", source: "hbase" },
     });
 
-    expect(Request.default.mock.calls[1][0]).toEqual('decisions');
+    expect(Request.default.mock.calls[1][0]).toEqual("decisions");
     expect(Request.default.mock.calls[1][1]).toEqual(DecisionsCollection);
-    expect(Request.default.mock.calls[1][2]).toEqual({prefetch: true});
+    expect(Request.default.mock.calls[1][2]).toEqual({});
 
     expect(() => prefetch(() => false)({})).not.toThrow();
     UserModel.dependencies = oldFields;
   });
 
-  it('correctly turns the config object into cache key using legacy cacheFields', () => {
-    var oldFields = UserModel.dependencies;
-
-    UserModel.dependencies = [];
-    UserModel.cacheFields = ['userId', 'source'];
+  it("will fire if the user hovers over the element for longer than the timeout", () => {
+    var leaveEvt = new Event("mouseleave");
 
     prefetch(getResources, expectedProps)(dummyEvt);
-    jest.advanceTimersByTime(100);
-
-    expect(Request.default.mock.calls[0][0]).toEqual('usersource=hbase_userId=noah');
-    expect(Request.default.mock.calls[0][1]).toEqual(UserModel);
-    expect(Request.default.mock.calls[0][2]).toEqual({
-      options: {userId: 'noah'},
-      params: {home: 'sf', source: 'hbase'},
-      prefetch: true
-    });
-
-    expect(Request.default.mock.calls[1][0]).toEqual('decisions');
-    expect(Request.default.mock.calls[1][1]).toEqual(DecisionsCollection);
-    expect(Request.default.mock.calls[1][2]).toEqual({prefetch: true});
-
-    expect(() => prefetch(() => false)({})).not.toThrow();
-    UserModel.cacheFields = [];
-    UserModel.dependencies = oldFields;
-  });
-
-  it('will fire if the user hovers over the element for longer than the timeout', () => {
-    var leaveEvt = new Event('mouseleave');
-
-    prefetch(getResources, expectedProps)(dummyEvt);
-    jest.advanceTimersByTime(50);
+    vi.advanceTimersByTime(50);
     renderNode.dispatchEvent(leaveEvt);
     expect(Request.default).toHaveBeenCalled();
   });
 
-  it('will not fetch if the user leaves the element before the timeout', () => {
-    var leaveEvt = new Event('mouseleave');
+  it("will not fetch if the user leaves the element before the timeout", () => {
+    var leaveEvt = new Event("mouseleave");
 
     prefetch(getResources, expectedProps)(dummyEvt);
-    jest.advanceTimersByTime(25);
+    vi.advanceTimersByTime(25);
     renderNode.dispatchEvent(leaveEvt);
-    jest.advanceTimersByTime(25);
+    vi.advanceTimersByTime(25);
     expect(Request.default).not.toHaveBeenCalled();
   });
 });

@@ -1,15 +1,19 @@
-import {ResourcesConfig} from './config.js';
+import { ResourcesConfig } from "./config.js";
+import Collection from "./collection.js";
+import Model from "./model.js";
+
+type Component = NonNullable<unknown>;
 
 // this is where all of our cached resources are stored
-const modelCache = new Map();
-// this map is {{string: Set<React.Component>}} where each property is a cache
+const modelCache = new Map<string, Model | Collection>();
+// this map is Map<string: Set<React.Component>> where each property is a cache
 // key. this is how we keep track all components that have requested a resource.
 // when a cache key's set is empty, we schedule that resource for cache removal
-const componentManifest = new Map();
+const componentManifest = new Map<string, Set<Component>>();
 // resource timeouts for cache removal. we keep references to these so that if,
 // during the cache grace period, another component requests the resource, we
 // can cancel the cache removal.
-const timeouts = {};
+const timeouts: Record<string, number> = {};
 
 /**
  * This module holds references to all of our returned resources as well as a
@@ -23,7 +27,7 @@ const timeouts = {};
  * with the `cacheGracePeriod` config option with the `setConfig` function.
  */
 export default {
-  get(cacheKey) {
+  get(cacheKey: string) {
     return modelCache.get(cacheKey);
   },
 
@@ -33,12 +37,8 @@ export default {
    * In this case, the user may never actually click on the component, so we
    * preemptively schedule for removal. The timeout will be overridden when
    * an additional component is registered to the model.
-   *
-   * @param {string} cacheKey - The cache key of the model to be removed.
-   * @param {Model | Collection} model - model to be cached
-   * @param {React.Component} component - component to register to model in the component manifest
    */
-  put(cacheKey, model, component) {
+  put(cacheKey: string, model: Model | Collection, component?: Component) {
     modelCache.set(cacheKey, model);
 
     if (component) {
@@ -51,14 +51,13 @@ export default {
   /**
    * Registers a component with a resource in the component manifest. Clears any
    * currently-scheduled cache removal timeout.
-   *
-   * @param {string} cacheKey
-   * @param {React.Component} component
    */
-  register(cacheKey, component) {
-    window.clearTimeout(timeouts[cacheKey]);
-    componentManifest.set(cacheKey, componentManifest.get(cacheKey) || new Set());
-    componentManifest.get(cacheKey).add(component);
+  register(cacheKey: string, component?: Component) {
+    if (component) {
+      window.clearTimeout(timeouts[cacheKey]);
+      componentManifest.set(cacheKey, componentManifest.get(cacheKey) || new Set());
+      componentManifest.get(cacheKey)?.add(component);
+    }
   },
 
   /**
@@ -68,13 +67,9 @@ export default {
    *
    * If, after the component is unregistered, a resource no longer has any
    * components registered, it will be scheduled for removal from the cache.
-   *
-   * @param {React.Component} component
-   * @param {...<string>} cacheKeys - list of keys from which to unregister
-   *    the component
    */
-  unregister(component, ...cacheKeys) {
-    cacheKeys = cacheKeys.length ? cacheKeys : componentManifest.keys();
+  unregister(component: Component, ...cacheKeys: string[]) {
+    cacheKeys = cacheKeys.length ? cacheKeys : [...componentManifest.keys()];
 
     for (let cacheKey of cacheKeys) {
       let componentSet = componentManifest.get(cacheKey);
@@ -92,39 +87,45 @@ export default {
   /**
    * Direct removal of a cache key from the cache. Should be used sparingly,
    * since it shortcuts the unregistration process and timeout.
-   *
-   * @param {string} cacheKey - The cache key of the model to be removed.
    */
-  remove(cacheKey) {
+  remove(cacheKey: string) {
     clearModel(cacheKey);
+    componentManifest.delete(cacheKey);
+  },
+
+  /**
+   * A shortcut to remove all models of a given resourceKey.
+   */
+  removeAllWithModel(resourceKey: string) {
+    for (const key of modelCache.keys()) {
+      if (key === resourceKey || key.startsWith(`${resourceKey}~`)) {
+        this.remove(key);
+      }
+    }
   },
 
   // internal only
   __removeAll__() {
     modelCache.forEach((val, key) => clearModel(key));
     componentManifest.forEach((val, key) => componentManifest.delete(key));
-  }
+  },
 };
 
 /**
  * Sets a timeout for clearing the model from the model cache and stores the
  * timeout id in the timeouts object.
- *
- * @param {string} cacheKey - The cache key of the model to be removed.
  */
-function scheduleForRemoval(cacheKey) {
-  var timeout = modelCache.get(cacheKey)?.constructor.cacheTimeout ||
-    ResourcesConfig.cacheGracePeriod;
+function scheduleForRemoval(cacheKey: string) {
+  const Constructor = modelCache.get(cacheKey)?.constructor as typeof Model | typeof Collection;
+  const timeout = Constructor?.cacheTimeout || ResourcesConfig.cacheGracePeriod;
 
   timeouts[cacheKey] = window.setTimeout(() => clearModel(cacheKey), timeout);
 }
 
 /**
  * Remove a model from the cache.
- *
- * @param {string} cacheKey - The cache key of the model to be removed.
  */
-function clearModel(cacheKey) {
+function clearModel(cacheKey: string) {
   window.clearTimeout(timeouts[cacheKey]);
   delete timeouts[cacheKey];
   modelCache.delete(cacheKey);

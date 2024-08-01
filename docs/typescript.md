@@ -1,22 +1,17 @@
 # Using resourcerer with TypeScript
 
-_Note: TypeScript support is in beta. Please file any bugs._
-
-Resourcerer is ⚡⚡⚡ with TypeScript, but requires one extra step in your config file:
+1. Resourcerer is ⚡⚡⚡ with TypeScript, but requires one extra step in your config file:
 
 ```ts
 // js/core/resourcerer-config.ts
-import {ModelMap} from 'resourcerer';
+import {register} from 'resourcerer';
 import TodosCollection from 'js/models/todos-collection';
 import UserTodosCollection from 'js/models/users-todos-collection';
 
 /**
- * Because the ModelMap is populated in user-land, we have to annotate its types here, as well.
- * Add your model types to this interface declaration, which will be merged with the interface
- * in the library.
- *
- * I wish we didn't have to do this duplication, and maybe there's a way to do it without, but
- * I am not good enough at TypeScript to figure it out myself. If you can, please submit a PR!
+ * Because we `register` the ModelMap is populated in user-land, we have to annotate its types
+ * here, as well. Add your model types to this interface declaration, which will be merged with
+ * the interface in the library.
  */
 declare module 'resourcerer' {
   export interface ModelMap {
@@ -26,19 +21,16 @@ declare module 'resourcerer' {
   }
 }
 
-/ now add your models to the model map as normal
-ModelMap.add({
+// now register your models as normal
+register({
   todos: TodosCollection,
   userTodos: UserTodosCollection,
   // ...etc
 });
 ```
 
-Note that you no longer need to add a resource key like `USER_TODOS` in the ModelMap, which would normally get
-auto-magically turned into the camelCase `userTodos`. Since TypeScript will enforce correctness, you can just
-use the string literal `userTodos` instead.
 
-When defining your models, you can add schemas as generic types:
+2. When defining your models, you can add schemas as generic types:
 
 ```ts
 // js/models/todos-collection.ts
@@ -50,8 +42,8 @@ interface Todo {
 }
 
 export default TodosCollection extends Collection<Todo> {
-  url() {
-    return '/todos';
+  url({userId}: {userId: string}) {
+    return `/${userId}/todos`;
   }
 }
 ```
@@ -59,11 +51,9 @@ export default TodosCollection extends Collection<Todo> {
 and now you can use it in your components!
 
 ```tsx
-import {type ExecutorFunction, useResources} from 'resourcerer';
+import {useResources} from 'resourcerer';
 
-// you don't need to worry about resourceKeys anymore, you can just use the
-// string literal! TypeScript will enforce correctness
-const getResources: ExecutorFunction = (resourceKeys, props) => ({todos: {}});
+const getResources = (props) => ({todos: {}});
 
 function MyComponent(props) {
   const {
@@ -92,3 +82,63 @@ function MyComponent(props) {
   );
 }
 ```
+
+
+3. You get the best built-in type hints when you inline the `getResources` function:
+
+    ```tsx
+    function MyComponent() {
+      const {
+        isLoading,
+        hasErrored,
+        hasLoaded,
+        // ERROR: property tdoosCollection does not exist on...
+        tdoosCollection
+      // ERROR Property ursdI does not exist on type...
+      } = useResources(({userId}) => ({todos: {params: {userId}}}), {ursdI: "oops"});
+    ```
+
+   But inlining executor functions leaves you susceptible to [the subtle bug where you are always reading from current props](https://github.com/noahgrant/resourcerer/tree/typescript?tab=readme-ov-file#differences-between-useresources-and-withresources). Executor functions can also get pretty involved, so it's nice to extract it. You still get good type hints, but you'll need to type out your props:
+
+    ```tsx
+    // type out these props
+    const getResources = (props: {userId: string}) => ({todos: {params: {userId}}});
+    
+    function MyComponent() {
+      const {
+        isLoading,
+        hasErrored,
+        hasLoaded,
+        // ERROR: property tdoosCollection does not exist on...
+        tdoosCollection
+      // ERROR no overload matches this call...
+      // since ursdI is being passed when we expect userId
+      } = useResources(getResources, {ursdI: "oops"});
+    ```
+
+    Using this method, the only drawback is that you don't get type hints for the ResourceKeys like `todos`. If you want to add those, you'll have to import the `ExecutorFunction` type and pass the list of ResourceKeys:
+
+     ```tsx
+    import {type ExecutorFunction, useResources} from 'resourcerer';
+
+    // "todos" and "todoItem" will come up as type hints, both as the type parameters and the Resource Config Object keys
+    // the second generic are the types for the props argument.
+    const getResources: ExecutorFunction<"todos" | "todoItem", {userId: number}> = (props) => ({
+       // ERROR: number not assignable to string. Because we set this in our "url" method!
+       todos: {path: {userId}},
+       todoItem: {}
+    });
+    
+    function MyComponent() {
+      const {
+        isLoading,
+        hasErrored,
+        hasLoaded,
+        // ERROR: property tdoosCollection does not exist on...
+        tdoosCollection
+      // ERROR no overload matches this call...
+      // since ursdI is being passed when we expect userId
+      } = useResources(getResources, {ursdI: "oops"});
+    ```
+
+     Up to you how you want your types!
