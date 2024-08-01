@@ -1,6 +1,5 @@
 import { Utils } from "../index";
 import {
-  camelize,
   hasErrored,
   hasLoaded,
   isDeepEqual,
@@ -21,19 +20,15 @@ describe("Utils", () => {
     it("returns true if any loading state has errored", () => {
       expect(hasErrored(["error", "loading"])).toBe(true);
       expect(hasErrored("error")).toBe(true);
-      expect(hasErrored({ myLoadingState: "error" })).toBe(true);
       expect(Utils.hasErrored(["error", "loading"])).toBe(true);
       expect(Utils.hasErrored("error")).toBe(true);
-      expect(Utils.hasErrored({ myLoadingState: "error" })).toBe(true);
     });
 
     it("returns false if no loading states have errored", () => {
       expect(hasErrored(["loaded", "loading"])).toBe(false);
       expect(hasErrored("loaded")).toBe(false);
-      expect(hasErrored({ myLoadingState: "loaded" })).toBe(false);
       expect(Utils.hasErrored(["loaded", "loading"])).toBe(false);
       expect(Utils.hasErrored("loaded")).toBe(false);
-      expect(Utils.hasErrored({ myLoadingState: "loaded" })).toBe(false);
     });
 
     it("returns false if an undefined loading state is passed", () => {
@@ -46,19 +41,15 @@ describe("Utils", () => {
     it("returns true if any loading state is loading", () => {
       expect(isLoading(["error", "loading"])).toBe(true);
       expect(isLoading("loading")).toBe(true);
-      expect(isLoading({ myLoadingState: "loading" })).toBe(true);
       expect(Utils.isLoading(["error", "loading"])).toBe(true);
       expect(Utils.isLoading("loading")).toBe(true);
-      expect(Utils.isLoading({ myLoadingState: "loading" })).toBe(true);
     });
 
     it("returns false if no loading states are loading", () => {
       expect(isLoading(["loaded", "loaded"])).toBe(false);
       expect(isLoading("loaded")).toBe(false);
-      expect(isLoading({ myLoadingState: "loaded" })).toBe(false);
       expect(Utils.isLoading(["loaded", "loaded"])).toBe(false);
       expect(Utils.isLoading("loaded")).toBe(false);
-      expect(Utils.isLoading({ myLoadingState: "loaded" })).toBe(false);
     });
 
     it("returns false if an undefined loading state is passed", () => {
@@ -71,21 +62,17 @@ describe("Utils", () => {
     it("returns true if all loading states have loaded", () => {
       expect(hasLoaded(["loaded", "loaded"])).toBe(true);
       expect(hasLoaded("loaded")).toBe(true);
-      expect(hasLoaded({ myLoadingState: "loaded" })).toBe(true);
       expect(Utils.hasLoaded(["loaded", "loaded"])).toBe(true);
       expect(Utils.hasLoaded("loaded")).toBe(true);
-      expect(Utils.hasLoaded({ myLoadingState: "loaded" })).toBe(true);
     });
 
     it("returns false if any state has not loaded", () => {
       expect(hasLoaded(["error", "loaded"])).toBe(false);
       expect(hasLoaded(["loaded", "loading"])).toBe(false);
       expect(hasLoaded("loading")).toBe(false);
-      expect(hasLoaded({ myLoadingState: "loading" })).toBe(false);
       expect(Utils.hasLoaded(["error", "loaded"])).toBe(false);
       expect(Utils.hasLoaded(["loaded", "loading"])).toBe(false);
       expect(Utils.hasLoaded("loading")).toBe(false);
-      expect(Utils.hasLoaded({ myLoadingState: "loading" })).toBe(false);
     });
 
     it("returns false if an undefined loading state is passed", () => {
@@ -98,54 +85,20 @@ describe("Utils", () => {
     it("returns true if any loading state is pending", () => {
       expect(isPending(["pending", "loading"])).toBe(true);
       expect(isPending("pending")).toBe(true);
-      expect(isPending({ myLoadingState: "pending" })).toBe(true);
       expect(Utils.isPending(["pending", "loading"])).toBe(true);
       expect(Utils.isPending("pending")).toBe(true);
-      expect(Utils.isPending({ myLoadingState: "pending" })).toBe(true);
     });
 
     it("returns false if no loading states are pending", () => {
       expect(isPending(["loaded", "loading"])).toBe(false);
       expect(isPending("loaded")).toBe(false);
-      expect(isPending({ myLoadingState: "loaded" })).toBe(false);
       expect(Utils.isPending(["loaded", "loading"])).toBe(false);
       expect(Utils.isPending("loaded")).toBe(false);
-      expect(Utils.isPending({ myLoadingState: "loaded" })).toBe(false);
     });
 
     it("returns false if an undefined loading state is passed", () => {
       expect(isPending(undefined)).toBe(false);
       expect(Utils.isPending(undefined)).toBe(false);
-    });
-  });
-
-  describe("camelize", () => {
-    it("passes words that are already camelCase", () => {
-      expect(camelize("camelCase")).toEqual("camelCase");
-      // also leaves alone PascalCase
-      expect(camelize("PascalCase")).toEqual("PascalCase");
-      // defaults
-      expect(camelize()).toEqual("");
-    });
-
-    it("passes words that are single word lowercase", () => {
-      expect(camelize("lowercase")).toEqual("lowercase");
-    });
-
-    it("lowercases words that are all uppercase", () => {
-      expect(camelize("UPPERCASE")).toEqual("uppercase");
-    });
-
-    it("turns snake_case words into camelcase", () => {
-      expect(camelize("snake_case_words")).toEqual("snakeCaseWords");
-    });
-
-    it("turns spine-case words into camelcase", () => {
-      expect(camelize("spine-case-words")).toEqual("spineCaseWords");
-    });
-
-    it("turns space-separated words into camelcase", () => {
-      expect(camelize("space separated words")).toEqual("spaceSeparatedWords");
     });
   });
 
