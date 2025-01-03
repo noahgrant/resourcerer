@@ -83,6 +83,10 @@ export function useResources<T extends ResourceKeys, O extends Record<string, an
   [Key in T as WithModelSuffix<Key, InstanceType<(typeof ModelMap)[Key]>>]: InstanceType<
     (typeof ModelMap)[Key]
   >;
+} & {
+  [Key in T as `${T}LoadingState`]: LoadingStates;
+} & {
+  [Key in T as `${T}Status`]: number;
 } {
   const [resourceState, setResourceState] = useState<Record<string, any>>({});
   const props = { ..._props, ...resourceState };

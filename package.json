@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "2.0.0-beta-2",
+  "version": "2.0.0-beta-3",
   "repository": "github.com/noahgrant/resourcerer",
   "description": "Declarative data-fetching and caching framework for React",
   "keywords": ["declarative data-fetching framework", "react"],
@@ -9,7 +9,7 @@
   "types": "resourcerer.d.ts",
   "type": "module",
   "scripts": {
-    "checks": "npm typecheck && npm test && npm run lint",
+    "checks": "npm run typecheck && npm test && npm run lint",
     "lint": "eslint lib/*.ts* test/*.js*",
     "typecheck": "tsc --noEmit",
     "build": "tsc",
