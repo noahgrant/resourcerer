@@ -45,8 +45,6 @@ declare module "resourcerer" {
     refetch: (keys: ResourceKeys | ResourceKeys[]) => void;
     invalidate: (keys: ResourceKeys | ResourceKeys[]) => void;
     setResourceState(newState: { [key: string]: any }): void;
-    [key: `${string}LoadingState`]: LoadingStates;
-    [key: `${string}Status`]: number;
   };
 
   export function useResources<T extends ResourceKeys, O extends Record<string, any>>(
@@ -54,5 +52,9 @@ declare module "resourcerer" {
     _props: O
   ): UseResourcesResponse & {
     [Key in T as WithModelSuffix<Key, InstanceType<ModelMap[Key]>>]: InstanceType<ModelMap[Key]>;
+  } & {
+    [Key in T as `${T}LoadingState`]: LoadingStates;
+  } & {
+    [Key in T as `${T}Status`]: number;
   };
 }

@@ -46,7 +46,8 @@ export type ExecutorFunction<
   T extends ResourceKeys = ResourceKeys,
   O extends { [key: string]: any } = any,
 > = (props: O) => {
-  [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj : ResourceConfigObj & { resourceKey: T };
+  [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj
+  : ResourceConfigObj & { resourceKey: T };
 };
 
 export type UseResourcesResponse = {
@@ -57,8 +58,4 @@ export type UseResourcesResponse = {
   refetch: (keys: ResourceKeys[]) => void;
   invalidate: (keys: ResourceKeys[]) => void;
   setResourceState(newState: { [key: string]: any }): void;
-  [key: `${string}LoadingState`]: LoadingStates;
-  [key: `${string}Collection`]: Collection;
-  [key: `${string}Model`]: Model;
-  [key: `${string}Status`]: number;
 };
