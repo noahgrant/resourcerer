@@ -1,23 +1,13 @@
 {
   "name": "resourcerer",
-  "version": "2.0.0-beta-3",
+  "version": "2.0.0",
   "repository": {
     "type": "git",
     "url": "github.com/noahgrant/resourcerer"
   },
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": [
-    "declarative data-fetching framework",
-    "react"
-  ],
-  "files": [
-    "build/**/*.js",
-    "*.d.ts",
-    "build/**/*.d.ts",
-    "test/*.js",
-    "*.md",
-    "docs/*.md"
-  ],
+  "keywords": ["declarative data-fetching framework", "react"],
+  "files": ["build/**/*.js", "*.d.ts", "build/**/*.d.ts", "test/*.js", "*.md", "docs/*.md"],
   "main": "build/index.js",
   "types": "resourcerer.d.ts",
   "type": "module",
