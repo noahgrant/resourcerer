@@ -1,6 +1,7 @@
 import { ResourcesConfig } from "./config.js";
 import Collection from "./collection.js";
 import Model from "./model.js";
+import { ResourceKeys } from "./types.js";
 
 type Component = NonNullable<unknown>;
 
@@ -26,7 +27,7 @@ const timeouts: Record<string, number> = {};
  * set, it is scheduled for cache removal. That time period can be configured
  * with the `cacheGracePeriod` config option with the `setConfig` function.
  */
-export default {
+const ModelCache = {
   get(cacheKey: string) {
     return modelCache.get(cacheKey);
   },
@@ -104,12 +105,28 @@ export default {
     }
   },
 
+  /**
+   * Remove all models except those specified.
+   */
+  removeAllExcept(resourceKeys: string[]) {
+    for (const key of modelCache.keys()) {
+      if (
+        !resourceKeys.includes(key) &&
+        !resourceKeys.some((resourceKey) => key.startsWith(`${resourceKey}~`))
+      ) {
+        this.remove(key);
+      }
+    }
+  },
+
   // internal only
   __removeAll__() {
     modelCache.forEach((val, key) => clearModel(key));
     componentManifest.forEach((val, key) => componentManifest.delete(key));
   },
 };
+
+export default ModelCache;
 
 /**
  * Sets a timeout for clearing the model from the model cache and stores the
@@ -129,4 +146,19 @@ function clearModel(cacheKey: string) {
   window.clearTimeout(timeouts[cacheKey]);
   delete timeouts[cacheKey];
   modelCache.delete(cacheKey);
+}
+
+/**
+ * For each resourceKey, find all entries in the cache and remove them. If the `except` option is
+ * true, remove all entries except those specified.
+ */
+export function invalidate(
+  keys: ResourceKeys | ResourceKeys[],
+  { except }: { except?: boolean } = {},
+) {
+  keys = Array.isArray(keys) ? keys : [keys];
+
+  except ?
+    ModelCache.removeAllExcept(keys)
+  : keys.forEach((key) => ModelCache.removeAllWithModel(key));
 }

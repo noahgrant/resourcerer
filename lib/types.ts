@@ -1,5 +1,6 @@
 import Model from "./model.js";
 import Collection from "./collection.js";
+import { invalidate } from "./model-cache.js";
 
 export type LoadingStates = "error" | "loading" | "loaded" | "pending";
 export type Resource = [string, InternalResourceConfigObj];
@@ -56,6 +57,6 @@ export type UseResourcesResponse = {
   hasLoaded: boolean;
   hasInitiallyLoaded: boolean;
   refetch: (keys: ResourceKeys[]) => void;
-  invalidate: (keys: ResourceKeys[]) => void;
+  invalidate: typeof invalidate;
   setResourceState(newState: { [key: string]: any }): void;
 };

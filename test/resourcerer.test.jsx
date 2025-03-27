@@ -206,7 +206,7 @@ describe("resourcerer", () => {
         renderUseResources({
           decisionsCollection: new DecisionsCollection(),
           userModel: new UserModel(),
-        })
+        }),
       );
 
       expect(dataChild.props.hasInitiallyLoaded).toBe(true);
@@ -217,7 +217,7 @@ describe("resourcerer", () => {
           // analystsCollection is noncritical
           analystsCollection: new AnalystsCollection(),
           userModel: new UserModel(),
-        })
+        }),
       );
       expect(dataChild.props.hasInitiallyLoaded).toBe(false);
 
@@ -259,7 +259,7 @@ describe("resourcerer", () => {
       expect(dataChild.props.decisionsCollection instanceof DecisionsCollection).toBe(true);
       expect(dataChild.props.userModel instanceof UserModel).toBe(true);
       expect(dataChild.props.analystsCollection instanceof AnalystsCollection).toBe(true);
-    }
+    },
   );
 
   it("returns a setResourceState function that allows it to change resource-related props", async () => {
@@ -284,10 +284,10 @@ describe("resourcerer", () => {
       await waitsFor(() => requestSpy.mock.calls.length === 4);
 
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual(
-        "decisions~include_deleted=true"
+        "decisions~include_deleted=true",
       );
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1]).toEqual(
-        ModelMap.decisions
+        ModelMap.decisions,
       );
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][2].params).toEqual({
         include_deleted: true,
@@ -334,7 +334,7 @@ describe("resourcerer", () => {
 
       expect(ModelCache.unregister).toHaveBeenCalledWith(
         componentRef,
-        "user~fraudLevel=high_userId=noah"
+        "user~fraudLevel=high_userId=noah",
       );
     });
 
@@ -486,7 +486,7 @@ describe("resourcerer", () => {
                 fraudLevel: "high",
                 lastName: "grant",
               },
-            })
+            }),
           ).toEqual("user~fraudLevel=high_userId=noah");
 
           expect(
@@ -497,9 +497,9 @@ describe("resourcerer", () => {
                 fraudLevel: "low",
                 lastName: "lopatron",
               },
-            })
+            }),
           ).toEqual("user~fraudLevel=low_userId=alex");
-        }
+        },
       );
 
       it("prioritizes dependencies in 'path' or 'data' config properties", () => {
@@ -508,7 +508,7 @@ describe("resourcerer", () => {
             params: { fraudLevel: "miniscule" },
             resourceKey: "user",
             path: { userId: "theboogieman" },
-          })
+          }),
         ).toEqual("user~fraudLevel=miniscule_userId=theboogieman");
       });
 
@@ -531,7 +531,7 @@ describe("resourcerer", () => {
               fraudLevel: "high",
               lastName: "grant",
             },
-          })
+          }),
         ).toEqual("user~fraudLevel=highgrant_lastName=grant_userId=noah");
 
         UserModel.dependencies = realDependencies;
@@ -773,7 +773,7 @@ describe("resourcerer", () => {
       expect(requestSpy.mock.calls.length).toEqual(4);
       expect(requestSpy.mock.calls.map((call) => call[0]).includes("actions")).toBe(true);
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).not.toMatch(
-        "decisionLogs"
+        "decisionLogs",
       );
 
       await waitsFor(() => dataChild.props.serialProp);
@@ -873,7 +873,7 @@ describe("resourcerer", () => {
         expect(
           requestSpy.mock.calls
             .filter((call) => /^searchQuery/.test(call[0]))
-            .map((call) => call[0])
+            .map((call) => call[0]),
         ).toEqual(["searchQuery", "searchQuery~from=10"]);
 
         await waitsFor(() => dataChild.props.hasLoaded);
@@ -886,7 +886,7 @@ describe("resourcerer", () => {
         expect(
           requestSpy.mock.calls
             .filter((call) => /^searchQuery/.test(call[0]))
-            .map((call) => call[0])
+            .map((call) => call[0]),
         ).toEqual(["searchQuery", "searchQuery~from=10", "searchQuery~from=20"]);
 
         expect(dataChild.props.searchQueryModel.params).toEqual({ from: 10 });
@@ -928,7 +928,7 @@ describe("resourcerer", () => {
                   res([model]);
                 }
               });
-            })
+            }),
         );
 
         dataChild = findDataChild(renderUseResources({ prefetch: true }));
@@ -1152,42 +1152,83 @@ describe("resourcerer", () => {
     expect(requestSpy.mock.calls.length).toEqual(8);
   });
 
-  it("invalidate removes models from the cache immediately", async () => {
-    dataChild = findDataChild(renderUseResources());
+  describe("invalidate", () => {
+    it("removes models from the cache immediately", async () => {
+      dataChild = findDataChild(renderUseResources());
 
-    await waitsFor(() => dataChild.props.hasLoaded);
+      await waitsFor(() => dataChild.props.hasLoaded);
 
-    expect(requestSpy.mock.calls.length).toEqual(3);
+      expect(requestSpy.mock.calls.length).toEqual(3);
 
-    ReactDOM.unmountComponentAtNode(renderNode);
-    dataChild = findDataChild(renderUseResources());
-    // models still in the cache, so nothing needs to be refetched
-    expect(dataChild.props.hasLoaded).toBe(true);
-    expect(requestSpy.mock.calls.length).toEqual(3);
+      ReactDOM.unmountComponentAtNode(renderNode);
+      dataChild = findDataChild(renderUseResources());
+      // models still in the cache, so nothing needs to be refetched
+      expect(dataChild.props.hasLoaded).toBe(true);
+      expect(requestSpy.mock.calls.length).toEqual(3);
 
-    dataChild.props.invalidate(["user", "decisions"]);
-    ReactDOM.unmountComponentAtNode(renderNode);
+      dataChild.props.invalidate(["user", "decisions"]);
+      ReactDOM.unmountComponentAtNode(renderNode);
 
-    dataChild = findDataChild(renderUseResources());
-    // now models are no longer in the cache
-    expect(dataChild.props.hasLoaded).not.toBe(true);
+      dataChild = findDataChild(renderUseResources());
+      // now models are no longer in the cache
+      expect(dataChild.props.hasLoaded).not.toBe(true);
 
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(requestSpy.mock.calls.length).toEqual(5);
-    expect(requestSpy.mock.calls.at(-1)[0]).toEqual("user~fraudLevel=high_userId=noah");
-    expect(requestSpy.mock.calls.at(-2)[0]).toEqual("decisions");
+      await waitsFor(() => dataChild.props.hasLoaded);
+      expect(requestSpy.mock.calls.length).toEqual(5);
+      expect(requestSpy.mock.calls.at(-1)[0]).toEqual("user~fraudLevel=high_userId=noah");
+      expect(requestSpy.mock.calls.at(-2)[0]).toEqual("decisions");
 
-    // also accepts a single key as an arg
-    dataChild.props.invalidate("decisions");
-    ReactDOM.unmountComponentAtNode(renderNode);
+      // also accepts a single key as an arg
+      dataChild.props.invalidate("decisions");
+      ReactDOM.unmountComponentAtNode(renderNode);
 
-    dataChild = findDataChild(renderUseResources());
-    // now models are no longer in the cache
-    expect(dataChild.props.hasLoaded).not.toBe(true);
+      dataChild = findDataChild(renderUseResources());
+      // now models are no longer in the cache
+      expect(dataChild.props.hasLoaded).not.toBe(true);
 
-    await waitsFor(() => dataChild.props.hasLoaded);
-    expect(requestSpy.mock.calls.length).toEqual(6);
-    expect(requestSpy.mock.calls.at(-1)[0]).toEqual("decisions");
+      await waitsFor(() => dataChild.props.hasLoaded);
+      expect(requestSpy.mock.calls.length).toEqual(6);
+      expect(requestSpy.mock.calls.at(-1)[0]).toEqual("decisions");
+    });
+
+    it("removes models except those specified when the 'except' option is true", async () => {
+      dataChild = findDataChild(renderUseResources());
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+
+      expect(requestSpy.mock.calls.length).toEqual(3);
+
+      ReactDOM.unmountComponentAtNode(renderNode);
+      dataChild = findDataChild(renderUseResources());
+      // models still in the cache, so nothing needs to be refetched
+      expect(dataChild.props.hasLoaded).toBe(true);
+      expect(requestSpy.mock.calls.length).toEqual(3);
+
+      dataChild.props.invalidate(["user"], { except: true });
+      ReactDOM.unmountComponentAtNode(renderNode);
+
+      dataChild = findDataChild(renderUseResources());
+      // now models are no longer in the cache
+      expect(dataChild.props.hasLoaded).not.toBe(true);
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+      expect(requestSpy.mock.calls.length).toEqual(5);
+      expect(requestSpy.mock.calls.at(-2)[0]).toEqual("decisions");
+      expect(requestSpy.mock.calls.at(-1)[0]).toEqual("analysts");
+
+      // also accepts a single key as an arg
+      dataChild.props.invalidate("decisions", { except: true });
+      ReactDOM.unmountComponentAtNode(renderNode);
+
+      dataChild = findDataChild(renderUseResources());
+      // now models are no longer in the cache
+      expect(dataChild.props.hasLoaded).not.toBe(true);
+
+      await waitsFor(() => dataChild.props.hasLoaded);
+      expect(requestSpy.mock.calls.length).toEqual(7);
+      expect(requestSpy.mock.calls.at(-2)[0]).toEqual("user~fraudLevel=high_userId=noah");
+      expect(requestSpy.mock.calls.at(-1)[0]).toEqual("analysts");
+    });
   });
 
   it("fetches on mount (but not on updated) even when cached with 'force' option", async () => {

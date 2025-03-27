@@ -1,6 +1,6 @@
 import Collection from "../lib/collection";
 import Model from "../lib/model";
-import ModelCache from "../lib/model-cache";
+import ModelCache, { invalidate } from "../lib/model-cache";
 import { vi } from "vitest";
 
 const CACHE_WAIT = 150000,
@@ -204,5 +204,63 @@ describe("ModelCache", () => {
     expect(ModelCache.get("users")).toBeDefined();
     expect(ModelCache.get("users~key=value")).toBeDefined();
     expect(ModelCache.get("decisions")).toBeDefined();
+  });
+
+  it("when calling 'removeAllExcept' removes all models except those with a specific key", () => {
+    const cacheKeys = [
+      "user~userId=zorah",
+      "user~source=hbase_userId=noah",
+      "user",
+      "users",
+      "users~key=value",
+      "aliens",
+      "decisions",
+    ];
+
+    cacheKeys.forEach((key) => ModelCache.put(key, {}, {}));
+
+    ModelCache.removeAllExcept(["users", "aliens"]);
+    expect(ModelCache.get("user")).not.toBeDefined();
+    expect(ModelCache.get("user~userId=zorah")).not.toBeDefined();
+    expect(ModelCache.get("user~source=hbase_userId=noah")).not.toBeDefined();
+    expect(ModelCache.get("users")).toBeDefined();
+    expect(ModelCache.get("users~key=value")).toBeDefined();
+    expect(ModelCache.get("aliens")).toBeDefined();
+    expect(ModelCache.get("decisions")).not.toBeDefined();
+  });
+});
+
+describe("invalidate", () => {
+  it("removes models from the cache immediately", () => {
+    ModelCache.put("foo", {}, {});
+    ModelCache.put("bar", {}, {});
+    ModelCache.put("baz", {}, {});
+    invalidate("foo");
+    expect(ModelCache.get("foo")).not.toBeDefined();
+    expect(ModelCache.get("bar")).toBeDefined();
+    expect(ModelCache.get("baz")).toBeDefined();
+
+    // safe
+    invalidate();
+    expect(ModelCache.get("bar")).toBeDefined();
+    expect(ModelCache.get("baz")).toBeDefined();
+
+    invalidate(["bar", "baz"]);
+    expect(ModelCache.get("bar")).not.toBeDefined();
+    expect(ModelCache.get("baz")).not.toBeDefined();
+  });
+
+  it("removes models except those specified when the 'except' option is true", () => {
+    ModelCache.put("foo", {}, {});
+    ModelCache.put("bar", {}, {});
+    ModelCache.put("baz", {}, {});
+    invalidate(["foo", "bar"], { except: true });
+    expect(ModelCache.get("foo")).toBeDefined();
+    expect(ModelCache.get("bar")).toBeDefined();
+    expect(ModelCache.get("baz")).not.toBeDefined();
+
+    invalidate([], { except: true });
+    expect(ModelCache.get("foo")).not.toBeDefined();
+    expect(ModelCache.get("bar")).not.toBeDefined();
   });
 });
