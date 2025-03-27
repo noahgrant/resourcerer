@@ -6,8 +6,18 @@
     "url": "github.com/noahgrant/resourcerer"
   },
   "description": "Declarative data-fetching and caching framework for React",
-  "keywords": ["declarative data-fetching framework", "react"],
-  "files": ["build/**/*.js", "*.d.ts", "build/**/*.d.ts", "test/*.js", "*.md", "docs/*.md"],
+  "keywords": [
+    "declarative data-fetching framework",
+    "react"
+  ],
+  "files": [
+    "build/**/*.js",
+    "*.d.ts",
+    "build/**/*.d.ts",
+    "test/*.js",
+    "*.md",
+    "docs/*.md"
+  ],
   "main": "build/index.js",
   "types": "resourcerer.d.ts",
   "type": "module",
@@ -40,7 +50,7 @@
     "vitest": "^1.6.0"
   },
   "peerDependencies": {
-    "react": "^16.14.0 || ^17.0.0 || ^18.0.0",
-    "react-dom": "^16.14.0 || ^17.0.0 || ^18.0.0"
+    "react": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0",
+    "react-dom": "^16.14.0 || ^17.0.0 || ^18.0.0 || ^19.0.0"
   }
 }
