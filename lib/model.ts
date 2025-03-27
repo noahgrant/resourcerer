@@ -208,7 +208,7 @@ export default class Model<
   /**
    * Removes all attributes for a model.
    */
-  clear(options: SetOptions): this {
+  clear(options?: SetOptions): this {
     const attrs: T = {} as T;
 
     for (let key of Object.keys(this.attributes)) {
