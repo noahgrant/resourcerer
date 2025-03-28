@@ -932,7 +932,14 @@ function MyComponent(props) {
   return <Button onClick={() => invalidate(["todos"])}>Invalidate me</Button>;
 ```
 
-* Unlike [`refetching`](#refetching), the ResourceKeys passed to `invalidate` do not need to be from those returned by the executor function. They can any resource key.
+* Unlike [`refetching`](#refetching), the ResourceKeys passed to `invalidate` do not need to be from those returned by the executor function. They can any resource key. This function is also available as a static import from the `resourcerer` package.
+
+Rather than invalidating the cache for select keys, you can also invalidate the entire cache with the exception of some keys by passing the `{except: true}` option:
+
+```js
+// this will remove all items from the cache except those from the "todos" resource
+invalidate(["todos"], {except: true});
+```
 
 ## Tracking Request Times
 
