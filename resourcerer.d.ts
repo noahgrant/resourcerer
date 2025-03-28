@@ -1,5 +1,6 @@
 import Model from "./build/lib/model.js";
 import Collection from "./build/lib/collection.js";
+import { invalidate } from "./build/lib/model-cache.js";
 
 export * from "./build/index.js";
 
@@ -43,7 +44,7 @@ declare module "resourcerer" {
     hasLoaded: boolean;
     hasInitiallyLoaded: boolean;
     refetch: (keys: ResourceKeys | ResourceKeys[]) => void;
-    invalidate: (keys: ResourceKeys | ResourceKeys[]) => void;
+    invalidate: typeof invalidate;
     setResourceState(newState: { [key: string]: any }): void;
   };
 
