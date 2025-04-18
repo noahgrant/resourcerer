@@ -20,7 +20,8 @@ import ReactDOM from "react-dom";
 import { waitsFor } from "./test-utils";
 import { vi } from "vitest";
 
-var measure;
+let measure;
+let globalFetchSignals = false;
 
 const transformSpy = vi.fn();
 const renderNode = document.createElement("div");
@@ -54,7 +55,7 @@ const getResources = (props) => ({
       },
     }
   : {}),
-  ...(props.fetchSignals ? { signals: {} } : {}),
+  ...(props.fetchSignals || globalFetchSignals ? { signals: {} } : {}),
   ...(props.serial ?
     {
       actions: {
@@ -348,22 +349,46 @@ describe("resourcerer", () => {
     });
   });
 
-  it("fetches a resource if newly specified", async () => {
-    resources = renderUseResources();
+  describe("fetches a resource if newly specified", () => {
+    it("when specified in props", async () => {
+      resources = renderUseResources();
 
-    await waitsFor(() => requestSpy.mock.calls.length);
+      await waitsFor(() => requestSpy.mock.calls.length);
 
-    expect(requestSpy.mock.calls.length).toEqual(3);
-    expect(requestSpy.mock.calls.map((call) => call[0]).includes("signals")).toBe(false);
+      expect(requestSpy.mock.calls.length).toEqual(3);
+      expect(requestSpy.mock.calls.map((call) => call[0]).includes("signals")).toBe(false);
 
-    findDataChild(resources).props.setResourceState({ fetchSignals: true });
+      findDataChild(resources).props.setResourceState({ fetchSignals: true });
 
-    await waitsFor(() => requestSpy.mock.calls.length === 4);
+      await waitsFor(() => requestSpy.mock.calls.length === 4);
 
-    expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual("signals");
-    expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1]).toEqual(ModelMap.signals);
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual("signals");
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1]).toEqual(ModelMap.signals);
 
-    await waitsFor(() => findDataChild(resources).props.hasLoaded);
+      await waitsFor(() => findDataChild(resources).props.hasLoaded);
+    });
+
+    it("when specified via a side effect", async () => {
+      resources = renderUseResources();
+
+      await waitsFor(() => requestSpy.mock.calls.length);
+
+      expect(requestSpy.mock.calls.length).toEqual(3);
+      expect(requestSpy.mock.calls.map((call) => call[0]).includes("signals")).toBe(false);
+
+      globalFetchSignals = true;
+
+      // trigger a re-render
+      findDataChild(resources).props.setResourceState({});
+
+      await waitsFor(() => requestSpy.mock.calls.length === 4);
+
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual("signals");
+      expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1]).toEqual(ModelMap.signals);
+
+      await waitsFor(() => findDataChild(resources).props.hasLoaded);
+      globalFetchSignals = false;
+    });
   });
 
   it("listens to all resources", async () => {

@@ -32,7 +32,7 @@ import type {
 
 type ModelInstanceType = Model | Collection;
 type ConstructorTypes = typeof Model | typeof Collection;
-type ModelState = SetStateAction<Record<string, ModelInstanceType>>;
+type ModelState = Record<string, ModelInstanceType>;
 
 /**
  * The useResources hook handles several different data-related things for a component
@@ -108,9 +108,11 @@ export function useResources<T extends ResourceKeys, O extends Record<string, an
   // show an empty model as a resource is being requested instead of
   // continuing to show the previous model. on the plus side, setting them
   // as state means we won't need a loading overlay component to do this for us
-  const [models, setModels] = useState<ModelState>(
-    modelAggregator(resources.filter(withoutPrefetch)),
-  );
+  const [models, setModels] = useState<ModelState>(() => {
+    const result = modelAggregator(resources.filter(withoutPrefetch));
+
+    return typeof result === "function" ? result({}) : result;
+  });
   const isMountedRef = useIsMounted();
   // this is used as an identifier to this component instance to register
   // with the ModelCache. it should be constant across renders, sow keep it in a ref.
@@ -157,6 +159,10 @@ export function useResources<T extends ResourceKeys, O extends Record<string, an
         return (
           !previousCacheKey ||
           previousCacheKey !== getCacheKey(config) ||
+          // if the model does not currently exist in state, then this is newly added. in this case,
+          // the previousCacheKey can still be equal to the currentCacheKey if it has been added via
+          // a side effect (ie, not from props changing). this handles that case.
+          !models[getResourcePropertyName(name, config.resourceKey)] ||
           !hasAllDependencies(["", prevConfig]) ||
           // we only want to refetch if the resource is currently in a loaded state. but then
           // we'll move to a loading state and short-circuit the render cycle, and it won't be
@@ -791,7 +797,7 @@ function getCriticalLoadingStates(
  * empty model if one does not exist. If no models have actually changed from
  * current state, we don't set a new object as state to avoid rerendering.
  */
-function modelAggregator(resources: Resource[]): ModelState {
+function modelAggregator(resources: Resource[]): SetStateAction<ModelState> {
   const newModels = resources.reduce(
     (memo, [name, config]) =>
       Object.assign(memo, {
