@@ -16,7 +16,7 @@ import { findRenderedComponentWithType } from "react-dom/test-utils";
 import Model from "../lib/model";
 import ModelCache from "../lib/model-cache";
 import React from "react";
-import ReactDOM from "react-dom";
+import ReactDOM, { unmountComponentAtNode } from "react-dom";
 import { waitsFor } from "./test-utils";
 import { vi } from "vitest";
 
@@ -207,7 +207,7 @@ describe("resourcerer", () => {
         renderUseResources({
           decisionsCollection: new DecisionsCollection(),
           userModel: new UserModel(),
-        }),
+        })
       );
 
       expect(dataChild.props.hasInitiallyLoaded).toBe(true);
@@ -218,7 +218,7 @@ describe("resourcerer", () => {
           // analystsCollection is noncritical
           analystsCollection: new AnalystsCollection(),
           userModel: new UserModel(),
-        }),
+        })
       );
       expect(dataChild.props.hasInitiallyLoaded).toBe(false);
 
@@ -260,7 +260,7 @@ describe("resourcerer", () => {
       expect(dataChild.props.decisionsCollection instanceof DecisionsCollection).toBe(true);
       expect(dataChild.props.userModel instanceof UserModel).toBe(true);
       expect(dataChild.props.analystsCollection instanceof AnalystsCollection).toBe(true);
-    },
+    }
   );
 
   it("returns a setResourceState function that allows it to change resource-related props", async () => {
@@ -285,10 +285,10 @@ describe("resourcerer", () => {
       await waitsFor(() => requestSpy.mock.calls.length === 4);
 
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).toEqual(
-        "decisions~include_deleted=true",
+        "decisions~include_deleted=true"
       );
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][1]).toEqual(
-        ModelMap.decisions,
+        ModelMap.decisions
       );
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][2].params).toEqual({
         include_deleted: true,
@@ -335,7 +335,7 @@ describe("resourcerer", () => {
 
       expect(ModelCache.unregister).toHaveBeenCalledWith(
         componentRef,
-        "user~fraudLevel=high_userId=noah",
+        "user~fraudLevel=high_userId=noah"
       );
     });
 
@@ -511,7 +511,7 @@ describe("resourcerer", () => {
                 fraudLevel: "high",
                 lastName: "grant",
               },
-            }),
+            })
           ).toEqual("user~fraudLevel=high_userId=noah");
 
           expect(
@@ -522,9 +522,9 @@ describe("resourcerer", () => {
                 fraudLevel: "low",
                 lastName: "lopatron",
               },
-            }),
+            })
           ).toEqual("user~fraudLevel=low_userId=alex");
-        },
+        }
       );
 
       it("prioritizes dependencies in 'path' or 'data' config properties", () => {
@@ -533,7 +533,7 @@ describe("resourcerer", () => {
             params: { fraudLevel: "miniscule" },
             resourceKey: "user",
             path: { userId: "theboogieman" },
-          }),
+          })
         ).toEqual("user~fraudLevel=miniscule_userId=theboogieman");
       });
 
@@ -556,7 +556,7 @@ describe("resourcerer", () => {
               fraudLevel: "high",
               lastName: "grant",
             },
-          }),
+          })
         ).toEqual("user~fraudLevel=highgrant_lastName=grant_userId=noah");
 
         UserModel.dependencies = realDependencies;
@@ -798,7 +798,7 @@ describe("resourcerer", () => {
       expect(requestSpy.mock.calls.length).toEqual(4);
       expect(requestSpy.mock.calls.map((call) => call[0]).includes("actions")).toBe(true);
       expect(requestSpy.mock.calls[requestSpy.mock.calls.length - 1][0]).not.toMatch(
-        "decisionLogs",
+        "decisionLogs"
       );
 
       await waitsFor(() => dataChild.props.serialProp);
@@ -898,7 +898,7 @@ describe("resourcerer", () => {
         expect(
           requestSpy.mock.calls
             .filter((call) => /^searchQuery/.test(call[0]))
-            .map((call) => call[0]),
+            .map((call) => call[0])
         ).toEqual(["searchQuery", "searchQuery~from=10"]);
 
         await waitsFor(() => dataChild.props.hasLoaded);
@@ -911,7 +911,7 @@ describe("resourcerer", () => {
         expect(
           requestSpy.mock.calls
             .filter((call) => /^searchQuery/.test(call[0]))
-            .map((call) => call[0]),
+            .map((call) => call[0])
         ).toEqual(["searchQuery", "searchQuery~from=10", "searchQuery~from=20"]);
 
         expect(dataChild.props.searchQueryModel.params).toEqual({ from: 10 });
@@ -953,7 +953,7 @@ describe("resourcerer", () => {
                   res([model]);
                 }
               });
-            }),
+            })
         );
 
         dataChild = findDataChild(renderUseResources({ prefetch: true }));
@@ -1275,6 +1275,16 @@ describe("resourcerer", () => {
     dataChild = findDataChild(renderUseResources({ force: true }));
     await waitsFor(() => dataChild.props.hasLoaded);
     expect(requestSpy.mock.calls.length).toEqual(3);
+  });
+
+  it("lazily-fetched models are instances of their classes and not the empty model", async () => {
+    dataChild = findDataChild(renderUseResources({ lazy: true }));
+
+    expect(dataChild.props.decisionsCollection).toBeInstanceOf(DecisionsCollection);
+    await waitsFor(() => expect(dataChild.props.decisionsCollection.lazy).toBe(true));
+    expect(dataChild.props.decisionsCollection.isEmptyModel).not.toBe(true);
+
+    await waitsFor(() => dataChild.props.hasLoaded);
   });
 
   it("fetches lazily-cached resources", async () => {
