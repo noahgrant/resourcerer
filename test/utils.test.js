@@ -39,9 +39,10 @@ describe("Utils", () => {
 
   describe("isLoading method", () => {
     it("returns true if any loading state is loading", () => {
-      expect(isLoading(["error", "loading"])).toBe(true);
+      expect(isLoading(["pending", "loading", "loading"])).toBe(true);
+      expect(isLoading(["loaded", "loading"])).toBe(true);
       expect(isLoading("loading")).toBe(true);
-      expect(Utils.isLoading(["error", "loading"])).toBe(true);
+      expect(Utils.isLoading(["loaded", "loading"])).toBe(true);
       expect(Utils.isLoading("loading")).toBe(true);
     });
 
@@ -50,6 +51,11 @@ describe("Utils", () => {
       expect(isLoading("loaded")).toBe(false);
       expect(Utils.isLoading(["loaded", "loaded"])).toBe(false);
       expect(Utils.isLoading("loaded")).toBe(false);
+    });
+
+    it("returns false if any other loading states have errored", () => {
+      expect(isLoading(["error", "loading", "loaded"])).toBe(false);
+      expect(Utils.isLoading(["error", "loading", "loaded"])).toBe(false);
     });
 
     it("returns false if an undefined loading state is passed", () => {

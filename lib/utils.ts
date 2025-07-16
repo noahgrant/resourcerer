@@ -7,10 +7,12 @@ export const hasErrored = (loadingStates: LoadingStates | LoadingStates[]): bool
   qualifyLoadingStates(loadingStates).some((state) => state === "error");
 
 /**
- * Returns true if any loadingStates are "loading". Can take a single or a list of LoadingStates.
+ * Returns true if any loadingStates are "loading" and none have errored, since once one has errored
+ * we know the whole group must be in an error state. Can take a single or a list of LoadingStates.
  */
 export const isLoading = (loadingStates: LoadingStates | LoadingStates[]): boolean =>
-  qualifyLoadingStates(loadingStates).some((state) => state === "loading");
+  qualifyLoadingStates(loadingStates).some((state) => state === "loading") &&
+  !qualifyLoadingStates(loadingStates).some((state) => state === "error");
 
 /**
  * Returns true if all loadingStates are "loaded". Can take a single or a list of LoadingStates.
