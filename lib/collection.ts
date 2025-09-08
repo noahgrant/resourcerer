@@ -35,21 +35,22 @@ type comparator =
 export default class Collection<
   T extends Record<string, any> = object,
   O extends Record<string, any> = object,
+  M extends typeof Model<T, O> = typeof Model<T, O>,
 > extends Events {
   lazy?: boolean;
   refetching?: boolean;
   measure?: boolean | ((config: ResourceConfigObj) => boolean);
   isEmptyModel?: boolean;
 
-  Model: typeof Model<T, O>;
+  Model: M;
 
   comparator?: comparator;
 
-  models: InstanceType<this["Model"]>[] = [];
+  models: InstanceType<M>[] = [];
 
   length: number;
 
-  _byId: Record<string, Model<T, O>>;
+  _byId: Record<string, InstanceType<M>>;
 
   /**
    * @param {object[]} models - initial models to be set on the collection
@@ -65,15 +66,15 @@ export default class Collection<
   constructor(
     models?: ModelArg<T, O> | ModelArg<T, O>[],
     options: O & {
-      Model?: typeof Model<T, O>;
+      Model?: M;
       comparator?: comparator;
-    } & CSetOptions = {} as O
+    } & CSetOptions = {} as O,
   ) {
     super();
 
     const RESERVED_OPTION_KEYS = ["Model", "comparator", "silent", "parse"];
 
-    this.Model = options.Model || this._getModelClass<T, O>();
+    this.Model = options.Model || (this._getModelClass<T, O>() as M);
     this.comparator = options.comparator || (this.constructor as typeof Collection).comparator;
 
     this._reset();
@@ -81,7 +82,7 @@ export default class Collection<
     this.urlOptions = Object.keys(options).reduce(
       (memo, key) =>
         Object.assign(memo, !RESERVED_OPTION_KEYS.includes(key) ? { [key]: options[key] } : {}),
-      {}
+      {},
     );
 
     if (models) {
@@ -97,7 +98,7 @@ export default class Collection<
    * The default model for a collection is just a Model, but this can be overridden by any other
    * custom Model subclass.
    */
-  static Model = Model;
+  static Model: new (...args: any[]) => Model = Model;
 
   /**
    * Defines the property by which we can uniquely identify models in the collection. Override this
@@ -160,7 +161,7 @@ export default class Collection<
    */
   remove(
     models: Model<T, O>["id"] | Model<T, O>["id"][] | ModelArg<T, O> | ModelArg<T, O>[],
-    options: CSetOptions = {}
+    options: CSetOptions = {},
   ) {
     const removed = this._removeModels(!Array.isArray(models) ? [models] : models);
 
@@ -301,7 +302,7 @@ export default class Collection<
    */
   where<B extends boolean = false>(
     attrs: Partial<T>,
-    first?: B
+    first?: B,
   ): B extends true ? InstanceType<this["Model"]> | undefined : InstanceType<this["Model"]>[] {
     const predicate = (model: InstanceType<this["Model"]>) => {
       for (let [attr, val] of Object.entries(attrs)) {
@@ -343,7 +344,7 @@ export default class Collection<
       this.models.sort(this.comparator.bind(this));
     } else {
       this.models = sortBy(this.models, (model) =>
-        typeof this.comparator === "function" ? this.comparator(model) : model.get(this.comparator)
+        typeof this.comparator === "function" ? this.comparator(model) : model.get(this.comparator),
       );
     }
 
@@ -374,7 +375,7 @@ export default class Collection<
    */
   create(
     model: ModelArg<T, O>,
-    options: { wait?: boolean } & SyncOptions & CSetOptions = {}
+    options: { wait?: boolean } & SyncOptions & CSetOptions = {},
   ): Promise<[InstanceType<this["Model"]>, Response]> {
     model = this._prepareModel(model, options);
 
@@ -422,7 +423,10 @@ export default class Collection<
    * if the collection has an `idAttribute` static property, it will create a new Model class
    * with the corresponding `idAttribute` property and return that.
    */
-  _getModelClass<T extends Record<string, any>, O extends Record<string, any>>() {
+  _getModelClass<T extends Record<string, any>, O extends Record<string, any>>(): typeof Model<
+    T,
+    O
+  > {
     if ((this.constructor as typeof Collection).idAttribute) {
       let attr = (this.constructor as typeof Collection).idAttribute;
 
@@ -431,7 +435,7 @@ export default class Collection<
       };
     }
 
-    return (this.constructor as typeof Collection).Model<T, O>;
+    return (this.constructor as typeof Collection).Model as typeof Model<T, O>;
   }
 
   /**
@@ -506,7 +510,7 @@ export default class Collection<
    * updates. This allows components to listen only on a collection and not an individual model and
    * still see the updates they expect.
    */
-  _addReference(model: Model<T, O>) {
+  _addReference(model: InstanceType<M>) {
     this._byId[model.cid] = model;
 
     let id = model.attributes[this.Model.idAttribute];
@@ -545,7 +549,7 @@ export default class Collection<
    * @param {string} prevId - the old id to remove
    * @param {Model} model - Model instance for new reference
    */
-  _updateModelReference(id: string | number, prevId: string | number, model: Model<T, O>) {
+  _updateModelReference(id: string | number, prevId: string | number, model: InstanceType<M>) {
     if (id) {
       delete this._byId[prevId];
       this._byId[id] = model;
