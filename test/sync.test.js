@@ -83,6 +83,16 @@ describe("sync", () => {
     await library.at(0).save(null, { params: { a: "a", one: 1 }, contentType: "resourcerer/json" });
     expect(window.fetch.mock.calls[0][0]).toEqual("/library");
     expect(window.fetch.mock.calls[0][1].body).toEqual("a=a&one=1");
+    window.fetch.mockClear();
+
+    // with body content: FormData
+    const formData = new FormData();
+
+    formData.append("a", 1);
+
+    await library.at(0).save(null, { params: formData, contentType: "multipart/form-data" });
+    expect(window.fetch.mock.calls[0][0]).toEqual("/library");
+    expect(window.fetch.mock.calls[0][1].body).toEqual(formData);
   });
 
   it("passes urlOptions to the model to formulate the url path", async () => {
