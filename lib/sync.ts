@@ -68,7 +68,7 @@ export default function (model: Model | Collection, options: SyncOptions = {}) {
 export function ajax(
   options: SyncOptions & Required<Pick<SyncOptions, "error" | "url" | "params">>
 ): Promise<SyncResolvedValue> {
-  const hasParams = !!Object.keys(options.params).length;
+  const hasParams = options.params instanceof FormData || !!Object.keys(options.params).length;
   const hasBodyContent = !/^(?:GET|HEAD)$/.test(options.method || "") && hasParams;
   const startTime = Date.now();
 
@@ -114,7 +114,8 @@ export function ajax(
       ...(hasBodyContent ?
         {
           body:
-            typeof options.params === "string" ? options.params
+            typeof options.params === "string" || options.params instanceof FormData ?
+              options.params
             : options.contentType === MIME_TYPE_JSON ? JSON.stringify(options.params)
             : ResourcesConfig.stringify(options.params, options),
         }
