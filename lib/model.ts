@@ -1,18 +1,34 @@
-import { isDeepEqual, result, uniqueId, urlError } from "./utils.js";
+import { getNestedValue, isDeepEqual, result, uniqueId, urlError } from "./utils.js";
 
 import Events from "./events.js";
 import sync, { type SyncOptions } from "./sync.js";
 import Collection from "./collection.js";
-import { ResourceConfigObj } from "./types.js";
+import { NestedKeys, ResourceConfigObj } from "./types.js";
+import CanonicalModel from "./canonical-model.js";
+import CanonicalModelCache from "./canonical-model-cache.js";
 
 export type ConstructorOptions = {
   collection?: Collection;
   parse?: boolean;
 };
 
+export type CanonicalModelSubscription<
+  M extends Record<string, any> = Record<string, any>,
+  C extends Record<string, any> = Record<string, any>,
+> = {
+  Model: typeof CanonicalModel<C>;
+  // notably, for our subscriptions, this is the field that corresponds
+  // to the canonical model's id, not the field for the subscribing model's id
+  idField?: NestedKeys<M>;
+  fromSource?: (attrs: Partial<C>, currentTarget: Partial<M>) => Partial<M>;
+  toSource?: (attrs: Partial<M>, currentSource: Partial<C>) => Partial<C>;
+};
+
 export type SetOptions = {
   silent?: boolean;
   unset?: boolean;
+  source?: "subscription" | "self";
+  subscribe?: boolean;
 };
 
 const RESERVED_OPTION_KEYS = [
@@ -40,7 +56,7 @@ const RESERVED_OPTION_KEYS = [
 export default class Model<
   T extends Record<string, any> = Record<string, any>,
   O extends Record<string, any> = Record<string, any>,
-> extends Events {
+> extends Events<[]> {
   cid: string;
   id: string | number;
   attributes: T;
@@ -62,8 +78,8 @@ export default class Model<
    *     passed to the `url` function
    */
   constructor(
-    attributes?: T,
-    options: O & SetOptions & ConstructorOptions = {} as O & SetOptions & ConstructorOptions
+    attributes?: Partial<T>,
+    options: O & SetOptions & ConstructorOptions = {} as O & SetOptions & ConstructorOptions,
   ) {
     super();
 
@@ -81,10 +97,14 @@ export default class Model<
     this.urlOptions = Object.keys(options).reduce(
       (memo, key) =>
         Object.assign(memo, !RESERVED_OPTION_KEYS.includes(key) ? { [key]: options[key] } : {}),
-      {} as O
+      {} as O,
     );
 
     this.set({ ...result(this.constructor, "defaults"), ...attributes }, options);
+
+    if (options.subscribe !== false) {
+      this._subscribe();
+    }
   }
 
   /**
@@ -120,6 +140,8 @@ export default class Model<
    */
   static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
 
+  static subscriptions: CanonicalModelSubscription[] = [];
+
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire
    * server data representation.
@@ -148,7 +170,7 @@ export default class Model<
   pick<K extends keyof T>(...attrs: K[]): Pick<T, K> {
     return attrs.reduce(
       (memo, attr) => Object.assign(memo, this.has(attr) ? { [attr]: this.get(attr) } : {}),
-      {} as Pick<T, K>
+      {} as Pick<T, K>,
     );
   }
 
@@ -178,6 +200,12 @@ export default class Model<
       options.unset ?
         delete this.attributes[attr]
       : (this.attributes[attr as keyof T] = attrs[attr] as T[keyof T]);
+    }
+
+    // the option.source check is to prevent infinite loops of updates
+    // the option.subscribe check is to prevent updating from the empty model
+    if (hasSomethingChanged && options.source !== "subscription" && options.subscribe !== false) {
+      this._updateSubscriptions(attrs, options);
     }
 
     // Update the `id`.
@@ -230,6 +258,7 @@ export default class Model<
       const serverAttrs = options.parse ? this.parse(json, options) : json;
 
       this.set(serverAttrs, options);
+      this._subscribe();
       // sync update
       this.triggerUpdate();
 
@@ -244,7 +273,7 @@ export default class Model<
    */
   save(
     attrs: Partial<T>,
-    options: { wait?: boolean; patch?: boolean } & SyncOptions & SetOptions = {}
+    options: { wait?: boolean; patch?: boolean } & SyncOptions & SetOptions = {},
   ): Promise<[this, Response]> {
     const previousAttributes = this.toJSON();
 
@@ -267,7 +296,7 @@ export default class Model<
       options.attrs = attrs;
     }
 
-    return this.sync(this, options)
+    return this.sync(this as Model | Collection, options)
       .then(([json, response]) => {
         let serverAttrs = options.parse ? this.parse(json, options) : json;
 
@@ -277,6 +306,7 @@ export default class Model<
 
         // avoid triggering any updates in the set call since we'll do it immediately after
         this.set(serverAttrs, { silent: true, ...options });
+        this._subscribe();
         // sync update
         this.triggerUpdate();
 
@@ -301,7 +331,9 @@ export default class Model<
    */
   destroy(options: { wait?: boolean } & SyncOptions & SetOptions = {}): Promise<[this, Response]> {
     const request =
-        this.isNew() ? Promise.resolve([]) : this.sync(this, { method: "DELETE", ...options }),
+        this.isNew() ?
+          Promise.resolve([])
+        : this.sync(this as Model | Collection, { method: "DELETE", ...options }),
       collection = this.collection;
 
     if (!options.wait) {
@@ -314,6 +346,7 @@ export default class Model<
         if (options.wait && !this.isNew()) {
           this.triggerUpdate();
           this.collection?.remove(this, { silent: true });
+          this.unsubscribe();
         }
 
         return [this, response] as [this, Response];
@@ -362,6 +395,91 @@ export default class Model<
    */
   isNew() {
     return !this.has((this.constructor as typeof Model).idAttribute);
+  }
+
+  /**
+   * This gets called:
+   * - when a model is instantiated (ie directly or when it is added to a collection)
+   * - when a model completes a fetch
+   * - when a model is saved
+   *
+   * This should only happen when the model has the id field set for the canonical model. And
+   * if we've already subscribed, this should have no effect.
+   */
+  _subscribe() {
+    const { subscriptions, idAttribute } = this.constructor as typeof Model;
+
+    for (const { Model: CanonicalModel, idField = idAttribute, fromSource } of subscriptions) {
+      const id = getNestedValue(this.toJSON(), idField);
+
+      if (id && !this.isEmptyModel) {
+        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
+
+        // remove any existing subscriptions. this could be more efficient.
+        canonicalModel.offUpdate(this);
+
+        /**
+         * This callback will get invoked when the canonical model is updated by any other
+         * subscribing model.
+         */
+        canonicalModel.onUpdate((canonicalAttrs, context) => {
+          // this will keep us from an infinite loop of updates
+          if (context === this || !fromSource) {
+            return;
+          }
+
+          this.set(fromSource(canonicalAttrs, this.toJSON()) as Partial<T>, {
+            source: "subscription",
+          });
+        }, this);
+      }
+    }
+  }
+
+  /**
+   * This gets called:
+   * - when it or its collection is removed from the cache
+   * - when a model is removed from a collection
+   * - when a model is destroyed
+   *
+   * Notably, it is never called in the context of the react lifecycle.
+   */
+  unsubscribe() {
+    const { subscriptions, idAttribute } = this.constructor as typeof Model;
+
+    for (const { Model: CanonicalModel, idField = idAttribute } of subscriptions) {
+      const id = getNestedValue(this.toJSON(), idField);
+
+      if (id) {
+        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
+
+        canonicalModel.removeSubscription(this, id);
+      }
+    }
+  }
+
+  /**
+   * This will get called when this model is set. It then needs to update any canonical models
+   * it is subscribed to.
+   */
+  _updateSubscriptions(attrs: Partial<T>, options: SetOptions): void {
+    const { subscriptions, idAttribute } = this.constructor as typeof Model;
+
+    for (const { Model: CanonicalModel, idField = idAttribute, toSource } of subscriptions) {
+      const id = getNestedValue(this.toJSON(), idField);
+
+      // TODO: this breaks if the id itself changes because it's no longer keyed correctly in the cache
+      // should we prohibit the id attribute from being changed by not passing it to set?
+      if (toSource && id && !this.isEmptyModel) {
+        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
+
+        canonicalModel.set(
+          toSource({ ...this.attributes, ...attrs }, canonicalModel.toJSON()),
+          this as Model,
+          options,
+        );
+      }
+    }
   }
 }
 

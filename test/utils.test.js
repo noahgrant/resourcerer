@@ -1,5 +1,6 @@
 import { Utils } from "../index";
 import {
+  getNestedValue,
   hasErrored,
   hasLoaded,
   isDeepEqual,
@@ -186,7 +187,7 @@ describe("Utils", () => {
 
       it("if the objects have equal values, deeply", () => {
         expect(
-          isDeepEqual({ one: "one", two: 2, three: null }, { one: "one", two: 2, three: null })
+          isDeepEqual({ one: "one", two: 2, three: null }, { one: "one", two: 2, three: null }),
         ).toBe(true);
         // nested
         expect(
@@ -198,8 +199,8 @@ describe("Utils", () => {
             {
               one: "one",
               two: { three: "three" },
-            }
-          )
+            },
+          ),
         ).toBe(true);
       });
     });
@@ -236,8 +237,8 @@ describe("Utils", () => {
             { name: "zorah" },
             { name: "alex" },
           ],
-          ({ name }) => name
-        )
+          ({ name }) => name,
+        ),
       ).toEqual([
         { name: "alex" },
         { name: "alex" },
@@ -250,6 +251,22 @@ describe("Utils", () => {
       ]);
 
       expect(sortBy()).toEqual([]);
+    });
+  });
+
+  describe("getNestedValue", () => {
+    it("gets a nested value from an object", () => {
+      expect(getNestedValue({ foo: { bar: "baz" } }, "foo.bar")).toEqual("baz");
+      expect(getNestedValue({ foo: "bar" }, "foo")).toEqual("bar");
+    });
+
+    it("returns undefined if the path is not found", () => {
+      expect(getNestedValue({ foo: { bar: "baz" } }, "foo.baz")).toBeUndefined();
+    });
+
+    it("returns undefined if the object is not an object", () => {
+      // this wouldn't pass types...
+      expect(getNestedValue(null, "foo.bar")).toBeUndefined();
     });
   });
 });

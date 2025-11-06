@@ -55,7 +55,7 @@ export function pick<T, K extends keyof T>(obj: T = {} as T, ...keys: K[]) {
 
       return memo;
     },
-    {} as { [P in K]: T[P] }
+    {} as { [P in K]: T[P] },
   );
 }
 
@@ -160,4 +160,11 @@ export function sortBy(list: any[] = [], comparator: (val: any) => string | numb
  */
 export function result(obj: Record<string, any> = {}, prop: string, ...args: any[]) {
   return typeof obj[prop] === "function" ? obj[prop](...args) : obj[prop];
+}
+
+/**
+ * Gets the value of a nested property in an object. The path is a string of dot-separated keys.
+ */
+export function getNestedValue(obj: Record<string, any>, path: string): any {
+  return path.split(".").reduce((acc, key) => acc?.[key], obj);
 }

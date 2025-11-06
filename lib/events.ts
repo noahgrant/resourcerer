@@ -1,5 +1,5 @@
-type CallbackEntry = {
-  callback: (...args: any[]) => void;
+type CallbackEntry<Args extends any[]> = {
+  callback: (...args: Args) => void;
   context: NonNullable<unknown>;
 };
 
@@ -17,18 +17,18 @@ export interface Events {
  * about event names, nor event arguments. On every trigger, we're going to fire all callbacks.
  * And when removing the listener, all we need is the context (which is the component).
  */
-export default class Events {
-  _callbacks: CallbackEntry[] = [];
+export default class Events<Args extends any[] = []> {
+  _callbacks: CallbackEntry<Args>[] = [];
 
-  triggerUpdate() {
-    this._callbacks?.forEach(({ callback, context }) => callback.call(context));
+  triggerUpdate(...args: Args) {
+    this._callbacks?.forEach(({ callback, context }) => callback.call(context, ...args));
   }
 
-  onUpdate(callback: CallbackEntry["callback"], context: CallbackEntry["context"]) {
+  onUpdate(callback: CallbackEntry<Args>["callback"], context: CallbackEntry<Args>["context"]) {
     this._callbacks = (this._callbacks || []).concat({ callback, context });
   }
 
-  offUpdate(ctx: CallbackEntry["context"]) {
+  offUpdate(ctx: CallbackEntry<Args>["context"]) {
     this._callbacks = (this._callbacks || []).filter(({ context }) => context !== ctx);
   }
 }

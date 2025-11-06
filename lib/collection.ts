@@ -36,7 +36,7 @@ export default class Collection<
   T extends Record<string, any> = object,
   O extends Record<string, any> = object,
   M extends typeof Model<T, O> = typeof Model<T, O>,
-> extends Events {
+> extends Events<[]> {
   lazy?: boolean;
   refetching?: boolean;
   measure?: boolean | ((config: ResourceConfigObj) => boolean);
@@ -417,6 +417,14 @@ export default class Collection<
   }
 
   /**
+   * This will unsubscribe all models in the collection, which will happen whenever the collection
+   * is removed from the cache.
+   */
+  unsubscribe() {
+    this.models.forEach((model) => model.unsubscribe());
+  }
+
+  /**
    * This function gets called when the collection is instantiated, and its return value is set to
    * its Model property (and used to instantiate all its models). It's only used if a `Model`
    * option isn't passed to the constructor, and by default it returns the Model base class. But
@@ -539,6 +547,7 @@ export default class Collection<
     delete model.collection;
 
     model.offUpdate(this);
+    model.unsubscribe();
   }
 
   /**

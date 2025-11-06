@@ -60,3 +60,21 @@ export type UseResourcesResponse = {
   invalidate: typeof invalidate;
   setResourceState(newState: { [key: string]: any }): void;
 };
+
+// limit this to 3 levels deep because sometimes objects can reference themselves
+export type NestedKeys<T, Depth extends number = 3> =
+  Depth extends 0 ? never
+  : T extends Record<string, any> ?
+    {
+      [K in Extract<keyof T, string>]: T[K] extends Record<string, any> | undefined ?
+        | `${K}`
+        | `${K}.${NestedKeys<
+            Exclude<T[K], undefined>,
+            Depth extends 1 ? 0
+            : Depth extends 2 ? 1
+            : Depth extends 3 ? 2
+            : never
+          >}`
+      : `${K}`;
+    }[Extract<keyof T, string>]
+  : never;

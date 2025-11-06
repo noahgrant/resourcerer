@@ -9,12 +9,13 @@ describe("Collection", () => {
 
   beforeEach(() => {
     vi.spyOn(sync, "default").mockResolvedValue([]);
+    vi.spyOn(Model.prototype, "unsubscribe");
   });
 
   afterEach(() => {
     collection = null;
-    sync.default.mockRestore();
     callback.mockClear();
+    vi.restoreAllMocks();
   });
 
   it("is instantiated with appropriate internal properties", () => {
@@ -113,6 +114,7 @@ describe("Collection", () => {
       expect(collection.length).toEqual(3);
 
       collection.remove({ id: "model2" });
+      expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(1);
       expect(collection.toJSON()).toEqual([{ id: "model1" }, { id: "model3" }]);
       expect(collection.length).toEqual(2);
       expect(collection.get("model2")).not.toBeDefined();
@@ -120,6 +122,8 @@ describe("Collection", () => {
       collection.remove([{ id: "model1" }, { id: "model3" }]);
       expect(collection.toJSON()).toEqual([]);
       expect(collection.length).toEqual(0);
+
+      expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(3);
     });
 
     it("does not trigger an update if the `silent` flag is passed", () => {
@@ -132,6 +136,7 @@ describe("Collection", () => {
 
       collection.remove({ id: "model1" }, { silent: true });
       expect(callback).not.toHaveBeenCalled();
+      expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(2);
     });
 
     it("does not trigger an update if nothing was removed", () => {
@@ -308,7 +313,7 @@ describe("Collection", () => {
           { id: "model1", name: "noah" },
           { id: "model2", name: "zorah" },
         ],
-        { comparator: "name" }
+        { comparator: "name" },
       );
 
       collection.set({ id: "model3", name: "alex" });
@@ -652,6 +657,15 @@ describe("Collection", () => {
       expect(collection.get("Noah Grant")).toBeDefined();
       expect(collection.get("Noah Grant").id).toEqual("Noah Grant");
       expect(collection.Model.idAttribute).toEqual("name");
+    });
+  });
+
+  describe("unsubscribe", () => {
+    it("unsubscribes all models in the collection", () => {
+      collection = new Collection([{ id: "model1" }, { id: "model2" }, { id: "model3" }]);
+      collection.unsubscribe();
+      expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(3);
+      expect(collection).toHaveLength(3);
     });
   });
 
