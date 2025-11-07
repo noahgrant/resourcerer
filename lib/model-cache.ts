@@ -140,9 +140,10 @@ function scheduleForRemoval(cacheKey: string) {
 }
 
 /**
- * Remove a model from the cache.
+ * Remove a model from the cache, unsubscribing from any canonical models.
  */
 function clearModel(cacheKey: string) {
+  modelCache.get(cacheKey)?.unsubscribe();
   window.clearTimeout(timeouts[cacheKey]);
   delete timeouts[cacheKey];
   modelCache.delete(cacheKey);

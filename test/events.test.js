@@ -1,7 +1,9 @@
 import * as sync from "../lib/sync";
 import Collection from "../lib/collection";
 import Model from "../lib/model";
+import CanonicalModel from "../lib/canonical-model";
 import { vi } from "vitest";
+import { canonicalModelCache } from "../lib/canonical-model-cache";
 
 class TestCollection extends Collection {
   url() {
@@ -191,6 +193,51 @@ describe("Events", () => {
       // for the sync, because the late add is silent
       expect(collectionCallback).toHaveBeenCalledTimes(1);
     });
+
+    describe("from a canonical model when a subscribing model is updated, updating the target model's attributes", () => {
+      let sourceModel, targetModel;
+
+      beforeEach(() => {
+        sourceModel = new SubscribingSourceModel();
+        targetModel = new SubscribingTargetModel({ id: "1234" });
+      });
+
+      afterEach(() => {
+        sourceModel.unsubscribe();
+        targetModel.unsubscribe();
+        canonicalModelCache.clear();
+      });
+
+      it("when the targetModel is solo", () => {
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).toEqual("C. Zorah");
+      });
+
+      it("when the targetModel is part of a collection", () => {
+        const collection = new SubscribingTargetCollection([{ id: "1234" }]);
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(collection.get("1234").get("name")).toEqual("C. Zorah");
+      });
+
+      it("when the target is also a source", () => {
+        const sourceModel = new SubscribingSourceAndTargetModel({ id: "1234" });
+        const targetModel = new SubscribingSourceAndTargetModel({ id: "1234" });
+
+        sourceModel.set({ name: "Zorah" });
+        expect(targetModel.get("name")).toEqual("Zorah");
+        targetModel.set({ name: "Zorah 2" });
+        expect(sourceModel.get("name")).toEqual("Zorah 2");
+      });
+
+      it("unless a model has unsubscribed", () => {
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).toEqual("C. Zorah");
+        targetModel.unsubscribe();
+        sourceModel.set({ name: "Zorah 2" });
+        expect(targetModel.get("name")).toEqual("C. Zorah");
+      });
+    });
   });
 
   it("gracefully removes listeners even if there are none", () => {
@@ -199,3 +246,39 @@ describe("Events", () => {
     expect(() => model.offUpdate(model)).not.toThrow();
   });
 });
+
+class CanonicalTestModel extends CanonicalModel {}
+// this model has its own idattribute of id, but the canonical model uses the value of the _id property
+class SubscribingSourceModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      idField: "_id",
+      toSource: (attrs) => ({ _id: attrs._id, name: attrs.name }),
+    },
+  ];
+}
+
+class SubscribingTargetModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      // default idField to id
+      fromSource: (attrs) => ({ id: attrs._id, name: "C. " + attrs.name }),
+    },
+  ];
+}
+
+class SubscribingTargetCollection extends Collection {
+  static Model = SubscribingTargetModel;
+}
+
+class SubscribingSourceAndTargetModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      fromSource: (attrs) => attrs,
+      toSource: (attrs) => attrs,
+    },
+  ];
+}

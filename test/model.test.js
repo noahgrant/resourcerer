@@ -1,4 +1,6 @@
 import * as sync from "../lib/sync";
+import CanonicalModel from "../lib/canonical-model";
+import { canonicalModelCache } from "../lib/canonical-model-cache";
 
 import Collection from "../lib/collection";
 import Model from "../lib/model";
@@ -47,7 +49,7 @@ describe("Model", () => {
       parse(attrs) {
         return Object.keys(attrs).reduce(
           (memo, attr) => Object.assign(memo, { [attr]: attrs[attr] + 5 }),
-          {}
+          {},
         );
       }
     }
@@ -514,4 +516,359 @@ describe("Model", () => {
       expect(model.isNew()).toBe(false);
     });
   });
+
+  describe("subscriptions", () => {
+    let sourceModel, targetModel;
+
+    beforeEach(() => {
+      sourceModel = new SubscribingSourceModel();
+      targetModel = new SubscribingTargetModel();
+    });
+
+    afterEach(() => {
+      sourceModel.unsubscribe();
+      targetModel.unsubscribe();
+      canonicalModelCache.clear();
+    });
+
+    describe("are not made", () => {
+      it("if the model is the empty model", async () => {
+        vi.spyOn(targetModel, "fetch").mockResolvedValue([{}, {}]);
+
+        targetModel.isEmptyModel = true;
+        await targetModel.fetch();
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).toBeUndefined();
+        delete targetModel.isEmptyModel;
+      });
+
+      it("if the model is new", () => {
+        // there is no id linking them, so no subscriptions will be made
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).toBeUndefined();
+      });
+
+      it("if the subscribe option is false when the model is instantiated", () => {
+        sourceModel = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+        targetModel = new SubscribingTargetModel({ id: "1234", subscribe: false });
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).toBeUndefined();
+      });
+
+      it("if the model is already subscribed", () => {
+        targetModel = new SubscribingTargetModel({ id: "1234" });
+        sourceModel = new SubscribingSourceModel();
+
+        vi.spyOn(targetModel, "set");
+
+        targetModel._subscribe();
+        targetModel._subscribe();
+        targetModel._subscribe();
+        targetModel._subscribe();
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).toBe("C. Zorah");
+        // only called once!
+        expect(targetModel.set).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    describe("are made", () => {
+      it("when the model is instantiated", () => {
+        targetModel = new SubscribingTargetModel({ id: "1234" });
+
+        vi.spyOn(targetModel, "set");
+        sourceModel = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+
+        expect(targetModel.get("name")).toBe("C. Zorah");
+        expect(targetModel.set).toHaveBeenCalledTimes(1);
+      });
+
+      it("when the model is fetched", async () => {
+        // no id yet, so no subscription made
+        targetModel = new SubscribingTargetModel();
+        // id will return on the fetch
+        vi.spyOn(targetModel, "sync").mockResolvedValue([{ id: "1234" }, {}]);
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).not.toBe("C. Zorah");
+
+        await targetModel.fetch();
+
+        sourceModel.set({ _id: "1234", name: "Zorah 2" });
+        expect(targetModel.get("name")).toBe("C. Zorah 2");
+      });
+
+      it("when the model is saved", async () => {
+        // no id yet, so no subscription made
+        targetModel = new SubscribingTargetModel();
+        // id will return on the save
+        vi.spyOn(targetModel, "sync").mockResolvedValue([{ id: "1234" }, {}]);
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(targetModel.get("name")).not.toBe("C. Zorah");
+
+        await targetModel.save();
+
+        sourceModel.set({ _id: "1234", name: "Zorah 2" });
+        expect(targetModel.get("name")).toBe("C. Zorah 2");
+      });
+    });
+
+    describe("are not updated", () => {
+      it("if the subscribe option is false", () => {
+        sourceModel = new SubscribingSourceModel();
+        targetModel = new SubscribingTargetModel({ id: "1234" });
+
+        sourceModel.set({ _id: "1234", name: "Zorah" }, { subscribe: false });
+        expect(targetModel.get("name")).not.toBeDefined();
+      });
+
+      it("if the source options is 'subscription'", () => {
+        sourceModel = new SubscribingSourceModel();
+        targetModel = new SubscribingTargetModel({ id: "1234" });
+
+        sourceModel.set({ _id: "1234", name: "Zorah" }, { source: "subscription" });
+        expect(targetModel.get("name")).not.toBeDefined();
+      });
+
+      it("if nothing changes", () => {
+        vi.spyOn(SubscribingTargetModel.prototype, "_updateSubscriptions");
+
+        sourceModel = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+        targetModel = new SubscribingTargetModel({ id: "1234", name: "C. Zorah" });
+
+        expect(SubscribingTargetModel.prototype._updateSubscriptions).toHaveBeenCalledTimes(1);
+        SubscribingTargetModel.prototype._updateSubscriptions.mockClear();
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(SubscribingTargetModel.prototype._updateSubscriptions).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  describe("_subscribe", () => {
+    beforeEach(() => {
+      vi.spyOn(CanonicalModel.prototype, "onUpdate").mockReturnValue();
+      vi.spyOn(CanonicalModel.prototype, "offUpdate").mockReturnValue();
+    });
+
+    describe("does nothing", () => {
+      it("if the model is the empty model", () => {
+        const emptyModel = new SubscribingTargetModel();
+
+        emptyModel.isEmptyModel = true;
+        emptyModel._subscribe();
+
+        expect(CanonicalModel.prototype.onUpdate).not.toHaveBeenCalled();
+        expect(CanonicalModel.prototype.offUpdate).not.toHaveBeenCalled();
+      });
+
+      it("if the model has no canonical model id", () => {
+        const model = new SubscribingTargetModel({ name: "Zorah" });
+
+        model._subscribe();
+
+        expect(CanonicalModel.prototype.onUpdate).not.toHaveBeenCalled();
+        expect(CanonicalModel.prototype.offUpdate).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("the id field", () => {
+      it("can come from attributes set on the model", () => {
+        const model = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+
+        model._subscribe();
+
+        expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalled();
+        expect(CanonicalModel.prototype.offUpdate).toHaveBeenCalledWith(model);
+      });
+
+      it("can come from the attributes passed to the _subscribe method", () => {
+        const model = new SubscribingSourceModel();
+
+        model._subscribe({ _id: "1234", name: "Zorah" });
+
+        expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalled();
+        expect(CanonicalModel.prototype.offUpdate).toHaveBeenCalledWith(model);
+      });
+
+      it("can be nested with a dot-separated string", () => {
+        class NestedSubscribingSourceModel extends SubscribingSourceModel {
+          static subscriptions = [
+            {
+              Model: CanonicalTestModel,
+              idField: "nested._id",
+            },
+          ];
+        }
+
+        const model = new NestedSubscribingSourceModel({ nested: { _id: "1234", name: "Zorah" } });
+
+        model._subscribe();
+
+        expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalled();
+        expect(CanonicalModel.prototype.offUpdate).toHaveBeenCalledWith(model);
+      });
+    });
+
+    describe("the onUpdate callback", () => {
+      describe("does nothing", () => {
+        it("if the context is the same as the model instance", () => {
+          const model = new SubscribingTargetModel({ id: "1234", name: "Zorah" });
+          const model2 = new SubscribingTargetModel({ id: "1234", name: "Zorah" });
+
+          vi.spyOn(model, "set");
+
+          expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalled();
+          // same context
+          CanonicalModel.prototype.onUpdate.mock.calls[0][0]({ name: "Zorah 2" }, model);
+
+          expect(model.set).not.toHaveBeenCalled();
+        });
+
+        it("if there is no fromSource function", () => {
+          // the source model is toSource only
+          const model = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+          const model2 = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+
+          vi.spyOn(model, "set");
+
+          expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalled();
+          // different context
+          CanonicalModel.prototype.onUpdate.mock.calls[0][0]({ name: "Zorah 2" }, model2);
+
+          expect(model.set).not.toHaveBeenCalled();
+        });
+      });
+
+      describe("updates the model", () => {
+        it("if the fromSource function is provided", () => {
+          const model = new SubscribingTargetModel({ id: "1234", name: "Zorah" });
+          const model2 = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+
+          vi.spyOn(model, "set");
+
+          expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalled();
+          // different context
+          CanonicalModel.prototype.onUpdate.mock.calls[0][0](
+            { _id: "1234", name: "Zorah 2" },
+            model2,
+          );
+
+          expect(model.set).toHaveBeenCalledWith(
+            // mapped attributes
+            { id: "1234", name: "C. Zorah 2" },
+            { source: "subscription" },
+          );
+        });
+      });
+    });
+  });
+
+  describe("unsubscribe", () => {
+    beforeEach(() => {
+      vi.spyOn(CanonicalModel.prototype, "removeSubscription").mockReturnValue();
+    });
+
+    it("does nothing if the model has no canonical model id", () => {
+      const model = new SubscribingTargetModel({ name: "Zorah" });
+
+      model.unsubscribe();
+
+      expect(CanonicalModel.prototype.removeSubscription).not.toHaveBeenCalled();
+    });
+
+    it("removes the model from the canonical model's subscriptions", () => {
+      const model = new SubscribingTargetModel({ id: "1234", name: "Zorah" });
+
+      model.unsubscribe();
+
+      expect(CanonicalModel.prototype.removeSubscription).toHaveBeenCalledWith(model, "1234");
+    });
+  });
+
+  describe("_updateSubscriptions", () => {
+    beforeEach(() => {
+      vi.spyOn(CanonicalModel.prototype, "set").mockReturnValue();
+    });
+
+    describe("does nothing", () => {
+      it("if the model has no canonical model id", () => {
+        const model = new SubscribingTargetModel({ name: "Zorah" });
+
+        model._updateSubscriptions();
+
+        expect(CanonicalModel.prototype.set).not.toHaveBeenCalled();
+      });
+
+      it("if the model is the empty model", () => {
+        const model = new SubscribingSourceModel();
+
+        model.isEmptyModel = true;
+        model.set({ _id: "1234", name: "Zorah" });
+        model._updateSubscriptions();
+
+        expect(CanonicalModel.prototype.set).not.toHaveBeenCalled();
+      });
+
+      it("if there is no toSource function", () => {
+        const model = new SubscribingTargetModel({ id: "1234", name: "Zorah" });
+
+        model._updateSubscriptions({ _id: "1234", name: "Zorah" });
+
+        expect(CanonicalModel.prototype.set).not.toHaveBeenCalled();
+      });
+    });
+
+    describe("the id field", () => {
+      it("can come from attributes set on the model", () => {
+        const model = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+
+        model._updateSubscriptions();
+
+        expect(CanonicalModel.prototype.set).toHaveBeenCalledWith(
+          { _id: "1234", name: "Zorah" },
+          model,
+          {},
+        );
+      });
+
+      it("can come from the attributes passed to the _updateSubscriptions method", () => {
+        const model = new SubscribingSourceModel();
+        const options = {};
+
+        model._updateSubscriptions({ _id: "1234", name: "Zorah" }, options);
+
+        expect(CanonicalModel.prototype.set).toHaveBeenCalledWith(
+          { _id: "1234", name: "Zorah" },
+          model,
+          options,
+        );
+      });
+    });
+  });
 });
+
+class CanonicalTestModel extends CanonicalModel {}
+// this model has its own idattribute of id, but the canonical model uses the value of the _id property
+class SubscribingSourceModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      idField: "_id",
+      toSource: (attrs) => ({ _id: attrs._id, name: attrs.name }),
+    },
+  ];
+}
+
+class SubscribingTargetModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      // default idField to id
+      fromSource: (attrs) => ({ id: attrs._id, name: "C. " + attrs.name }),
+    },
+  ];
+}

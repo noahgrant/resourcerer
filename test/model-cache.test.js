@@ -3,13 +3,14 @@ import Model from "../lib/model";
 import ModelCache, { invalidate } from "../lib/model-cache";
 import { vi } from "vitest";
 
-const CACHE_WAIT = 150000,
-  testModel = {};
+const CACHE_WAIT = 150000;
+const testModel = new Model();
 
 describe("ModelCache", () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(ModelCache, "register");
+    vi.spyOn(Model.prototype, "unsubscribe");
   });
 
   afterEach(() => {
@@ -19,7 +20,7 @@ describe("ModelCache", () => {
   });
 
   it("gets a model from its cache via a unique key", () => {
-    var model2 = {};
+    var model2 = new Model();
 
     ModelCache.put("foo", testModel, {});
     ModelCache.put("bar", model2, {});
@@ -87,7 +88,7 @@ describe("ModelCache", () => {
       component2 = {};
 
     beforeEach(() => {
-      ModelCache.put("foo", {}, component);
+      ModelCache.put("foo", new Model(), component);
     });
 
     it("clears any current cache removal timeouts", () => {
@@ -97,10 +98,10 @@ describe("ModelCache", () => {
       expect(ModelCache.get("foo")).not.toBeDefined();
 
       // but if we re-register beforehand, we won't
-      ModelCache.put("foo", {}, component);
+      ModelCache.put("foo", new Model(), component);
       expect(ModelCache.get("foo")).toBeDefined();
       ModelCache.unregister(component);
-      ModelCache.put("foo", {}, component);
+      ModelCache.put("foo", new Model(), component);
       vi.advanceTimersByTime(CACHE_WAIT);
       expect(ModelCache.get("foo")).toBeDefined();
     });
@@ -111,7 +112,7 @@ describe("ModelCache", () => {
       // from the cache
       ModelCache.register("foo", component);
       // add new entry
-      ModelCache.put("foo", {}, component2);
+      ModelCache.put("foo", new Model(), component2);
       ModelCache.unregister(component2);
       vi.advanceTimersByTime(CACHE_WAIT);
       // even though the first component didn't add the model, the model should
@@ -124,9 +125,9 @@ describe("ModelCache", () => {
     const component = {};
 
     beforeEach(() => {
-      ModelCache.put("foo", {}, component);
-      ModelCache.put("bar", {}, component);
-      ModelCache.put("baz", {}, component);
+      ModelCache.put("foo", new Model(), component);
+      ModelCache.put("bar", new Model(), component);
+      ModelCache.put("baz", new Model(), component);
     });
 
     it("removes the component from the componentManifest for the given cache keys", () => {
@@ -147,8 +148,8 @@ describe("ModelCache", () => {
 
     it("schedules the model for cache removal if it no longer has components registered", () => {
       // let's add another component to foo and to baz
-      ModelCache.put("foo", {}, {});
-      ModelCache.put("bar", {}, {});
+      ModelCache.put("foo", new Model(), {});
+      ModelCache.put("bar", new Model(), {});
 
       ModelCache.unregister(component);
       vi.advanceTimersByTime(CACHE_WAIT);
@@ -158,6 +159,7 @@ describe("ModelCache", () => {
       // only baz will get removed, since the others have other components
       // still attached
       expect(ModelCache.get("baz")).not.toBeDefined();
+      expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(1);
       ModelCache.unregister({});
     });
   });
@@ -166,23 +168,27 @@ describe("ModelCache", () => {
     const component = {};
 
     // let's register foo to three components
-    ModelCache.put("foo", {}, {});
-    ModelCache.put("foo", {}, {});
-    ModelCache.put("foo", {}, {});
+    ModelCache.put("foo", new Model(), {});
+    ModelCache.put("foo", new Model(), {});
+    ModelCache.put("foo", new Model(), {});
 
     expect(ModelCache.get("foo")).toBeDefined();
     ModelCache.remove("foo");
     expect(ModelCache.get("foo")).not.toBeDefined();
+    expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(1);
+    Model.prototype.unsubscribe.mockClear();
 
-    ModelCache.put("foo", {}, component);
+    ModelCache.put("foo", new Model(), component);
     ModelCache.unregister(component);
 
     // still defined because of the timeout
     expect(ModelCache.get("foo")).toBeDefined();
+    expect(Model.prototype.unsubscribe).not.toHaveBeenCalled();
 
     ModelCache.remove("foo");
     // now immediately gone
     expect(ModelCache.get("foo")).not.toBeDefined();
+    expect(Model.prototype.unsubscribe).toHaveBeenCalledTimes(1);
   });
 
   it("when calling 'removeAllWithModel' removes all models of a specific key", () => {
@@ -195,7 +201,7 @@ describe("ModelCache", () => {
       "decisions",
     ];
 
-    cacheKeys.forEach((key) => ModelCache.put(key, {}, {}));
+    cacheKeys.forEach((key) => ModelCache.put(key, new Model(), {}));
 
     ModelCache.removeAllWithModel("user");
     expect(ModelCache.get("user")).not.toBeDefined();
@@ -217,7 +223,7 @@ describe("ModelCache", () => {
       "decisions",
     ];
 
-    cacheKeys.forEach((key) => ModelCache.put(key, {}, {}));
+    cacheKeys.forEach((key) => ModelCache.put(key, new Model(), {}));
 
     ModelCache.removeAllExcept(["users", "aliens"]);
     expect(ModelCache.get("user")).not.toBeDefined();
@@ -232,9 +238,9 @@ describe("ModelCache", () => {
 
 describe("invalidate", () => {
   it("removes models from the cache immediately", () => {
-    ModelCache.put("foo", {}, {});
-    ModelCache.put("bar", {}, {});
-    ModelCache.put("baz", {}, {});
+    ModelCache.put("foo", new Model(), {});
+    ModelCache.put("bar", new Model(), {});
+    ModelCache.put("baz", new Model(), {});
     invalidate("foo");
     expect(ModelCache.get("foo")).not.toBeDefined();
     expect(ModelCache.get("bar")).toBeDefined();
@@ -251,9 +257,9 @@ describe("invalidate", () => {
   });
 
   it("removes models except those specified when the 'except' option is true", () => {
-    ModelCache.put("foo", {}, {});
-    ModelCache.put("bar", {}, {});
-    ModelCache.put("baz", {}, {});
+    ModelCache.put("foo", new Model(), {});
+    ModelCache.put("bar", new Model(), {});
+    ModelCache.put("baz", new Model(), {});
     invalidate(["foo", "bar"], { except: true });
     expect(ModelCache.get("foo")).toBeDefined();
     expect(ModelCache.get("bar")).toBeDefined();
