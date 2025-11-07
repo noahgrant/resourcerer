@@ -100,11 +100,20 @@ export default class Model<
       {} as O,
     );
 
-    this.set({ ...result(this.constructor, "defaults"), ...attributes }, options);
+    const attrs = { ...result(this.constructor, "defaults"), ...attributes };
 
     if (options.subscribe !== false) {
-      this._subscribe();
+      /**
+       * In general, we want to subscribe to canonical models when a model is instantiated before we
+       * set the attributes so that we can broadcast the set call. However, the model needs to have an
+       * id field set before it can subscribe to a canonical model.
+       *
+       * So we pass the attributes to this fn as a fallback in case the id field is not yet set.
+       */
+      this._subscribe(attrs);
     }
+
+    this.set(attrs, options);
   }
 
   /**
@@ -257,8 +266,8 @@ export default class Model<
     return this.sync(this, options).then(([json, response]) => {
       const serverAttrs = options.parse ? this.parse(json, options) : json;
 
+      this._subscribe(serverAttrs);
       this.set(serverAttrs, options);
-      this._subscribe();
       // sync update
       this.triggerUpdate();
 
@@ -304,9 +313,9 @@ export default class Model<
           serverAttrs = { ...attrs, ...serverAttrs };
         }
 
+        this._subscribe(serverAttrs);
         // avoid triggering any updates in the set call since we'll do it immediately after
         this.set(serverAttrs, { silent: true, ...options });
-        this._subscribe();
         // sync update
         this.triggerUpdate();
 
@@ -406,11 +415,11 @@ export default class Model<
    * This should only happen when the model has the id field set for the canonical model. And
    * if we've already subscribed, this should have no effect.
    */
-  _subscribe() {
+  _subscribe(attrs: Partial<T> = {}) {
     const { subscriptions, idAttribute } = this.constructor as typeof Model;
 
     for (const { Model: CanonicalModel, idField = idAttribute, fromSource } of subscriptions) {
-      const id = getNestedValue(this.toJSON(), idField);
+      const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs || {}, idField);
 
       if (id && !this.isEmptyModel) {
         const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
@@ -462,11 +471,11 @@ export default class Model<
    * This will get called when this model is set. It then needs to update any canonical models
    * it is subscribed to.
    */
-  _updateSubscriptions(attrs: Partial<T>, options: SetOptions): void {
+  _updateSubscriptions(attrs: Partial<T> = {}, options: SetOptions = {}): void {
     const { subscriptions, idAttribute } = this.constructor as typeof Model;
 
     for (const { Model: CanonicalModel, idField = idAttribute, toSource } of subscriptions) {
-      const id = getNestedValue(this.toJSON(), idField);
+      const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs, idField);
 
       // TODO: this breaks if the id itself changes because it's no longer keyed correctly in the cache
       // should we prohibit the id attribute from being changed by not passing it to set?
