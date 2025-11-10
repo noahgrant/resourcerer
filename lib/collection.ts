@@ -1,7 +1,11 @@
 import { isDeepEqual, sortBy } from "./utils.js";
 
 import Events from "./events.js";
-import Model, { type ConstructorOptions, type SetOptions } from "./model.js";
+import Model, {
+  type CanonicalModelSubscription,
+  type ConstructorOptions,
+  type SetOptions,
+} from "./model.js";
 import sync, { type SyncOptions } from "./sync.js";
 import { ResourceConfigObj } from "./types.js";
 
@@ -106,6 +110,12 @@ export default class Collection<
    * than the default ('id').
    */
   static idAttribute: string;
+
+  /**
+   * Collection's models' subscriptions to canonical models can be placed directly on the collection
+   * as a shorthand so that you don't have to create a custom Model class just to add them.
+   */
+  static subscriptions: CanonicalModelSubscription[] = [];
 
   /**
    * This is a list of keys (could be attribute keys, but also keys passed in from the options
@@ -435,15 +445,17 @@ export default class Collection<
     T,
     O
   > {
-    if ((this.constructor as typeof Collection).idAttribute) {
-      let attr = (this.constructor as typeof Collection).idAttribute;
+    const { idAttribute, subscriptions } = this.constructor as typeof Collection;
+    const DefaultModel = (this.constructor as typeof Collection).Model as typeof Model<T, O>;
 
+    if (idAttribute || subscriptions.length) {
       return class extends Model<T, O> {
-        static idAttribute = attr;
+        static idAttribute = idAttribute || DefaultModel.idAttribute;
+        static subscriptions = subscriptions;
       };
     }
 
-    return (this.constructor as typeof Collection).Model as typeof Model<T, O>;
+    return DefaultModel;
   }
 
   /**

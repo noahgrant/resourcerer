@@ -220,6 +220,19 @@ describe("Events", () => {
         expect(collection.get("1234").get("name")).toEqual("C. Zorah");
       });
 
+      it("when the targetModel is part of a collection with shorthand subscriptions defined", () => {
+        const collection = new SubscribingTargetShorthandCollection([{ id: "1234" }]);
+
+        sourceModel.set({ _id: "1234", name: "Zorah" });
+        expect(collection.get("1234").get("name")).toEqual("C. Zorah");
+      });
+
+      it("when the source model is part of a collection with shorthand subscriptions defined", () => {
+        new SubscribingSourceShorthandCollection([{ _id: "1234", name: "Zorah" }]);
+
+        expect(targetModel.get("name")).toEqual("C. Zorah");
+      });
+
       it("when the target is also a source", () => {
         const sourceModel = new SubscribingSourceAndTargetModel({ id: "1234" });
         const targetModel = new SubscribingSourceAndTargetModel({ id: "1234" });
@@ -271,6 +284,25 @@ class SubscribingTargetModel extends Model {
 
 class SubscribingTargetCollection extends Collection {
   static Model = SubscribingTargetModel;
+}
+
+class SubscribingTargetShorthandCollection extends Collection {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      fromSource: (attrs) => ({ id: attrs._id, name: "C. " + attrs.name }),
+    },
+  ];
+}
+
+class SubscribingSourceShorthandCollection extends Collection {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      idField: "_id",
+      toSource: (attrs) => ({ _id: attrs._id, name: attrs.name }),
+    },
+  ];
 }
 
 class SubscribingSourceAndTargetModel extends Model {
