@@ -355,8 +355,10 @@ export default class Model<
         if (options.wait && !this.isNew()) {
           this.triggerUpdate();
           this.collection?.remove(this, { silent: true });
-          this.unsubscribe();
         }
+
+        // model orphans with subscriptions will never have a chance to unsubscribe automatically.
+        this.unsubscribe();
 
         return [this, response] as [this, Response];
       })
