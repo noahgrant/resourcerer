@@ -36,9 +36,10 @@ export default function (model: Model | Collection, options: SyncOptions = {}) {
   return ajax({
     contentType: MIME_TYPE_JSON,
     params:
-      options.params || ["POST", "PATCH", "PUT"].includes(options.method || "") ?
+      options.params ||
+      (["POST", "PATCH", "PUT"].includes(options.method || "") ?
         options.attrs || model.toJSON()
-      : {},
+      : {}),
     // url can be passed via the model (as a property or function) or via options.url directly
     url: options.url || result(model, "url", model.urlOptions) || urlError(),
     // default catch block. most large applications should override this in the config settings to
@@ -66,7 +67,7 @@ export default function (model: Model | Collection, options: SyncOptions = {}) {
  *   rejects with the response
  */
 export function ajax(
-  options: SyncOptions & Required<Pick<SyncOptions, "error" | "url" | "params">>
+  options: SyncOptions & Required<Pick<SyncOptions, "error" | "url" | "params">>,
 ): Promise<SyncResolvedValue> {
   const hasParams = options.params instanceof FormData || !!Object.keys(options.params).length;
   const hasBodyContent = !/^(?:GET|HEAD)$/.test(options.method || "") && hasParams;
@@ -76,7 +77,7 @@ export function ajax(
     const requestDuration = Date.now() - startTime;
     const routeRequest = (
       resolve: (value: SyncResolvedValue) => void,
-      reject: (response?: any) => void
+      reject: (response?: any) => void,
     ) =>
       response.ok ?
         resolve([json, response])
@@ -88,8 +89,8 @@ export function ajax(
         routeRequest(resolve, reject)
       : window.setTimeout(
           () => routeRequest(resolve, reject),
-          options.minDuration - requestDuration
-        )
+          options.minDuration - requestDuration,
+        ),
     );
   };
 
@@ -127,7 +128,7 @@ export function ajax(
         // catch block here handles the case where the response isn't valid json,
         // like for example a 204 no content
         .catch(() => ({}))
-        .then((json) => onRequestComplete(json, res))
+        .then((json) => onRequestComplete(json, res)),
     );
 }
 
