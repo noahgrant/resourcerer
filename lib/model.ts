@@ -301,7 +301,7 @@ export default class Model<
       : options.patch ? "PATCH"
       : "PUT";
 
-    if (options.method === "PATCH" && !options.attrs) {
+    if (options.method === "PATCH") {
       options.attrs = attrs;
     }
 

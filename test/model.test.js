@@ -287,6 +287,15 @@ describe("Model", () => {
         method: "PATCH",
         attrs: { one: "one" },
       });
+      sync.default.mockClear();
+      await model.save({ one: "one" }, { patch: true, wait: true });
+      expect(sync.default).toHaveBeenCalledWith(model, {
+        parse: true,
+        patch: true,
+        wait: true,
+        method: "PATCH",
+        attrs: { one: "one" },
+      });
     });
 
     it("parses results unless `parse` is set to false", async () => {
