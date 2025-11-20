@@ -22,7 +22,7 @@ describe("sync", () => {
   beforeEach(() => {
     library = new Library();
     vi.spyOn(window, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({ test: "response!" }), { status: 200 })
+      new Response(JSON.stringify({ test: "response!" }), { status: 200 }),
     );
   });
 
@@ -93,6 +93,7 @@ describe("sync", () => {
     await library.at(0).save(null, { params: formData, contentType: "multipart/form-data" });
     expect(window.fetch.mock.calls[0][0]).toEqual("/library");
     expect(window.fetch.mock.calls[0][1].body).toEqual(formData);
+    expect(window.fetch.mock.calls[0][1].headers["Content-Type"]).not.toBeDefined();
   });
 
   it("passes urlOptions to the model to formulate the url path", async () => {
@@ -121,7 +122,7 @@ describe("sync", () => {
 
     librarySectionBook = new LibrarySectionBook(
       {},
-      { section: "nature", bookId: "all-about-frogs" }
+      { section: "nature", bookId: "all-about-frogs" },
     );
     await librarySectionBook.fetch({ params: { a: "a", one: 1 } });
     expect(window.fetch.mock.calls[2][0]).toEqual("/library/nature/all-about-frogs?a=a&one=1");
@@ -182,7 +183,7 @@ describe("sync", () => {
 
   it("rejects non-2xx", async () => {
     window.fetch.mockResolvedValue(
-      new Response(JSON.stringify({ test: "womp" }), { status: 500, type: "application/json" })
+      new Response(JSON.stringify({ test: "womp" }), { status: 500, type: "application/json" }),
     );
 
     try {
