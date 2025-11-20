@@ -109,7 +109,11 @@ export function ajax(
         Accept: MIME_TYPE_JSON,
         // only set contentType header if a write request and if there is body params. also, default
         // to JSON contentTypes, but allow for it to be overridden, ie with x-www-form-urlencoded.
-        ...(hasBodyContent ? { "Content-Type": options.contentType } : {}),
+        // finally, let the browser auto-set multipart/form-data if a FormData object is passed in,
+        // because it'll also add the appropriate boundary string to the header.
+        ...(hasBodyContent && !(options.params instanceof FormData) ?
+          { "Content-Type": options.contentType }
+        : {}),
         ...options.headers,
       },
       ...(hasBodyContent ?
