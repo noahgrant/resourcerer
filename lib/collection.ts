@@ -8,6 +8,7 @@ import Model, {
 } from "./model.js";
 import sync, { type SyncOptions } from "./sync.js";
 import { ResourceConfigObj } from "./types.js";
+import CanonicalModelConstructor from "./canonical-model.js";
 
 type CSetOptions = {
   parse?: boolean;
@@ -103,6 +104,8 @@ export default class Collection<
    * custom Model subclass.
    */
   static Model: new (...args: any[]) => Model = Model;
+
+  static CanonicalModel: (new (...args: any[]) => CanonicalModelConstructor<any>) | null = null;
 
   /**
    * Defines the property by which we can uniquely identify models in the collection. Override this
@@ -445,13 +448,24 @@ export default class Collection<
     T,
     O
   > {
-    const { idAttribute, subscriptions } = this.constructor as typeof Collection;
+    const { idAttribute, subscriptions, CanonicalModel } = this.constructor as typeof Collection;
     const DefaultModel = (this.constructor as typeof Collection).Model as typeof Model<T, O>;
 
-    if (idAttribute || subscriptions.length) {
+    if (idAttribute || subscriptions.length || CanonicalModel) {
       return class extends Model<T, O> {
         static idAttribute = idAttribute || DefaultModel.idAttribute;
-        static subscriptions = subscriptions;
+        static subscriptions = [
+          ...(CanonicalModel ?
+            [
+              {
+                Model: CanonicalModel,
+                toSource: (attrs: Partial<Record<string, any>>) => attrs,
+                fromSource: (attrs: Partial<Record<string, any>>) => attrs,
+              },
+            ]
+          : []),
+          ...(subscriptions || []),
+        ];
       };
     }
 
