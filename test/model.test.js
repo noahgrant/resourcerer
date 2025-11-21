@@ -19,6 +19,7 @@ describe("Model", () => {
     model = collection = null;
     sync.default.mockRestore();
     callback.mockClear();
+    vi.restoreAllMocks();
   });
 
   it("is given a cid", () => {
@@ -774,6 +775,68 @@ describe("Model", () => {
         });
       });
     });
+
+    it("auto-sets a subscription if the model has a CanonicalModel static property", () => {
+      CanonicalModel.prototype.onUpdate.mockRestore();
+      CanonicalModel.prototype.offUpdate.mockRestore();
+
+      vi.spyOn(CanonicalModel.prototype, "triggerUpdate");
+
+      class AutoSubscribingModel extends Model {
+        static CanonicalModel = CanonicalTestModel;
+      }
+
+      const model = new AutoSubscribingModel({ id: "1234", name: "Zorah" });
+      const model2 = new AutoSubscribingModel({ id: "1234", name: "Noah" });
+
+      expect(canonicalModelCache.get(CanonicalTestModel).get("1234")._callbacks).toHaveLength(2);
+
+      expect(model.get("name")).toBe("Noah");
+
+      model.set({ name: "Zorah" });
+      expect(model2.get("name")).toBe("Zorah");
+
+      model.unsubscribe();
+      model2.unsubscribe();
+
+      expect(canonicalModelCache.get(CanonicalTestModel).get("1234")).not.toBeDefined();
+    });
+
+    it("adding a CanonicalModel property and a subscription on the same model makes a single subscription", () => {
+      CanonicalModel.prototype.onUpdate.mockRestore();
+      CanonicalModel.prototype.offUpdate.mockRestore();
+
+      vi.spyOn(CanonicalModel.prototype, "onUpdate");
+      vi.spyOn(CanonicalModel.prototype, "offUpdate");
+      vi.spyOn(CanonicalModel.prototype, "triggerUpdate");
+
+      class AutoSubscribingModel extends Model {
+        static CanonicalModel = CanonicalTestModel;
+
+        static subscriptions = [
+          {
+            Model: CanonicalTestModel,
+            toSource: (attrs) => attrs,
+            fromSource: (attrs) => attrs,
+          },
+        ];
+      }
+
+      const model = new AutoSubscribingModel({ id: "1234", name: "Zorah" });
+      const model2 = new AutoSubscribingModel({ id: "1234", name: "Noah" });
+
+      expect(CanonicalModel.prototype.onUpdate).toHaveBeenCalledTimes(4);
+      expect(CanonicalModel.prototype.offUpdate).toHaveBeenCalledTimes(4);
+      // only one trigger update per model
+      expect(CanonicalModel.prototype.triggerUpdate).toHaveBeenCalledTimes(2);
+
+      expect(canonicalModelCache.get(CanonicalTestModel).get("1234")._callbacks).toHaveLength(2);
+
+      model.unsubscribe();
+      model2.unsubscribe();
+
+      expect(canonicalModelCache.get(CanonicalTestModel).get("1234")).not.toBeDefined();
+    });
   });
 
   describe("unsubscribe", () => {
@@ -856,6 +919,50 @@ describe("Model", () => {
           options,
         );
       });
+    });
+  });
+
+  describe("_getSubscriptions", () => {
+    it("returns the subscriptions for the model", () => {
+      const model = new SubscribingSourceModel({ _id: "1234", name: "Zorah" });
+
+      expect(model._getSubscriptions()).toEqual([
+        {
+          Model: CanonicalTestModel,
+          idField: "_id",
+          toSource: expect.any(Function),
+        },
+      ]);
+    });
+
+    it("combines the subscriptions from the model and the CanonicalModel static property", () => {
+      class AutoSubscribingSourceModel extends Model {
+        static CanonicalModel = CanonicalTestModel;
+
+        static subscriptions = [
+          {
+            Model: CanonicalTestModel,
+            toSource: (attrs) => attrs,
+            fromSource: (attrs) => attrs,
+          },
+        ];
+      }
+
+      const model = new AutoSubscribingSourceModel({ id: "1234", name: "Zorah" });
+
+      expect(model._getSubscriptions()).toEqual([
+        {
+          Model: CanonicalTestModel,
+          idField: "id",
+          toSource: expect.any(Function),
+          fromSource: expect.any(Function),
+        },
+        {
+          Model: CanonicalTestModel,
+          toSource: expect.any(Function),
+          fromSource: expect.any(Function),
+        },
+      ]);
     });
   });
 });

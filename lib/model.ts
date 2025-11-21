@@ -151,6 +151,8 @@ export default class Model<
 
   static subscriptions: CanonicalModelSubscription[] = [];
 
+  static CanonicalModel: (new (...args: any[]) => CanonicalModel<any>) | null = null;
+
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire
    * server data representation.
@@ -418,7 +420,8 @@ export default class Model<
    * if we've already subscribed, this should have no effect.
    */
   _subscribe(attrs: Partial<T> = {}) {
-    const { subscriptions, idAttribute } = this.constructor as typeof Model;
+    const subscriptions = this._getSubscriptions();
+    const idAttribute = (this.constructor as typeof Model).idAttribute;
 
     for (const { Model: CanonicalModel, idField = idAttribute, fromSource } of subscriptions) {
       const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs || {}, idField);
@@ -456,7 +459,8 @@ export default class Model<
    * Notably, it is never called in the context of the react lifecycle.
    */
   unsubscribe() {
-    const { subscriptions, idAttribute } = this.constructor as typeof Model;
+    const subscriptions = this._getSubscriptions();
+    const idAttribute = (this.constructor as typeof Model).idAttribute;
 
     for (const { Model: CanonicalModel, idField = idAttribute } of subscriptions) {
       const id = getNestedValue(this.toJSON(), idField);
@@ -474,7 +478,8 @@ export default class Model<
    * it is subscribed to.
    */
   _updateSubscriptions(attrs: Partial<T> = {}, options: SetOptions = {}): void {
-    const { subscriptions, idAttribute } = this.constructor as typeof Model;
+    const subscriptions = this._getSubscriptions();
+    const idAttribute = (this.constructor as typeof Model).idAttribute;
 
     for (const { Model: CanonicalModel, idField = idAttribute, toSource } of subscriptions) {
       const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs, idField);
@@ -491,6 +496,24 @@ export default class Model<
         );
       }
     }
+  }
+
+  _getSubscriptions() {
+    const { subscriptions, idAttribute, CanonicalModel } = this.constructor as typeof Model;
+
+    return [
+      ...(CanonicalModel ?
+        [
+          {
+            Model: CanonicalModel,
+            idField: idAttribute,
+            toSource: (attrs: Partial<Record<string, any>>) => attrs,
+            fromSource: (attrs: Partial<Record<string, any>>) => attrs,
+          },
+        ]
+      : []),
+      ...(subscriptions || []),
+    ];
   }
 }
 
