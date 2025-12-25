@@ -8,6 +8,7 @@
 * prioritized rendering for critical data (enabling less critical or slower requests to not block interactivity)
 * delayed requests
 * prefetching
+* inter-model syncing
 * ...and more
 
 Additional features include:
@@ -147,6 +148,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [provides](#provides)
     1. [Data mutations](#data-mutations)
     1. [Serial Requests](#serial-requests)
+    2. [Canonical Models](#canonical-models)
     3. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
     4. [Using resourcerer with TypeScript](docs/typescript.md)
     4. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
@@ -590,6 +592,8 @@ Like `params` and `path`, the `data` object will also be used in cache key gener
 
 ### lazy
 
+##### (this feature is deprecated — use [canonical models](#canonical-models) instead.)
+
 Lazy fetching is one of resourcerer's most powerful features, allowing you to get a reference to a model without actually fetching it. If the model is ultimately fetched elsewhere on the page, the component that lazily fetched it will still listen for updates.
 
 A great example of when this would be useful is for search results. Search results are read-only, but if you modify the entity of a result somewhere else in the page, you'd like to see it reflected in your search results. Yet you don't want to fetch the entity details for every search result and spam your API. Enter lazy loading:
@@ -764,6 +768,57 @@ export default function QueueItemPage(props) {
   } = useResources(getResources, props);
 }
 ```
+
+## Canonical Models
+
+Generally, we can't always be RESTful, all the time. Imagine this scenario: we want to show the name of who created a TODO item in our list of TODOS. If we were being perfectly RESTful, we  might request two endpoints: `/todos` and `/users`:
+
+```json
+// Todo
+{
+  id: "todo1234"
+  name: "My Todo",
+  created_by: "user1234"
+}
+
+// User
+{
+  id: "user1234"
+  name: "Bob Donut"
+}
+```
+
+Our components would make requests to both and do the join on the client to display the name:
+
+```js
+const userName = usersCollection.get(todoModel.get("created_by"))?.get("name");
+```
+
+But there are valid reasons why we might want to instead be _less_ RESTful by returning the user's name directly with the TODO:
+
+1. If a user leaves the organization, the TODO remains, and we still need to know who created it
+2. It's just easier; now the client only has to make one request without any joins
+
+In this case, the TODO may look like:
+
+```json
+{
+  id: "todo1234"
+  name: "My Todo",
+  created_by: {
+    id: "user1234",
+    name: "Bob Donut"
+  }
+}
+```
+
+But what happens if Mr Bob Donut goes into the app and updates his name?
+
+```js
+usersCollection.get("user1234")?.save({name: "Mr Bob Donuts"}).catch(() => ...);
+```
+
+The Todos on the page, reading only from `/todos`, will still show `"Bob Donut"`. This is where CanonicalModels come in.
 
 # Differences between useResources and withResources
 
