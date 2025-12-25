@@ -773,7 +773,7 @@ export default function QueueItemPage(props) {
 
 Generally, we can't always be RESTful, all the time. Imagine this scenario: we want to show the name of who created a TODO item in our list of TODOS. If we were being perfectly RESTful, we  might request two endpoints: `/todos` and `/users`:
 
-```json
+```js
 // Todo
 {
   id: "todo1234"
@@ -801,7 +801,7 @@ But there are valid reasons why we might want to instead be _less_ RESTful by re
 
 In this case, the TODO may look like:
 
-```json
+```js
 {
   id: "todo1234"
   name: "My Todo",
@@ -819,6 +819,82 @@ usersCollection.get("user1234")?.save({name: "Mr Bob Donuts"}).catch(() => ...);
 ```
 
 The Todos on the page, reading only from `/todos`, will still show `"Bob Donut"`. This is where CanonicalModels come in.
+
+CanonicalModels are a new class of model that exist solely to act as third-party mediatators for pub-sub between models of the same class at the same id. First, you create a new canonical model class - these are generally not extended with any additional or custom members, and so all your canonical models can live in the same file:
+
+```ts
+// canonical-models.js
+import type {User} from "types";
+import {CanonicalModel} from "resourcerer";
+
+export class CanonicalUserModel extends CanonicalModel<User> {}
+```
+
+Then we want to add a subscription on both the `TodosCollection` and the `UsersCollection` to tell them _how_ they should update when one changes:
+
+```ts
+import type { CanonicalModelSubscription } from "resourcerer";
+
+// todos-collection.js
+export class TodosCollection extends Collection<Todo> {
+  // this is an array, because a model or collection can have as many subscriptions as it needs
+  static subscriptions: [CanonicalModelSubscription<Todo, User>] = [{
+    // which model class we listen to updates on
+    Model: CanonicalUserModel,
+    // this is the field in Todo that corresponds to the id field for User. Dot-separated for nested strings.
+    // defaults to the idAttribute
+    idField: "created_by.id",
+    // takes an object of type User (the source) and returns the object that should be merged on the Todo
+    fromSource: (attrs) => ({
+      created_by: attrs.id,
+      name: attrs.name
+    })
+  }]
+
+  // ...
+}
+```
+
+There is also a `toSource` option here that does the inverse - takes a Todo type and returns the type of the CanonicalModel (`User`, in this case), but since we are not writing from the Todo onto the canonical model (just reading), we don't need that here. We need that on the UsersCollection. Because the UsersCollection user is the same type as our CanonicalUserModel, this is a little bit simpler:
+
+```ts
+import type { CanonicalModelSubscription } from "resourcerer";
+
+export class UsersCollection extends Collection<User> {
+  static subscriptions: [CanonicalModelSubscription<User, User>] = [{
+    Model: CanonicalUserModel,
+    idField: "id",
+    // because the types are the same from this model to the canonical, we want all updates on the user
+    // to update the canonical model identically
+    toSource: (attrs) => attrs,
+    fromSource: (attrs) => attrs
+  }]
+
+  // ...
+}
+```
+
+With this simple change, when Bob Donut changes his name, the TodosCollection will get updated automatically in the app if it is in the cache! At its core, this is just pub/sub. Here's a breakdown of what happens:
+
+* The user model gets updated with the new name as the request is sent to the server
+* There is a `CanonicalUserModel` instance for each id in the `usersCollection`, and the one keyed at this id is listening on changes. It gets updated based on the result of the `toSource` function
+* Each entry in the `todosCollection` is listening for changes in the `CanonicalUserModel` instance at its id field. So when the instance is updated, the `todoModel` gets updated with the result of the `fromSource` function
+* When the `todoModel` updates, its component re-renders.
+
+Ta-da! This is really a magical client-side syncing experience.
+
+Two final notes:
+
+1. The above subscription definition on the `UsersCollection` is what we want any time a model is its own canonical representation. So we have a shorthand. The above is equivalent to setting a `static CanonicalModel` property on the class:
+
+```ts
+export class UsersCollection extends Collection<User> {
+  static CanonicalModel = CanonicalUserModel;
+}
+```
+
+2. `subscriptions` and `CanonicalModel` static properties can also be set on `Model` definitions.
+   
 
 # Differences between useResources and withResources
 
