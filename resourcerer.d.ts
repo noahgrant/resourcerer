@@ -19,53 +19,32 @@ declare module "resourcerer" {
   export interface ModelMap {}
   export type ResourceKeys = Extract<keyof ModelMap, string>;
 
-  // Base resource config that can be used for any resource key
-  type BaseResourceConfigObj = {
-    data?: { [key: string]: any };
+  // Resource config for a specific resource key
+  // K represents the ResourceKey, which can be either:
+  // - The key itself (when the key IS a ResourceKey)
+  // - The resourceKey field value (when using a custom key with resourceKey property)
+  export type ResourceConfigObj<K extends ResourceKeys> = {
+    data?: Partial<GetModelOptions<InstanceType<ModelMap[K]>>[0]>;
     dependsOn?: boolean;
     force?: boolean;
     lazy?: boolean;
     noncritical?: boolean;
     options?: { [key: string]: any };
-    path?: { [key: string]: any };
-    params?: { [key: string]: any };
-    prefetches?: { [key: string]: any }[];
-    provides?: (
-      model: InstanceType<ModelMap[ResourceKeys]>,
-      props: Record<string, any>,
-    ) => { [key: string]: any };
-    resourceKey?: ResourceKeys;
-  };
-
-  // Resource config for a specific resource key, extending the base config with type-specific properties
-  export type ResourceConfigObj<K extends ResourceKeys> = BaseResourceConfigObj & {
-    data?: Partial<GetModelOptions<InstanceType<ModelMap[K]>>[0]>;
     // ts is not happy with this but this will make our typings easier
     // @ts-ignore
     path?: Parameters<InstanceType<ModelMap[K]>["url"]>[0];
+    params?: { [key: string]: any };
+    prefetches?: { [key: string]: any }[];
     provides?: (
       model: InstanceType<ModelMap[K]>,
       props: Record<string, any>,
     ) => { [key: string]: any };
   };
 
-  // For keys that are ResourceKeys, config can be ResourceConfigObj<Key> (resourceKey optional)
-  // For keys that are not ResourceKeys, config must include resourceKey
-  // Note: We don't constrain resourceKey to ResourceKeys here to preserve literal types during inference
-  type ResourceConfigForKey<K extends string> =
-    K extends ResourceKeys ? ResourceConfigObj<K> : BaseResourceConfigObj & { resourceKey: string };
-
-  // Mapping type: maps executor function keys to their resourceKeys
-  // For keys that are ResourceKeys, the mapping is the key itself
-  // For keys that are not ResourceKeys, the mapping is the resourceKey from the config
-  type ResourceKeyMap<R extends Record<string, any>> = {
-    [K in keyof R]: K extends ResourceKeys ? K
-    : R[K] extends { resourceKey: infer RK } ?
-      RK extends ResourceKeys ?
-        RK
-      : never
-    : K extends ResourceKeys ? K
-    : never;
+  // Helper type to create a config object with resourceKey field
+  // Used when the executor key is not a ResourceKey and needs a resourceKey property
+  type ResourceConfigWithKey<RK extends ResourceKeys> = ResourceConfigObj<RK> & {
+    resourceKey: RK;
   };
 
   // Helper to extract resourceKey from a config object
@@ -99,21 +78,28 @@ declare module "resourcerer" {
   type GetModelType<K extends string, R extends Record<string, any>> =
     GetModelConstructor<K, R> extends new (...args: any[]) => infer ModelType ? ModelType : never;
 
+  // Union type of all possible configs with resourceKey
+  // TypeScript will narrow this discriminated union based on the literal resourceKey value
+  // When you use resourceKey: "energySource", provides will be typed for energySourceModel
+  type ConfigWithResourceKey = {
+    [RK in ResourceKeys]: ResourceConfigWithKey<RK>;
+  }[ResourceKeys];
+
   // ExecutorFunction with explicit resourceKey mapping
   // M maps executor keys to their resourceKeys (e.g., { gridEnergySource: "energySource" })
+  // When a custom key is used with resourceKey property, TypeScript will narrow the provides type
+  // based on the literal resourceKey value provided
   export type ExecutorFunction<
     T extends string,
     O = Record<string, never>,
     M extends Partial<Record<T, ResourceKeys>> = Partial<Record<T, ResourceKeys>>,
   > = (props: O) => {
     [Key in T]?: Key extends ResourceKeys ? ResourceConfigObj<Key>
-    : BaseResourceConfigObj & {
-        resourceKey: Key extends keyof M ?
-          M[Key] extends ResourceKeys ?
-            M[Key]
-          : ResourceKeys
-        : ResourceKeys;
-      };
+    : Key extends keyof M ?
+      M[Key] extends ResourceKeys ?
+        ResourceConfigWithKey<M[Key]>
+      : ConfigWithResourceKey
+    : ConfigWithResourceKey;
   };
 
   export type UseResourcesResponse = {
@@ -141,11 +127,10 @@ declare module "resourcerer" {
           `${Key}Collection`
         : `${Key}Model`
       : `${Key}Model`
-    : never]: GetModelType<Key, R>
+    : never]: GetModelType<Key, R>;
   } & {
     [Key in T as `${Key}LoadingState`]: LoadingStates;
   } & {
     [Key in T as `${Key}Status`]: number;
   };
 }
-
