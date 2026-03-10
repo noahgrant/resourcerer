@@ -20,7 +20,7 @@ import ReactDOM, { unmountComponentAtNode } from "react-dom";
 import { waitsFor } from "./test-utils";
 import { vi } from "vitest";
 
-let measure;
+let measure = undefined;
 let globalFetchSignals = false;
 
 const transformSpy = vi.fn();
