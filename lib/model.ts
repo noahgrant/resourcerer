@@ -381,14 +381,16 @@ export default class Model<
   url(options = this.urlOptions): string {
     const base =
       result(this, "urlRoot", options) || result(this.collection, "url", options) || urlError();
+    const { pathname, searchParams } = new URL(base, window.location.origin);
 
     if (this.isNew()) {
       return base;
     }
 
     return (
-      base.replace(/[^/]$/, "$&/") +
-      window.encodeURIComponent(this.get((this.constructor as typeof Model).idAttribute))
+      pathname.replace(/[^/]$/, "$&/") +
+      window.encodeURIComponent(this.get((this.constructor as typeof Model).idAttribute)) +
+      `${searchParams.toString() ? `?${searchParams.toString()}` : ""}`
     );
   }
 
