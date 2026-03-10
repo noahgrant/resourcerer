@@ -142,6 +142,8 @@ export default class Collection<
    */
   static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
 
+  declare url: (options: typeof this.urlOptions) => string;
+
   /**
    * Similar to the method for an individual model, this maps through each model in the collection
    * and returns its data attributes.
