@@ -470,19 +470,36 @@ describe("Model", () => {
       expect(model.url()).toEqual("/library");
     });
 
-    it("appends its id to the url if not new", () => {
+    describe("appends its id to the url if not new", () => {
       class _Model extends Model {
         static idAttribute = "name";
       }
 
-      model = new _Model({ name: "noah?grant" });
-      model.urlRoot = () => "/library";
-      expect(model.url()).toEqual("/library/noah%3Fgrant");
+      beforeEach(() => {
+        vi.stubGlobal("location", { origin: "https://bobsdonuts.com" });
+      });
 
-      collection = new Collection();
-      collection.url = () => "/library";
-      model = new _Model({ name: "noah?grant" }, { collection });
-      expect(model.url()).toEqual("/library/noah%3Fgrant");
+      it("when there are no query params", () => {
+        model = new _Model({ name: "noah?grant" });
+        model.urlRoot = () => "/library";
+        expect(model.url()).toEqual("/library/noah%3Fgrant");
+
+        collection = new Collection();
+        collection.url = () => "/library";
+        model = new _Model({ name: "noah?grant" }, { collection });
+        expect(model.url()).toEqual("/library/noah%3Fgrant");
+      });
+
+      it("when there are query params attached to the url", () => {
+        model = new _Model({ name: "noah?grant" });
+        model.urlRoot = () => "/library?foo=bar";
+        expect(model.url()).toEqual("/library/noah%3Fgrant?foo=bar");
+
+        collection = new Collection();
+        collection.url = () => "/library?foo=bar";
+        model = new _Model({ name: "noah?grant" }, { collection });
+        expect(model.url()).toEqual("/library/noah%3Fgrant?foo=bar");
+      });
     });
 
     it("is called by default with its urlOptions", () => {
