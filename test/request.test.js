@@ -8,7 +8,6 @@ import { vi } from "vitest";
 const component = {};
 const CACHE_WAIT = 150000;
 
-/* eslint-disable max-nested-callbacks */
 describe("Request", () => {
   var waitSuccess, reject;
 
@@ -360,4 +359,3 @@ function unregisterComponent(comp) {
   vi.advanceTimersByTime(CACHE_WAIT);
   vi.useRealTimers();
 }
-/* eslint-enable max-nested-callbacks */

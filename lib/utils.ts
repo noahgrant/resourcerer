@@ -26,7 +26,6 @@ export const hasLoaded = (loadingStates: LoadingStates | LoadingStates[]): boole
 export const isPending = (loadingStates: LoadingStates | LoadingStates[]): boolean =>
   qualifyLoadingStates(loadingStates).some((state) => state === "pending");
 
-/* eslint-disable @typescript-eslint/no-empty-function */
 export function noOp() {}
 
 /**

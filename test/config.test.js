@@ -8,7 +8,6 @@ class TestModel2 extends Model {}
 
 const { register } = Config;
 
-/* eslint-disable max-nested-callbacks */
 describe("Config", () => {
   afterEach(() => {
     Object.keys(Config.ModelMap).forEach((resourceKey) => {
