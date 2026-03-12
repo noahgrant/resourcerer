@@ -26,3 +26,4 @@ jobs:
       - run: npm ci && npm i react@18 react-dom@18
       - run: npm run lint
       - run: npm test
+      - run: npm audit signatures
