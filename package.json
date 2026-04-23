@@ -1,6 +1,6 @@
 {
   "name": "resourcerer",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "repository": {
     "type": "git",
     "url": "github.com/noahgrant/resourcerer"
@@ -32,7 +32,12 @@
     "test:coverage": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --pool threads --poolOptions.threads.singleThread run"
   },
-  "exports": "./build/index.js",
+  "exports": {
+    ".": {
+      "types": "./resourcerer.d.ts",
+      "import": "./build/index.js"
+    }
+  },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
