@@ -591,3 +591,5 @@ export default class Collection<
     }
   }
 }
+
+export type CollectionConstructor = abstract new (...args: any[]) => Collection;

@@ -2,7 +2,7 @@ import { getNestedValue, isDeepEqual, result, uniqueId, urlError } from "./utils
 
 import Events from "./events.js";
 import sync, { type SyncOptions } from "./sync.js";
-import Collection from "./collection.js";
+import Collection, { type CollectionConstructor } from "./collection.js";
 import { NestedKeys, ResourceConfigObj } from "./types.js";
 import CanonicalModel from "./canonical-model.js";
 import CanonicalModelCache from "./canonical-model-cache.js";
@@ -346,9 +346,10 @@ export default class Model<
           Promise.resolve([])
         : this.sync(this as Model | Collection, { method: "DELETE", ...options }),
       collection = this.collection;
+    // store as a variable because once removed, there is no collection field on the model
+    const CollectionClass = collection?.constructor as CollectionConstructor | undefined;
 
     if (!options.wait) {
-      this.triggerUpdate();
       this.collection?.remove(this, { silent: true });
     }
 
@@ -357,6 +358,10 @@ export default class Model<
         if (options.wait && !this.isNew()) {
           this.triggerUpdate();
           this.collection?.remove(this, { silent: true });
+        }
+
+        if (!this.isNew()) {
+          this._removePeerSubscribers(CollectionClass);
         }
 
         // model orphans with subscriptions will never have a chance to unsubscribe automatically.
@@ -476,9 +481,36 @@ export default class Model<
   }
 
   /**
-   * This will get called when this model is set. It then needs to update any canonical models
-   * it is subscribed to.
+   * When a model with subscriptions is deleted, we know that we can remove any model with that id
+   * from an identical Collection class (think of two Collection instances that are filtered
+   * differently).
+   *
+   * We do have to run through our subscriptions and pick out our CanonicalModel class. It could be
+   * as easy as a static CanonicalModel property. Or it could be in our subscriptions array.
    */
+  _removePeerSubscribers(CollectionClass?: CollectionConstructor) {
+    if (!CollectionClass) {
+      return;
+    }
+
+    const subscriptions = this._getSubscriptions();
+    const idAttribute = (this.constructor as typeof Model).idAttribute;
+
+    for (const { Model: CanonicalModel, idField = idAttribute } of subscriptions) {
+      if (idField !== idAttribute) {
+        continue;
+      }
+
+      const id = getNestedValue(this.toJSON(), idField);
+
+      if (id && !this.isEmptyModel) {
+        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
+
+        canonicalModel.removeSubscribersFromCollection(CollectionClass, this);
+      }
+    }
+  }
+
   _updateSubscriptions(attrs: Partial<T> = {}, options: SetOptions = {}): void {
     const subscriptions = this._getSubscriptions();
     const idAttribute = (this.constructor as typeof Model).idAttribute;

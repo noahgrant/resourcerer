@@ -19,6 +19,7 @@
     "strictPropertyInitialization": false,
     "noFallthroughCasesInSwitch": true,
     "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
     "noImplicitOverride": false,
     "noImplicitReturns": false,
     "noImplicitThis": true,
