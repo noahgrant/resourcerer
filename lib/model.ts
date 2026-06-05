@@ -350,6 +350,7 @@ export default class Model<
     const CollectionClass = collection?.constructor as CollectionConstructor | undefined;
 
     if (!options.wait) {
+      this.triggerUpdate();
       this.collection?.remove(this, { silent: true });
     }
 

@@ -73,7 +73,7 @@ describe("Events", () => {
       var request;
 
       request = model.destroy();
-      expect(callback).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalled();
 
       await request;
       expect(callback).toHaveBeenCalledTimes(1);
@@ -82,7 +82,8 @@ describe("Events", () => {
       sync.default.mockRejectedValue({});
 
       await model.destroy().catch(() => false);
-      expect(callback).not.toHaveBeenCalled();
+      // gets called when model is added back to collection
+      expect(callback).toHaveBeenCalled();
       callback.mockClear();
 
       await model.destroy({ wait: true }).catch(() => false);

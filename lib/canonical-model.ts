@@ -56,14 +56,14 @@ export default class CanonicalModel<T extends Record<string, any>> extends Event
    * collection class from their collections, since we know it must no longer exist.
    * This keeps peer collection instances in sync.
    */
-  removeSubscribersFromCollection(collectionClass: CollectionConstructor, source: Model<any, any>) {
+  removeSubscribersFromCollection(CollectionClass: CollectionConstructor, source: Model<any, any>) {
     for (const { context } of this._callbacks) {
       const model = context as Model<any, any>;
 
       if (
         model !== source &&
         model.collection &&
-        model.collection.constructor === collectionClass
+        model.collection.constructor === CollectionClass
       ) {
         model.collection.remove(model);
       }

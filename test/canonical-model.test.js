@@ -55,12 +55,16 @@ describe("CanonicalModel", () => {
 
   describe("removeSubscribersFromCollection", () => {
     class UsersCollection extends Collection {
+      static CanonicalModel = CanonicalTestModel;
+
       url() {
         return "/users";
       }
     }
 
     class UserDetailsCollection extends Collection {
+      static CanonicalModel = CanonicalTestModel;
+
       url() {
         return "/user-details";
       }
@@ -79,6 +83,7 @@ describe("CanonicalModel", () => {
 
       canonicalModel.removeSubscribersFromCollection(UsersCollection, source);
 
+      // we didn't actually remove it from this collection, it's jus the source
       expect(activeUsers.has("1234")).toBe(true);
       expect(allUsers.has("1234")).toBe(false);
       expect(userDetails.has("1234")).toBe(true);
