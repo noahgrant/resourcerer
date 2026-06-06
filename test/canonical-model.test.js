@@ -1,4 +1,5 @@
-import CanonicalModelCache from "../lib/canonical-model-cache";
+import CanonicalModelCache, { canonicalModelCache } from "../lib/canonical-model-cache";
+import Collection from "../lib/collection";
 import Model from "../lib/model";
 import { vi } from "vitest";
 import CanonicalModel from "../lib/canonical-model";
@@ -12,6 +13,7 @@ describe("CanonicalModel", () => {
 
   afterEach(() => {
     callback.mockClear();
+    canonicalModelCache.clear();
   });
 
   describe("get", () => {
@@ -48,6 +50,43 @@ describe("CanonicalModel", () => {
         expect(model.toJSON()).toEqual({ two: { three: "four" } });
         expect(callback).toHaveBeenCalledWith(model.toJSON(), context);
       });
+    });
+  });
+
+  describe("removeSubscribersFromCollection", () => {
+    class UsersCollection extends Collection {
+      static CanonicalModel = CanonicalTestModel;
+
+      url() {
+        return "/users";
+      }
+    }
+
+    class UserDetailsCollection extends Collection {
+      static CanonicalModel = CanonicalTestModel;
+
+      url() {
+        return "/user-details";
+      }
+    }
+
+    it("removes peer models from the same collection class but not other collection classes", () => {
+      const canonicalModel = new CanonicalTestModel();
+      const activeUsers = new UsersCollection([{ id: "1234" }]);
+      const allUsers = new UsersCollection([{ id: "1234" }]);
+      const userDetails = new UserDetailsCollection([{ id: "1234" }]);
+      const source = activeUsers.get("1234");
+
+      canonicalModel.onUpdate(() => {}, activeUsers.get("1234"));
+      canonicalModel.onUpdate(() => {}, allUsers.get("1234"));
+      canonicalModel.onUpdate(() => {}, userDetails.get("1234"));
+
+      canonicalModel.removeSubscribersFromCollection(UsersCollection, source);
+
+      // we didn't actually remove it from this collection, it's jus the source
+      expect(activeUsers.has("1234")).toBe(true);
+      expect(allUsers.has("1234")).toBe(false);
+      expect(userDetails.has("1234")).toBe(true);
     });
   });
 

@@ -1,6 +1,7 @@
 import { isDeepEqual } from "./utils.js";
 import Events from "./events.js";
 import Model from "./model.js";
+import { type CollectionConstructor } from "./collection.js";
 import CanonicalModelCache from "./canonical-model-cache.js";
 
 /**
@@ -47,6 +48,25 @@ export default class CanonicalModel<T extends Record<string, any>> extends Event
       // the context is important here - we don't want to update the same model that just
       // set the canonical model's attributes in the first place
       this.triggerUpdate(this.toJSON(), context);
+    }
+  }
+
+  /**
+   * When a model is destroyed, remove any other subscribing models that belong to the same
+   * collection class from their collections, since we know it must no longer exist.
+   * This keeps peer collection instances in sync.
+   */
+  removeSubscribersFromCollection(CollectionClass: CollectionConstructor, source: Model<any, any>) {
+    for (const { context } of this._callbacks) {
+      const model = context as Model<any, any>;
+
+      if (
+        model !== source &&
+        model.collection &&
+        model.collection.constructor === CollectionClass
+      ) {
+        model.collection.remove(model);
+      }
     }
   }
 

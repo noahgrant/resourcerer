@@ -454,6 +454,180 @@ describe("Model", () => {
         expect(err).toEqual(response);
       }
     });
+
+    describe("peer collections", () => {
+      class CanonicalUserModel extends CanonicalModel {}
+
+      class UsersCollection extends Collection {
+        static CanonicalModel = CanonicalUserModel;
+
+        url() {
+          return "/users";
+        }
+      }
+
+      class UserDetailsCollection extends Collection {
+        static CanonicalModel = CanonicalUserModel;
+
+        url() {
+          return "/user-details";
+        }
+      }
+
+      afterEach(() => {
+        canonicalModelCache.clear();
+      });
+
+      it("removes the model from other instances of the same collection class after DELETE succeeds", async () => {
+        const activeUsers = new UsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new UsersCollection([{ id: "1234", name: "Bob" }]);
+        const userDetails = new UserDetailsCollection([{ id: "1234", name: "Bob" }]);
+
+        await activeUsers.get("1234").destroy();
+
+        expect(activeUsers.has("1234")).toBe(false);
+        expect(allUsers.has("1234")).toBe(false);
+        expect(userDetails.has("1234")).toBe(true);
+      });
+
+      it("removes peers only after the request resolves when `wait` is true", async () => {
+        const activeUsers = new UsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new UsersCollection([{ id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+        const request = model.destroy({ wait: true });
+
+        expect(allUsers.has("1234")).toBe(true);
+        await request;
+        expect(allUsers.has("1234")).toBe(false);
+      });
+
+      it("does not remove peers when the request rejects", async () => {
+        sync.default.mockRejectedValue(response);
+
+        const activeUsers = new UsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new UsersCollection([{ id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+
+        try {
+          await model.destroy();
+        } catch (err) {
+          expect(allUsers.has("1234")).toBe(true);
+          expect(err).toEqual(response);
+        }
+      });
+
+      it("removes peers when the canonical model is defined on the model subscriptions", async () => {
+        class User extends Model {
+          static subscriptions = [
+            {
+              Model: CanonicalUserModel,
+              toSource: (attrs) => attrs,
+              fromSource: (attrs) => attrs,
+            },
+          ];
+        }
+
+        class SubscriptionsUsersCollection extends Collection {
+          static Model = User;
+        }
+
+        const activeUsers = new SubscriptionsUsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new SubscriptionsUsersCollection([{ id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+        await model.destroy();
+
+        expect(allUsers.has("1234")).toBe(false);
+      });
+
+      it("does not remove peers when the canonical model id field and idAttribute are not equal", async () => {
+        class User extends Model {
+          static subscriptions = [
+            {
+              Model: CanonicalUserModel,
+              idField: "_id",
+              toSource: (attrs) => attrs,
+              fromSource: (attrs) => attrs,
+            },
+          ];
+        }
+
+        class SubscriptionsUsersCollection extends Collection {
+          static Model = User;
+        }
+
+        const activeUsers = new SubscriptionsUsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new SubscriptionsUsersCollection([{ id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+        await model.destroy();
+
+        // canonical model subscription has an id field that does not equal idAttribute,
+        // so it is not removed
+        expect(allUsers.has("1234")).toBe(true);
+      });
+
+      it("removes peers when the canonical model id field and idAttribute are not the default 'id'", async () => {
+        class User extends Model {
+          static subscriptions = [
+            {
+              Model: CanonicalUserModel,
+              idField: "_id",
+              toSource: (attrs) => attrs,
+              fromSource: (attrs) => attrs,
+            },
+          ];
+
+          static idAttribute = "_id";
+        }
+
+        class SubscriptionsUsersCollection extends Collection {
+          static Model = User;
+        }
+
+        const activeUsers = new SubscriptionsUsersCollection([{ _id: "1234", name: "Bob" }]);
+        const allUsers = new SubscriptionsUsersCollection([{ _id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+        await model.destroy();
+
+        expect(allUsers.has("1234")).toBe(false);
+      });
+
+      it("removes peers when the canonical model is defined on the collection", async () => {
+        class SubscriptionsUsersCollection extends Collection {
+          static CanonicalModel = CanonicalUserModel;
+        }
+
+        const activeUsers = new SubscriptionsUsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new SubscriptionsUsersCollection([{ id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+        await model.destroy();
+
+        expect(allUsers.has("1234")).toBe(false);
+      });
+
+      it("removes peers when the canonical model is defined on the model class", async () => {
+        class User extends Model {
+          static CanonicalModel = CanonicalUserModel;
+        }
+
+        class ModelUsersCollection extends Collection {
+          static Model = User;
+        }
+
+        const activeUsers = new ModelUsersCollection([{ id: "1234", name: "Bob" }]);
+        const allUsers = new ModelUsersCollection([{ id: "1234", name: "Bob" }]);
+
+        model = activeUsers.get("1234");
+        await model.destroy();
+
+        expect(allUsers.has("1234")).toBe(false);
+      });
+    });
   });
 
   describe("url", () => {
