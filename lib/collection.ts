@@ -296,6 +296,10 @@ export default class Collection<
     return this.models.map(predicate);
   }
 
+  forEach(predicate: (model: InstanceType<this["Model"]>) => void) {
+    this.models.forEach(predicate);
+  }
+
   find(predicate: (model: InstanceType<this["Model"]>) => boolean) {
     return this.models.find(predicate);
   }

@@ -224,6 +224,13 @@ map: (predicate: (Model) => any) => any[]
 
 Same signature as Array.prototype.map across a collection's models.
 
+### forEach
+```js
+forEach: (predicate: (Model) => void) => void
+```
+
+Same signature as Array.prototype.forEach across a collection's models.
+
 ### pluck
 ```js
 pluck: (attribute: string) => any[]
