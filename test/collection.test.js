@@ -411,6 +411,17 @@ describe("Collection", () => {
       });
     });
 
+    describe("forEach", () => {
+      it("runs a forEach function across the models", () => {
+        collection.forEach((model, i) => model.set({ index: i }));
+        expect(collection.toJSON()).toEqual([
+          { id: "model1", index: 0 },
+          { id: "model2", index: 1 },
+          { id: "model3", index: 2 },
+        ]);
+      });
+    });
+
     describe("find", () => {
       it("finds the first model that passes the predicate", () => {
         expect(collection.find((model, i) => i === 1)).toEqual(model2);
