@@ -21,7 +21,7 @@ Additional features include:
 * forced cache invalidation
 * updating a component when a resource updates
 * zero dependencies
-* < 6kB!
+* under 10kB gzipped!
 
 Getting started is easy:
 
@@ -136,7 +136,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
     1. [Changing Props](#changing-props)
     1. [Common Resource Config Options](#common-resource-config-options)
         1. [params](#params)
-        1. [options](#options)
+        1. [path](#path)
         1. [noncritical](#noncritical)
         1. [force](#force)
         1. [Custom Resource Names](#custom-resource-names)
@@ -144,19 +144,20 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
         1. [data](#data)
         1. [lazy](#lazy)
         1. [minDuration](#minduration) 
+        1. [fetch](#fetch)
         1. [dependsOn](#dependson)
         1. [provides](#provides)
     1. [Data mutations](#data-mutations)
     1. [Serial Requests](#serial-requests)
-    2. [Canonical Models](#canonical-models)
-    3. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
-    4. [Using resourcerer with TypeScript](docs/typescript.md)
-    4. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
-    5. [Declarative Cache Keys](#declarative-cache-keys)
-    6. [Prefetch on Hover](#prefetch-on-hover)
-    7. [Refetching](#refetching)
-    8. [Cache Invalidation](#cache-invalidation)
-    9. [Tracking Request Times](#tracking-request-times)
+    1. [Canonical Models](#canonical-models)
+    1. [Differences between useResources and withResources](#differences-between-useresources-and-withresources)
+    1. [Using resourcerer with TypeScript](docs/typescript.md)
+    1. [Caching Resources with ModelCache](#caching-resources-with-modelcache)
+    1. [Declarative Cache Keys](#declarative-cache-keys)
+    1. [Prefetch on Hover](#prefetch-on-hover)
+    1. [Refetching](#refetching)
+    1. [Cache Invalidation](#cache-invalidation)
+    1. [Tracking Request Times](#tracking-request-times)
 1. [Configuring resourcerer](#configuring-resourcerer)
 1. [FAQs](#faqs)
 1. [Migrating to v2.0](#migrating-to-v20)
@@ -166,7 +167,7 @@ There's a lot there, so let's unpack that a bit. There's also a lot more that we
 
 `$ npm i resourcerer` or `yarn add resourcerer`
 
-`resourcerer` requires on React >= 16.8 but has no external dependencies.
+`resourcerer` requires React >= 16.14 (peer range includes React 17, 18, and 19) but has no external dependencies.
 
 Note: Resourcerer is written in TypeScript and is compiled to ESNext. It does no further transpiling&mdash;including `import`/`export`.
 If you are using TypeScript yourself, this won't be a problem. If you're not, and you're not babelifying (or similar) your `node_modules` folder, you'll need to make an exception for this package, ie:
@@ -256,7 +257,8 @@ Back to the executor function. In the example above, you see it returns an objec
 Of course, in our initial example, the `todosCollection` won’t be populated with data immediately since, after all, the resource has to be fetched from the API.  Some of the most **significant** and most common React UI states we utilize are whether a component’s critical resources have loaded entirely, whether any are still loading, or whether any have errored out. This is how we can appropriately cover our bases&mdash;i.e., we can ensure the component shows a loader while the resource is still in route, or if something goes wrong, we can ensure the component will still fail gracefully and not break the layout. To address these concerns, the `useResources` hook/`withResources` HOC gives you several loading state helper props. From our last example:
 
 
-- `todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/noahgrant/resourcerer/blob/06ed847a8d8d0daefd3ad1b7634d887767d338ac/lib/types.ts#L4). There will be one for each resource, and the property names will be equal to `${resourceKey}LoadingState`)
+- `todosLoadingState` (can be equal to any of the [LoadingStates constants](https://github.com/noahgrant/resourcerer/blob/main/lib/types.ts#L4). There will be one for each resource, and the property names will be equal to `${resourceKey}LoadingState`)
+- `todosStatus` {number} - the HTTP status code from the most recent response for that resource (one per resource as `${resourceKey}Status`)
 - `hasLoaded` {boolean} - all critical resources have successfully completed and are ready to be used by the component
 - `isLoading` {boolean} - any of the critical resources are still in the process of being fetched
 - `hasErrored` {boolean} - any of the critical resource requests did not complete successfully
@@ -494,7 +496,7 @@ As alluded to in the [Other Props](#other-props-returned-from-the-hookpassed-fro
 
 - De-prioritize fetching the resource until after all critical resources have been fetched
 - Remove the resource from consideration within the component-wide loading states (`hasLoaded`, `isLoading`, `hasErrored`), giving us the ability to render without waiting on those resources
-- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `Utils.hasLoaded`, `Utils.hasErrored`, and `Utils.isLoading` from `resourcerer`.
+- Can set our own UI logic around displaying noncritical data based on their individual loading states, ie `usersLoadingState`, which can be passed to the pure helper methods, `Utils.hasLoaded`, `Utils.hasErrored`, `Utils.isLoading`, and `Utils.isPending` from `resourcerer`.
   
   
 
@@ -520,7 +522,7 @@ This behavior is similar to the behavior you get with [cache invalidation](#cach
 Passing a `resourceKey: <ResourceKeys>` option allows you to pass a custom name as the `withResources` key, which will become the base name for component-related props passed down to the component. For example, this configuration:
 
 ```js
-const getResources = (props) => ({myRadTodos: {resourceKey: todos});
+const getResources = (props) => ({myRadTodos: {resourceKey: 'todos'}});
 
 export default function MyComponentWithTodos {
   const {
@@ -620,7 +622,7 @@ function TodoSearch(props) {
 
 // todo_search_item.jsx
 // the todoModel is never actually fetched here, it's only listened on, allowing any changes made elsewhere in the page to be reflected here.
-getResources = () => ({todo: {id: props.id, lazy: true}});
+getResources = () => ({todo: {data: {id: props.id, lazy: true}});
 
 function TodoSearchItem(props) {
   const {todoModel} = useResources(getResources, props);
@@ -637,7 +639,20 @@ If the todo model has been fetched already, we'll read straight from that. And i
 
 ### minDuration
 
-Sometimes requests can be _too_ fast for certain UIs. In these cases, spinners and other loading states can appear more like a jarring flicker than a helpful status indicator. For these, you can pass a `minDuration` equal to the minimum number of milliseconds that a request should take. This is great for [save and destroy](#data-mutations) requests. It will work for fetch requests via `useResources`, as well, but beware: if multiple components use the same resource and there are different (or missing) values for `minDuration`, this will cause a race condition.
+Sometimes requests can be _too_ fast for certain UIs. In these cases, spinners and other loading states can appear more like a jarring flicker than a helpful status indicator. For these, you can pass a `minDuration` equal to the minimum number of milliseconds that a request should take on [save and destroy](#data-mutations) calls (for example `model.save(attrs, {minDuration: 300})`). It is not a resource config option and is not applied to fetches made through `useResources` / `withResources`.
+
+### fetch
+
+Pass `fetch: false` (or any expression that evaluates to false) to instantiate and cache a model **without** calling the network. Useful when composing a new resource client-side before it has an id, or when you already have data. See [Unfetched Resources](/docs/advanced_topics.md#unfetched-resources) and [Recaching newly-saved models](/docs/advanced_topics.md#recaching-newly-saved-models).
+
+```js
+const getResources = (props) => ({
+  todo: {
+    data: {id: props.id},
+    fetch: !!props.id
+  }
+});
+```
 
 ### dependsOn
 
@@ -645,7 +660,7 @@ See the section on [serial requests](#serial-requests).
 
 ### provides
 
-See the section on [serial requests](#serial-requests).
+See the section on [serial requests](#serial-requests). The `provides` function receives `(model, props)` and should return a map of prop names to values that get set via `setResourceState` for dependent resources.
 
 # Data Mutations
 
@@ -659,7 +674,7 @@ So far we've only discussed fetching data. But `resourcerer` also makes it very 
     function MyComponent(props) {
       const {myModel} = useResources(getResources, props),
             onSave = () => myModel.save({foo: 'bar'})
-              .then([model]) => // ...)
+              .then(([model]) => // ...)
               .catch(() => alert('request failed'));
         
       return <button onClick={onSave}>Persist model</button>;
@@ -1236,7 +1251,7 @@ ResourcesConfig.set(configObj);
 
 * Can `resourcerer` do anything other than `GET` requests?
 
-    `resourcerer` only handles resource _fetching_ (i.e. calling [Model.prototype.fetch](/docs/model.md#fetch)). Note that this is not the same as only making `GET` requests; pass in a `method: 'POST'` property in a resource's config to turn the `params` property into a POST body, for example, when making a search request.
+    `resourcerer` only handles resource _fetching_ (i.e. calling [Model.prototype.fetch](/docs/model.md#fetch)), which defaults to `GET`. If a resource needs a different HTTP method (for example a search endpoint that takes a POST body), override [`fetch`](/docs/model.md#fetch) on that Model/Collection class once—do not set `method` in each resource config.
     
     For write operations, use Models' [`save`](/docs/model.md#save) and [`destroy`](/docs/model.md#destroy) methods directly:
     

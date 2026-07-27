@@ -51,6 +51,15 @@ The number of milliseconds to keep all collections of this class in the cache af
 
 A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this collection's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
+### `static` invalidates
+`ResourceKeys[]`
+
+Same as [Model `static invalidates`](/docs/model.md#static-invalidates): resource keys to remove from the cache after a successful write that goes through this collection's shared save/destroy invalidation path. Prefer declarative invalidation when related resources should clear together; use imperative [`invalidate`](https://github.com/noahgrant/resourcerer#cache-invalidation) for one-off cases.
+
+### `static` subscriptions / `static` CanonicalModel
+
+For keeping denormalized fields in sync across models, see [Canonical Models](https://github.com/noahgrant/resourcerer#canonical-models).
+
 ### `static` idAttribute
 
 Use this as a shortcut when you don't want to define a custom Model class just because the collection doesn't contain the default id field (which is `'id'`), ie:
@@ -70,7 +79,7 @@ static idAttribute = 'name'
 constructor: (models: Array<Record<string, any> | Model>, options: object) => void
 ```
 
-The Collection's constructor gets passed any initial models, as well as the [options](https://github.com/noahgrant/resourcerer#path) from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
+The Collection's constructor gets passed any initial models, as well as the [`path`](https://github.com/noahgrant/resourcerer#path) fields from the executor function. Override this to add some custom logic or instance variables for the collection&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```js
 class MyCollection extends Collection<ModelType> {
@@ -87,7 +96,7 @@ class MyCollection extends Collection<ModelType> {
 }
 ```
 
-Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other `path` fields (the ones passed from the executor function [options](https://github.com/noahgrant/resourcerer#path) property) are passed to the `url` as shown in the example above.
+Passing in a `Model` option or a `comparator` option to an instance's constructor will override the statically defined properties on its constructor. Other [`path`](https://github.com/noahgrant/resourcerer#path) fields from the executor function are passed to the `url` as shown in the example above.
 
 
 ### add
@@ -95,14 +104,14 @@ Passing in a `Model` option or a `comparator` option to an instance's constructo
 add: (models: Record<string, any> | Model | Array<Record<string, any> | Model>, options: Object) => this
 ```
 
-Add a new entry or list of entries into the collection. Each entry can be an object of data or a Model instance. Will trigger an update in all subscribed components unless the `trigger: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse](/docs/model.md#parse) method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
+Add a new entry or list of entries into the collection. Each entry can be an object of data or a Model instance. Will trigger an update in all subscribed components unless the `silent: true` option is passed. You can also pass a `parse: true` option to run the model through its [parse](/docs/model.md#parse) method before setting its properties. If an entry already exists on the collection, the new properties will get merged into its existing model.
 
 ### create
 ```js
 create: (model: Record<string, any> | Model, options: Object) => Promise<[Model, Response]>
 ```
 
-Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. Because it also instantiates the new model, be sure to pass any path params you need in your url as the options argument (the same [options](https://github.com/noahgrant/resourcerer#options) in the resource config object). The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
+Adds a new entry to the collection and persists it to the server. This is literally the equivalent to calling `collection.add()` and then `model.save()`. Because it also instantiates the new model, be sure to pass any path params you need in your url as the options argument (the same [`path`](https://github.com/noahgrant/resourcerer#path) fields in the resource config object). The returned Promise is the same as is returned from [Model#save](/docs/model.md#save). If the request errors, the model is auto-removed from the collection. Pass the `wait: true` option to wait to add the new model until after the save request returns. Subscribed components will update when the new entry is added as well as when the request returns.
 
 ***All .create() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 
@@ -121,7 +130,7 @@ This is the method that `resourcerer` uses internally to get server data and set
 get: (identifier: string | number) => Model | undefined
 ```
 
-Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or, equivalently as a shortcut, by the collection's own static [`modelIdAttribute`](#static-modelidattribute) property. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
+Collections index their Model instances by either the Model's [`idAttribute`](/docs/model.md#static-idattribute) or, equivalently as a shortcut, by the collection's own static [`idAttribute`](#static-idattribute) property. The `.get()` method takes an id value and returns the quick-lookup model instance if one exists.  
 
 ### has  
 ```js

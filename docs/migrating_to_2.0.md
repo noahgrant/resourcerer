@@ -35,14 +35,16 @@ The core methodology and functionality of `resourcerer` has not changed in versi
 
 1. The utility methods `haveAllLoaded`, `areAnyLoading`, and `haveAnyErrored` have been placed under a top-level `Utils` object and are now named `Utils.hasLoaded`, `Utils.isLoading`, and `Utils.hasErrored`, resepectively, to provide consistency with other loading state names. Their signatures have not changed.
 
-1. The [refetch](/#refetching) method returned from `useResources` no longer accepts a function as an argument. Pass an array of resource keys directly instead:
+1. The [refetch](/#refetching) method returned from `useResources` no longer accepts a function as an argument. Pass a resource key or an array of resource keys directly instead:
 
     ```js
     // previously
     refetch(({todos}) => [todos]);
 
     // now
-    refetch([todos]);
+    refetch("todos");
+    // or
+    refetch(["todos"]);
     ```
 
 1. [dependsOn](/#serial-requests) is no longer an array of strings that checks existence of prop fields. To be more versatile, it is a boolean, and will fetch the resource whenever its conditions evaluate to true:

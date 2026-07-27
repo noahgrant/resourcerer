@@ -41,7 +41,7 @@ interface Todo {
   name: string;
 }
 
-export default TodosCollection extends Collection<Todo> {
+export default class TodosCollection extends Collection<Todo> {
   url({userId}: {userId: string}) {
     return `/${userId}/todos`;
   }
@@ -98,7 +98,7 @@ function MyComponent(props) {
       } = useResources(({userId}) => ({todos: {params: {userId}}}), {ursdI: "oops"});
     ```
 
-   But inlining executor functions leaves you susceptible to [the subtle bug where you are always reading from current props](https://github.com/noahgrant/resourcerer/tree/typescript?tab=readme-ov-file#differences-between-useresources-and-withresources). Executor functions can also get pretty involved, so it's nice to extract it. You still get good type hints, but you'll need to type out your props:
+   But inlining executor functions leaves you susceptible to [the subtle bug where you are always reading from current props](https://github.com/noahgrant/resourcerer#differences-between-useresources-and-withresources). Executor functions can also get pretty involved, so it's nice to extract it. You still get good type hints, but you'll need to type out your props:
 
     ```tsx
     // type out these props

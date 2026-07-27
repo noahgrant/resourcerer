@@ -56,13 +56,14 @@ type ModelState = Record<string, ModelInstanceType>;
  *   * params {object} - query params for the fetch call passed to the `request`
  *   * path {object} - params passed to the `url` function
  *   * options {object} - generic options object passed to the model constructor
- *   * dependsOn {string[]} - prop fields required to be present before the
- *        resource will fetch
+ *   * dependsOn {boolean} - when false/falsy, the resource stays PENDING and does
+ *        not fetch until the condition becomes true
  *   * provides {(model, props) => Record<string, any>} - list of props that a resource
  *        provides, for example, for dependent resources (serial requests). Each
  *        key in the return object is set as state
  *   * force {boolean} - force a fetch request on mount regardless of whether the
  *        model is already in the cache
+ *   * fetch {boolean} - when false, instantiate/cache the model without fetching
  *   * prefetch {object} - an individual map of expected future props to fetch
  *        a new resource and store it in the cache. it will not, however, get
  *        passed down to the child (no loading states, either)

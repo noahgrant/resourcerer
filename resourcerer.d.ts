@@ -16,6 +16,7 @@ declare module "resourcerer" {
   export type ResourceConfigObj<K extends ResourceKeys> = {
     data?: Partial<GetModelOptions<InstanceType<ModelMap[K]>>[0]>;
     dependsOn?: boolean;
+    fetch?: boolean;
     force?: boolean;
     lazy?: boolean;
     noncritical?: boolean;
@@ -29,6 +30,7 @@ declare module "resourcerer" {
       model: InstanceType<ModelMap[K]>,
       props: Record<string, any>
     ) => { [key: string]: any };
+    resourceKey?: ResourceKeys;
   };
 
   export interface ModelMap {}
