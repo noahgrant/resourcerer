@@ -24,19 +24,20 @@ it('runs a test', () => {
 
 ### Changing resource loading states
 
-When using `resourcerer`, you are using React function components that have no backing instances (and thus whose return from `render` is `null`). Therefore, we can't assert any prop values on components and we can't navigate a DOM tree the way we can when using classes. However, we can simply mock out `useResources` itself to test functionality. Because the `withResources` HOC also uses `useResources` under the hood, this will work when testing both. Here's an example (using [jest](https://jestjs.io/) and [react testing library](https://testing-library.com/docs/react-testing-library/intro/)) for testing how a component that uses `useResources` looks under a loading state:
+When using `resourcerer`, you are using React function components that have no backing instances (and thus whose return from `render` is `null`). Therefore, we can't assert any prop values on components and we can't navigate a DOM tree the way we can when using classes. However, we can simply mock out `useResources` itself to test functionality. Because the `withResources` HOC also uses `useResources` under the hood, this will work when testing both. Here's an example (using [Vitest](https://vitest.dev/) or [Jest](https://jestjs.io/) and [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)) for testing how a component that uses `useResources` looks under a loading state:
 
 ```jsx
 import * as resourcerer from 'resourcerer';
 import {render} from '@testing-library/react';
+import {vi} from 'vitest'; // or use jest.spyOn with Jest
 
 // ...
 it('shows a loader when in a loading state', () => {
-  jest.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
+  vi.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
     ...props,
     hasLoaded: false,
     isLoading: true
-  ));
+  }));
 
   const {container} = render(<MyComponent />);
    
@@ -47,12 +48,12 @@ it('shows a loader when in a loading state', () => {
 This should solve most of your use cases; you can return any mocked info you want, such as a noncritical loading state. You can also mock out `setResourceState`:
 
 ```jsx
- var setResourceMock = jest.fn();
+ var setResourceMock = vi.fn();
  
- jest.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
+ vi.spyOn(resourcerer, 'useResources').mockImplementation((fn, props) => ({
    ...props,
    setResourceState: setResourceMock
- ));
+ }));
 ```
 
 Keep in mind that in this case the calls to `setResourceState` won't actually go through, and so state won't persist. 

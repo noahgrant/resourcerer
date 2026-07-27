@@ -65,7 +65,14 @@ An object or function that returns object with attribute keys and their default 
 
 A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this model's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
+### `static` invalidates
+`ResourceKeys[]`
 
+List of resource keys whose cache entries should be removed after a successful [`save`](#save) or [`destroy`](#destroy) on this model. Prefer this for declarative invalidation of related resources; use the imperative [`invalidate`](https://github.com/noahgrant/resourcerer#cache-invalidation) helper when you need one-off control from a component.
+
+### `static` subscriptions / `static` CanonicalModel
+
+For keeping denormalized fields in sync across models, see [Canonical Models](https://github.com/noahgrant/resourcerer#canonical-models).
 
 ## Methods
 
@@ -75,7 +82,7 @@ A boolean or function that accepts a [resource configuration object](https://git
 constructor: (initialData: object, options: object) => void
 ```
 
-The Model's constructor gets passed any initial data, as well as the [options](https://github.com/noahgrant/resourcerer#options) from the executor function. Override this to add some custom logic or instance variables for the model&mdash;just be sure to pass the arguments to its `.super()` call, as well:
+The Model's constructor gets passed any initial data, as well as the [`path`](https://github.com/noahgrant/resourcerer#path) fields from the executor function. Override this to add some custom logic or instance variables for the model&mdash;just be sure to pass the arguments to its `.super()` call, as well:
 
 ```ts
 class MyModel extends Model<ModelType> {
@@ -91,7 +98,7 @@ class MyModel extends Model<ModelType> {
 }
 ```
 
-Note that `this.id` is automatically set to whichever value is passed in at the [`idAttribute`](#static-idattribute) key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set. Other [options](https://github.com/noahgrant/resourcerer#options) fields from the executor function are passed to the `url` as shown in the example above.
+Note that `this.id` is automatically set to whichever value is passed in at the [`idAttribute`](#static-idattribute) key (default: 'id'). Pass the `parse: true` option to have the data get run through the Model's `parse` method before getting set. Other [`path`](https://github.com/noahgrant/resourcerer#path) fields from the executor function are passed to the `url` as shown in the example above.
 
 
 ### toJSON
@@ -198,6 +205,20 @@ Use this to remove the send a DELETE request at this model's url to the server. 
 fetch: (options: Object) => Promise<[Model, Response]> 
 ```
 
-This is the method that `resourcerer` uses internally to get server data and set its parsed response as models on the collection. This should rarely need to be used in your application. Subscribed components will update when the request returns.
+This is the method that `resourcerer` uses internally to get server data and set its parsed response as attributes on the model. This should rarely need to be used in your application. Subscribed components will update when the request returns. Defaults to `GET`; override this method on a Model/Collection subclass when every fetch for that resource should use a different HTTP verb. `useResources` / `withResources` only forward `params` into this call.
 
 ***All .fetch() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
+
+### sync
+```js
+sync: (model: Model | Collection, options: SyncOptions) => Promise<[any, Response]>
+```
+
+Low-level networking used by [`fetch`](#fetch), [`save`](#save), and [`destroy`](#destroy). By default this is the package [`sync`](https://github.com/noahgrant/resourcerer/blob/main/lib/sync.ts) / `ajax` helpers (Fetch API under the hood). Override `Model.sync` (or `Collection.sync`) on a class or instance when you need custom transport. Common `SyncOptions` include:
+
+* `method` — HTTP method (`GET` / `POST` / `PUT` / `PATCH` / `DELETE`)
+* `params` — query string (GET) or JSON body (write methods)
+* `minDuration` — minimum request duration in milliseconds (useful on `save` / `destroy`; not forwarded by resourcerer resource configs)
+* `headers`, `url`, `attrs`, and anything else your [`prefilter`](https://github.com/noahgrant/resourcerer#configuring-resourcerer) / custom sync layer understands
+
+Auth headers and global error handling belong in [`ResourcesConfig.prefilter`](https://github.com/noahgrant/resourcerer#configuring-resourcerer).

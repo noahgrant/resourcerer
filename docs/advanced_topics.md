@@ -55,8 +55,9 @@ Using `dependsOn` in simple cases like the one highlighted in the [README](https
       
         // this assumes that the parent is handling the `hasErrored` state. if it is not, then
         // you may need to instead use:
+        // import {Utils} from 'resourcerer';
         shouldComponentUpdate(nextProps) {
-          return !(nextProps.isLoading || areAnyPending(nextProps.myDependentLoadingState));
+          return !(nextProps.isLoading || Utils.isPending(nextProps.myDependentLoadingState));
         }
         ```
 
@@ -116,7 +117,20 @@ In this case, when the component is used as an order component (denoted by the p
 
 For all other uses of dependent resources, we should use `dependsOn`.
 
+## Unfetched Resources
 
+Sometimes you want a Model instance in the cache _without_ hitting the network—for example, while composing a new resource in a form before it has an id. Pass `fetch: false` (or a boolean expression that evaluates to false) in the resource config:
+
+```js
+const getResources = (props) => ({
+  todo: {
+    data: {id: props.id},
+    fetch: !!props.id
+  }
+});
+```
+
+When `fetch` is false, resourcerer still constructs and caches the model (initialized from `data`) and returns it to your component, but it does not call `model.fetch()`. See [Recaching newly-saved models](#recaching-newly-saved-models) for the common create-then-navigate pattern that builds on this.
 
 ## Loading Overlays
 

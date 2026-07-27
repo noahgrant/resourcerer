@@ -21,6 +21,7 @@ export type WithModelSuffix<K extends string, C> =
 export type ResourceConfigObj = {
   data?: { [key: string]: any };
   dependsOn?: boolean;
+  fetch?: boolean;
   force?: boolean;
   lazy?: boolean;
   resourceKey?: ResourceKeys;
@@ -56,7 +57,7 @@ export type UseResourcesResponse = {
   hasErrored: boolean;
   hasLoaded: boolean;
   hasInitiallyLoaded: boolean;
-  refetch: (keys: ResourceKeys[]) => void;
+  refetch: (keys: ResourceKeys | ResourceKeys[]) => void;
   invalidate: typeof invalidate;
   setResourceState(newState: { [key: string]: any }): void;
 };
