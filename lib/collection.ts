@@ -7,7 +7,7 @@ import Model, {
   type SetOptions,
 } from "./model.js";
 import sync, { type SyncOptions } from "./sync.js";
-import { ResourceConfigObj } from "./types.js";
+import { ResourceConfigObj, ResourceKeys } from "./types.js";
 import CanonicalModelConstructor from "./canonical-model.js";
 
 type CSetOptions = {
@@ -141,6 +141,12 @@ export default class Collection<
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
   static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
+
+  /**
+   * Use this to list resource keys that should be invalidated from the ModelCache after any
+   * successful write request (save or destroy) on a model belonging to this collection.
+   */
+  static invalidates: ResourceKeys[] = [];
 
   /**
    * Similar to the method for an individual model, this maps through each model in the collection
