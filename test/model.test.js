@@ -1,4 +1,5 @@
 import * as sync from "../lib/sync";
+import * as modelCache from "../lib/model-cache";
 import CanonicalModel from "../lib/canonical-model";
 import { canonicalModelCache } from "../lib/canonical-model-cache";
 
@@ -1154,6 +1155,126 @@ describe("Model", () => {
           fromSource: expect.any(Function),
         },
       ]);
+    });
+  });
+
+  describe("invalidates", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.spyOn(modelCache, "invalidate");
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      modelCache.invalidate.mockRestore();
+    });
+
+    it("has an empty invalidates list by default", () => {
+      expect(Model.invalidates).toEqual([]);
+    });
+
+    it("does not call invalidate after save when invalidates is empty", async () => {
+      model = new Model();
+      await model.save();
+      vi.runAllTimers();
+      expect(modelCache.invalidate).not.toHaveBeenCalled();
+    });
+
+    it("calls invalidate with the model's invalidates keys after a successful save", async () => {
+      class _Model extends Model {
+        static invalidates = ["todos", "user"];
+      }
+
+      model = new _Model();
+      await model.save();
+      expect(modelCache.invalidate).not.toHaveBeenCalled();
+
+      vi.runAllTimers();
+      expect(modelCache.invalidate).toHaveBeenCalledWith(["todos", "user"]);
+    });
+
+    it("calls invalidate with the model's invalidates keys after a successful destroy", async () => {
+      class _Model extends Model {
+        static invalidates = ["todos"];
+      }
+
+      model = new _Model({ id: "1234" });
+      await model.destroy();
+      expect(modelCache.invalidate).not.toHaveBeenCalled();
+
+      vi.runAllTimers();
+      expect(modelCache.invalidate).toHaveBeenCalledWith(["todos"]);
+    });
+
+    it("does not call invalidate after a failed save", async () => {
+      class _Model extends Model {
+        static invalidates = ["todos"];
+      }
+
+      sync.default.mockRejectedValue(new Error("failed"));
+      model = new _Model();
+
+      try {
+        await model.save();
+      } catch (_) {
+        // expected
+      }
+
+      vi.runAllTimers();
+      expect(modelCache.invalidate).not.toHaveBeenCalled();
+    });
+
+    it("does not call invalidate after a failed destroy", async () => {
+      class _Model extends Model {
+        static invalidates = ["todos"];
+      }
+
+      sync.default.mockRejectedValue(new Error("failed"));
+      model = new _Model({ id: "1234" });
+
+      try {
+        await model.destroy();
+      } catch (_) {
+        // expected
+      }
+
+      vi.runAllTimers();
+      expect(modelCache.invalidate).not.toHaveBeenCalled();
+    });
+
+    it("includes invalidates keys from the parent collection", async () => {
+      class _Model extends Model {
+        static invalidates = ["todos"];
+      }
+
+      class _Collection extends Collection {
+        static invalidates = ["user"];
+      }
+
+      collection = new _Collection();
+      model = new _Model({ id: "1234" }, { collection });
+      await model.save();
+      vi.runAllTimers();
+      expect(modelCache.invalidate).toHaveBeenCalledWith(["todos", "user"]);
+    });
+
+    it("defers invalidation so refetch can still find the model in the same .then() chain", async () => {
+      class _Model extends Model {
+        static invalidates = ["todos"];
+      }
+
+      model = new _Model();
+
+      let modelStillInCacheDuringSave = false;
+
+      await model.save().then(() => {
+        modelStillInCacheDuringSave = true;
+        expect(modelCache.invalidate).not.toHaveBeenCalled();
+      });
+
+      expect(modelStillInCacheDuringSave).toBe(true);
+      vi.runAllTimers();
+      expect(modelCache.invalidate).toHaveBeenCalled();
     });
   });
 });

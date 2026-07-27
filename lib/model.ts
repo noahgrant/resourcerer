@@ -3,7 +3,8 @@ import { getNestedValue, isDeepEqual, result, uniqueId, urlError } from "./utils
 import Events from "./events.js";
 import sync, { type SyncOptions } from "./sync.js";
 import Collection, { type CollectionConstructor } from "./collection.js";
-import { NestedKeys, ResourceConfigObj } from "./types.js";
+import { NestedKeys, ResourceConfigObj, ResourceKeys } from "./types.js";
+import { invalidate } from "./model-cache.js";
 import CanonicalModel from "./canonical-model.js";
 import CanonicalModelCache from "./canonical-model-cache.js";
 
@@ -152,6 +153,15 @@ export default class Model<
   static subscriptions: CanonicalModelSubscription[] = [];
 
   static CanonicalModel: (new (...args: any[]) => CanonicalModel<any>) | null = null;
+
+  /**
+   * Use this to list resource keys that should be invalidated from the ModelCache after any
+   * successful write request (save or destroy) on this model or its parent collection. Because
+   * invalidation and refetch can happen in the same JS stack, the invalidation is deferred via
+   * setTimeout so that any refetch() calls in the same .then() chain can still find the model
+   * in the cache before it is removed.
+   */
+  static invalidates: ResourceKeys[] = [];
 
   /**
    * Returns a copy of the model's `attributes` object. Use this method to get the current entire
@@ -320,6 +330,7 @@ export default class Model<
         this.set(serverAttrs, { silent: true, ...options });
         // sync update
         this.triggerUpdate();
+        this._invalidateRelated();
 
         return [this, response] as [this, Response];
       })
@@ -367,6 +378,7 @@ export default class Model<
 
         // model orphans with subscriptions will never have a chance to unsubscribe automatically.
         this.unsubscribe();
+        this._invalidateRelated();
 
         return [this, response] as [this, Response];
       })
@@ -530,6 +542,19 @@ export default class Model<
           options,
         );
       }
+    }
+  }
+
+  _invalidateRelated() {
+    const keys = [
+      ...(this.constructor as typeof Model).invalidates,
+      ...((this.collection?.constructor as typeof Collection)?.invalidates ?? []),
+    ];
+
+    if (keys.length) {
+      // Defer so that any refetch() calls made by user code in the same .then()
+      // chain can still find the model in the cache before we remove it.
+      window.setTimeout(() => invalidate(keys), 0);
     }
   }
 
