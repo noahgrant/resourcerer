@@ -7,6 +7,7 @@ import { NestedKeys, ResourceConfigObj, ResourceKeys } from "./types.js";
 import { invalidate } from "./model-cache.js";
 import CanonicalModel from "./canonical-model.js";
 import CanonicalModelCache from "./canonical-model-cache.js";
+import { ResourcesConfig } from "./config.js";
 
 export type ConstructorOptions = {
   collection?: Collection;
@@ -67,6 +68,7 @@ export default class Model<
   refetching?: boolean;
   measure?: boolean | ((config: ResourceConfigObj) => boolean);
   isEmptyModel?: boolean;
+  private saveRequestId = 0;
 
   /**
    * @param {object} attributes - initial server data representation to be kept on the model
@@ -149,6 +151,12 @@ export default class Model<
    * boolean. If the latter, it takes a the resource config object as an argument.
    */
   static measure: boolean | ((config: ResourceConfigObj) => boolean) = false;
+
+  /**
+   * When true, overlapping `.save()` calls on the same model instance ignore stale
+   * responses. Overridden by `ResourcesConfig.latestWins` and per-call `latestWins`.
+   */
+  static latestWins?: boolean;
 
   static subscriptions: CanonicalModelSubscription[] = [];
 
@@ -294,11 +302,19 @@ export default class Model<
    */
   save(
     attrs: Partial<T>,
-    options: { wait?: boolean; patch?: boolean } & SyncOptions & SetOptions = {},
+    options: { wait?: boolean; patch?: boolean; latestWins?: boolean } & SyncOptions & SetOptions = {},
   ): Promise<[this, Response]> {
     const previousAttributes = this.toJSON();
 
     options = { parse: true, ...options };
+    const latestWins =
+      options.latestWins ??
+      (this.constructor as typeof Model).latestWins ??
+      ResourcesConfig.latestWins ??
+      false;
+    const requestId = latestWins ? ++this.saveRequestId : null;
+    const isStale = () => latestWins && requestId !== this.saveRequestId;
+
     attrs = attrs || this.toJSON();
 
     // If we're not waiting and attributes exist, save acts as `set(attr).save(null, opts)`
@@ -319,6 +335,10 @@ export default class Model<
 
     return this.sync(this as Model | Collection, options)
       .then(([json, response]) => {
+        if (isStale()) {
+          return new Promise<[this, Response]>(() => {});
+        }
+
         let serverAttrs = options.parse ? this.parse(json, options) : json;
 
         if (options.wait) {
@@ -335,6 +355,10 @@ export default class Model<
         return [this, response] as [this, Response];
       })
       .catch((response) => {
+        if (isStale()) {
+          return new Promise<[this, Response]>(() => {});
+        }
+
         if (!options.wait) {
           // keep the clear silent so that we only render when we reset attributes
           this.clear({ silent: true }).set(previousAttributes, options);

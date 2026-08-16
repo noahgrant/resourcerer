@@ -65,6 +65,11 @@ An object or function that returns object with attribute keys and their default 
 
 A boolean or function that accepts a [resource configuration object](https://github.com/noahgrant/resourcerer#nomenclature) and returns a boolean, telling resourcerer to track this model's request time and report it via the `track` method setup in [configuration](https://github.com/noahgrant/resourcerer#configuring-resourcerer).
 
+### `static` latestWins
+`boolean`. Default: inherit from `ResourcesConfig.latestWins`, then `false`.
+
+When `true`, overlapping [`.save()`](#save) calls on the same model instance ignore stale responses. Overridden by per-call `options.latestWins`. See [`save`](#save) for resolution order and behavior.
+
 ### `static` invalidates
 `ResourceKeys[]`
 
@@ -184,10 +189,12 @@ Handy helper method to only return a subset of a model's data, as opposed to the
 
 ### save
 ```js
-save: (attrs: Partial<ModelType>, options?: {wait?: boolean; patch?: boolean}) => Promise<[Model, Response]>
+save: (attrs: Partial<ModelType>, options?: {wait?: boolean; patch?: boolean; latestWins?: boolean}) => Promise<[Model, Response]>
 ```
 
 Use this to persist data mutations to the server. If [`.isNew()`](#isnew) is true, the request will be sent as a POST. Otherwise, it will be sent as a PUT with the whole resource, or a PATCH with only `data` sent over if the `patch: true` option is passed. When the request returns, the server data is passed through the [`.parse()`](#parse) method before being set on the model. Pass the `wait: true` option to wait to add the data until after the server responds. Subscribed components will update when the new entry is added as well as when the request returns. If the request errors, all changes will be reverted and components updated.
+
+Pass `{ latestWins: true }` when overlapping saves are expected (e.g. autosave). Resolved from the call (`options.latestWins`), then [`Model.latestWins`](#static-latestwins), then [`ResourcesConfig.latestWins`](https://github.com/noahgrant/resourcerer#configuring-resourcerer) (default: `false`). When enabled, only the most recently initiated save may update attributes, trigger subscribed re-renders, run [`invalidates`](#static-invalidates), or settle its returned Promise. Stale responses are ignored; their Promises remain pending. This aligns the UI with the latest client edit — it does not guarantee server write ordering. For form submits, prefer disabling the submit control until the save Promise settles; use `{ latestWins: false }` to opt out (e.g. a like button) when enabled globally or on the model class.
 
 ***All .save() calls must have a .catch attached, even if the rejection is swallowed. Omitting one risks an uncaught Promise rejection exception if the request fails.***
 

@@ -1119,6 +1119,8 @@ ResourcesConfig.set(configObj);
 
 * `cacheGracePeriod` (number in ms): the length of time a resource will be kept in the cache after being scheduled for removal (see the [caching section](#caching-resources-with-modelcache) for more). **Default:** 120000 (2 minutes). Note that each model class can provide its own timeout override.
 
+* `latestWins` (boolean): when `true`, overlapping `.save()` calls on the same model instance ignore stale responses. Overridden by [`Model.latestWins`](/docs/model.md#static-latestwins) and per-call `options.latestWins`. **Default:** `false` (unset). See [`Model#save`](/docs/model.md#save).
+
 * `errorBoundaryChild` (JSX/React.Element): the element or component that should be rendered in the ErrorBoundary included in every `withResources` wrapping. By default, a caught error renders this child:
 
     ```jsx

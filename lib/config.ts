@@ -5,6 +5,7 @@ import { type ModelMap as _ModelMap } from "./types.js";
 
 export interface ResourcererConfig {
   cacheGracePeriod: number;
+  latestWins?: boolean;
   errorBoundaryChild: ReactElement;
   stringify: (
     params: string | URLSearchParams | string[][] | Record<string, string>,

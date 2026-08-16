@@ -5,6 +5,7 @@ import { canonicalModelCache } from "../lib/canonical-model-cache";
 
 import Collection from "../lib/collection";
 import Model from "../lib/model";
+import { ResourcesConfig } from "../lib/config";
 import { vi } from "vitest";
 
 describe("Model", () => {
@@ -348,6 +349,238 @@ describe("Model", () => {
         expect(err).toEqual(response);
         expect(model.toJSON()).toEqual({ one: "one" });
       }
+    });
+
+    describe("latestWins", () => {
+      var resolveFirst, rejectFirst, firstResponse;
+
+      beforeEach(() => {
+        model = new _Model({ id: "1", one: "original" });
+        firstResponse = new Promise((resolve, reject) => {
+          resolveFirst = resolve;
+          rejectFirst = reject;
+        });
+      });
+
+      afterEach(() => {
+        ResourcesConfig.set({ latestWins: undefined });
+      });
+
+      it("ignores stale save responses that return out of order when latestWins is true", async () => {
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true });
+        await model.save({ one: "bob" }, { latestWins: true });
+
+        expect(model.get("one")).toEqual("bob");
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(model.get("one")).toEqual("bob");
+      });
+
+      it("does not change default save behavior when latestWins is omitted", async () => {
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        const saveA = model.save({ one: "alice" });
+        await model.save({ one: "bob" });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await saveA;
+
+        expect(model.get("one")).toEqual("alice");
+      });
+
+      it("call site latestWins false overrides static and config when overlapping", async () => {
+        ResourcesConfig.set({ latestWins: true });
+
+        class _LatestWinsModel extends Model {
+          static latestWins = true;
+
+          parse(resp) {
+            return resp.data;
+          }
+        }
+
+        model = new _LatestWinsModel({ id: "1", one: "original" });
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        const saveA = model.save({ one: "alice" }, { latestWins: false });
+        await model.save({ one: "bob" }, { latestWins: false });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await saveA;
+
+        expect(model.get("one")).toEqual("alice");
+      });
+
+      it("inherits static latestWins when call site omits it", async () => {
+        class _LatestWinsModel extends Model {
+          static latestWins = true;
+
+          parse(resp) {
+            return resp.data;
+          }
+        }
+
+        model = new _LatestWinsModel({ id: "1", one: "original" });
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" });
+        await model.save({ one: "bob" });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(model.get("one")).toEqual("bob");
+      });
+
+      it("inherits ResourcesConfig.latestWins when static unset", async () => {
+        ResourcesConfig.set({ latestWins: true });
+
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" });
+        await model.save({ one: "bob" });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(model.get("one")).toEqual("bob");
+      });
+
+      it("ignores stale save responses when wait is true", async () => {
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob", two: "two" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true, wait: true });
+        await model.save({ one: "bob" }, { latestWins: true, wait: true });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(model.get("one")).toEqual("bob");
+      });
+
+      it("does not revert attributes when a stale save errors", async () => {
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true });
+        await model.save({ one: "bob" }, { latestWins: true });
+
+        rejectFirst({ status: 500 });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(model.get("one")).toEqual("bob");
+      });
+
+      it("does not reject stale save promises on HTTP error", async () => {
+        var catchA = vi.fn();
+
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true }).catch(catchA);
+        await model.save({ one: "bob" }, { latestWins: true });
+
+        rejectFirst({ status: 500 });
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(catchA).not.toHaveBeenCalled();
+      });
+
+      it("does not resolve stale save promises on HTTP success", async () => {
+        var thenA = vi.fn();
+
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true }).then(thenA);
+        await model.save({ one: "bob" }, { latestWins: true });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await new Promise((r) => setTimeout(r, 0));
+
+        expect(thenA).not.toHaveBeenCalled();
+      });
+
+      it("resolves the latest save promise normally", async () => {
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true });
+        var result = await model.save({ one: "bob" }, { latestWins: true });
+
+        expect(result).toEqual([model, response]);
+      });
+
+      it("does not invalidate related resources for stale saves", async () => {
+        vi.spyOn(modelCache, "invalidate");
+        vi.useFakeTimers();
+
+        class _LatestWinsModel extends Model {
+          static latestWins = true;
+          static invalidates = ["todos"];
+
+          parse(resp) {
+            return resp.data;
+          }
+        }
+
+        model = new _LatestWinsModel({ id: "1", one: "original" });
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" });
+        await model.save({ one: "bob" });
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await Promise.resolve();
+        await Promise.resolve();
+        vi.runAllTimers();
+
+        expect(modelCache.invalidate).toHaveBeenCalledTimes(1);
+        expect(modelCache.invalidate).toHaveBeenCalledWith(["todos"]);
+
+        modelCache.invalidate.mockRestore();
+        vi.useRealTimers();
+      });
+
+      it("does not trigger extra onUpdate calls for stale saves", async () => {
+        model.onUpdate(callback);
+        sync.default
+          .mockImplementationOnce(() => firstResponse)
+          .mockResolvedValueOnce([{ data: { one: "bob" } }, response]);
+
+        model.save({ one: "alice" }, { latestWins: true });
+        await model.save({ one: "bob" }, { latestWins: true });
+
+        var callsAfterLatest = callback.mock.calls.length;
+
+        resolveFirst([{ data: { one: "alice" } }, response]);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(callback.mock.calls.length).toEqual(callsAfterLatest);
+      });
     });
   });
 
