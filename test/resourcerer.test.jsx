@@ -246,6 +246,47 @@ describe("resourcerer", () => {
 
       await waitsFor(() => dataChild.props.hasLoaded);
     });
+
+    it("if serial critical models already exist in the cache", async () => {
+      var decisionLogsCollection = new Collection();
+
+      ModelCache.put("decisions", new Collection());
+      ModelCache.put("user~fraudLevel=high_userId=noah", new Model());
+      ModelCache.put("actions", new Model());
+      ModelCache.put(
+        getCacheKey({ resourceKey: "decisionLogs", path: { logs: 42 } }),
+        decisionLogsCollection
+      );
+      dataChild = findDataChild(renderUseResources({ serial: true }));
+
+      expect(dataChild.props.serialProp).toEqual(42);
+      expect(dataChild.props.decisionLogsLoadingState).toEqual("loaded");
+      expect(dataChild.props.decisionLogsCollection).toEqual(decisionLogsCollection);
+      expect(dataChild.props.hasLoaded).toBe(true);
+      expect(dataChild.props.hasInitiallyLoaded).toBe(true);
+    });
+  });
+
+  it("'hasInitiallyLoaded' is set when a serial model resolves from the cache after its parent loads", async () => {
+    var decisionLogsCollection = new Collection(),
+      decisionLogsCacheKey = getCacheKey({ resourceKey: "decisionLogs", path: { logs: 42 } });
+
+    ModelCache.put("decisions", new Collection());
+    ModelCache.put("user~fraudLevel=high_userId=noah", new Model());
+    ModelCache.put(decisionLogsCacheKey, decisionLogsCollection);
+    dataChild = findDataChild(renderUseResources({ serial: true }));
+
+    expect(dataChild.props.actionsLoadingState).toEqual("loading");
+    expect(dataChild.props.decisionLogsLoadingState).toEqual("pending");
+    expect(dataChild.props.hasInitiallyLoaded).toBe(false);
+
+    await waitsFor(() => dataChild.props.decisionLogsLoadingState === "loaded");
+
+    expect(dataChild.props.hasInitiallyLoaded).toBe(true);
+    expect(dataChild.props.serialProp).toEqual(42);
+    expect(dataChild.props.decisionLogsCollection).toEqual(decisionLogsCollection);
+    expect(dataChild.props.hasLoaded).toBe(true);
+    expect(requestSpy.mock.calls.map(([key]) => key)).not.toContain(decisionLogsCacheKey);
   });
 
   it(
