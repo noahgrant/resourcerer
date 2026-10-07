@@ -266,15 +266,15 @@ export function useResources<T extends ResourceKeys, O extends Record<string, an
     }
   });
 
-  // set our updated resources' loading states to LOADING. but don't set if we're already in a
-  // loading state for that resource, because that's a pointless extra render. also, any resources
-  // that have lost their dependencies should go back to a pending state.
+  // render-phase loading state changes: resources that are newly loading, have lost their
+  // dependencies and gone back to pending, or have become loaded straight from the cache. don't
+  // dispatch if nothing has changed, because that's a pointless extra render.
   if (
     Object.keys(nextLoadingStates).some(
       (ky) => nextLoadingStates[ky as LoadingStateKey] !== loadingStates[ky as LoadingStateKey],
     )
   ) {
-    loaderDispatch({ type: "loading", payload: nextLoadingStates });
+    loaderDispatch({ type: "changed", payload: { loadingStates: nextLoadingStates, resources } });
   }
 
   /**
@@ -340,7 +340,7 @@ export function useResources<T extends ResourceKeys, O extends Record<string, an
 
             loaderDispatch({
               type: "error",
-              payload: { name, status },
+              payload: { name, status, resources },
             });
           });
         },
@@ -852,22 +852,26 @@ function partitionResources(
  * Reducer used in useResources for managing model loading states. Also includes
  * request status state (as in the loadingStates state object, requestStatuses
  * are keyed by the model name) since those are often set together (when
- * requests succeed or fail). Action types for this reducer are any of the
- * LoadingStates values: ERROR and LOADED are roughly identical, whereas
- * LOADING actually encompasses both LOADING and PENDING and is the only time
- * that we just pass loading states in directly to be set (a combination of
- * LOADING and PENDING).
+ * requests succeed or fail).
  *
- * Also sets the hasInitiallyLoaded state when all critical loading states have
- * loaded for the first time.
+ * Action types:
+ *   * ERROR and LOADED - a single resource's request has returned. These set
+ *       its loading state and request status.
+ *   * CHANGED - loading states changed during render, with no request involved:
+ *       resources that are newly LOADING, have gone back to PENDING, or are
+ *       LOADED straight from the cache. Any combination of states can be
+ *       passed in directly.
+ *
+ * Every action that can move a resource to LOADED also sets hasInitiallyLoaded
+ * when all critical loading states have loaded for the first time. Once true,
+ * it stays true.
  */
 type LoaderAction =
-  | { type: "error"; payload: { name: string; status: number } }
   | {
-      type: "loaded";
+      type: "error" | "loaded";
       payload: { name: string; status?: number; resources: Resource[] };
     }
-  | { type: "loading"; payload: LoadingStateObj };
+  | { type: "changed"; payload: { loadingStates: LoadingStateObj; resources: Resource[] } };
 type LoaderState = {
   loadingStates: LoadingStateObj;
   requestStatuses: Record<`${string}Status`, number>;
@@ -876,15 +880,13 @@ type LoaderState = {
 
 function loaderReducer(
   { loadingStates, requestStatuses, hasInitiallyLoaded }: LoaderState,
-  { type, payload = {} }: LoaderAction,
+  action: LoaderAction,
 ): LoaderState {
-  switch (type) {
+  switch (action.type) {
     case "error":
     case "loaded": {
-      // @ts-ignore
-      const { name, status, resources } = payload;
-
-      let nextLoadingStates = { ...loadingStates, [getResourceState(name)]: type };
+      const { name, status, resources } = action.payload;
+      const nextLoadingStates = { ...loadingStates, [getResourceState(name)]: action.type };
 
       return {
         loadingStates: nextLoadingStates,
@@ -894,17 +896,21 @@ function loaderReducer(
         },
         hasInitiallyLoaded:
           hasInitiallyLoaded ||
-          (type === "loaded" &&
-            hasLoaded(getCriticalLoadingStates(nextLoadingStates, resources)) &&
-            !hasInitiallyLoaded),
+          (action.type === "loaded" &&
+            hasLoaded(getCriticalLoadingStates(nextLoadingStates, resources))),
       };
     }
-    case "loading":
+    case "changed": {
+      const { loadingStates: changedLoadingStates, resources } = action.payload;
+      const nextLoadingStates = { ...loadingStates, ...changedLoadingStates };
+
       return {
-        loadingStates: { ...loadingStates, ...payload },
+        loadingStates: nextLoadingStates,
         requestStatuses,
-        hasInitiallyLoaded,
+        hasInitiallyLoaded:
+          hasInitiallyLoaded || hasLoaded(getCriticalLoadingStates(nextLoadingStates, resources)),
       };
+    }
     default:
       return { loadingStates, requestStatuses, hasInitiallyLoaded };
   }
