@@ -818,6 +818,94 @@ describe("Model", () => {
       });
     });
 
+    describe("when the canonical id changes", () => {
+      let todo, bob, alice;
+
+      beforeEach(() => {
+        bob = new SubscribingSourceModel({ _id: "bob", name: "Bob" });
+        alice = new SubscribingSourceModel({ _id: "alice", name: "Alice" });
+        todo = new SubscribingReferenceModel({
+          id: "todo1",
+          updated_by: { _id: "bob", name: "Bob" },
+        });
+      });
+
+      afterEach(() => {
+        todo.unsubscribe();
+        bob.unsubscribe();
+        alice.unsubscribe();
+      });
+
+      it("moves the subscription to the new id when set", () => {
+        todo.set({ updated_by: { _id: "alice", name: "Alice" } });
+
+        expect(canonicalCallbackContexts("bob")).not.toContain(todo);
+        expect(canonicalCallbackContexts("alice")).toContain(todo);
+
+        // updates from the old id no longer reach the model
+        bob.set({ name: "Bob 2" });
+        expect(todo.get("updated_by")).toEqual({ _id: "alice", name: "Alice" });
+
+        // updates from the new id do
+        alice.set({ name: "Alice 2" });
+        expect(todo.get("updated_by")).toEqual({ _id: "alice", name: "Alice 2" });
+      });
+
+      it("moves the subscription to the new id when saved", async () => {
+        vi.spyOn(todo, "sync").mockResolvedValue([
+          { id: "todo1", updated_by: { _id: "alice", name: "Alice" } },
+          {},
+        ]);
+
+        await todo.save({ title: "new title" });
+
+        expect(canonicalCallbackContexts("bob")).not.toContain(todo);
+        expect(canonicalCallbackContexts("alice")).toContain(todo);
+
+        bob.set({ name: "Bob 2" });
+        expect(todo.get("updated_by")).toEqual({ _id: "alice", name: "Alice" });
+
+        alice.set({ name: "Alice 2" });
+        expect(todo.get("updated_by")).toEqual({ _id: "alice", name: "Alice 2" });
+      });
+
+      it("moves the subscription to the new id when fetched", async () => {
+        vi.spyOn(todo, "sync").mockResolvedValue([
+          { id: "todo1", updated_by: { _id: "alice", name: "Alice" } },
+          {},
+        ]);
+
+        await todo.fetch();
+
+        expect(canonicalCallbackContexts("bob")).not.toContain(todo);
+        expect(canonicalCallbackContexts("alice")).toContain(todo);
+      });
+
+      it("removes the old canonical model from the cache if it has no more subscribers", () => {
+        bob.unsubscribe();
+        todo.set({ updated_by: { _id: "alice", name: "Alice" } });
+
+        expect(canonicalModelCache.get(CanonicalTestModel).get("bob")).not.toBeDefined();
+      });
+
+      it("unsubscribes from the old id when the id is removed", () => {
+        todo.set({ updated_by: null });
+
+        expect(canonicalCallbackContexts("bob")).not.toContain(todo);
+
+        bob.set({ name: "Bob 2" });
+        expect(todo.get("updated_by")).toBe(null);
+      });
+
+      it("does not subscribe the empty model", () => {
+        todo.isEmptyModel = true;
+        todo.set({ updated_by: { _id: "alice", name: "Alice" } });
+
+        expect(canonicalCallbackContexts("alice")).not.toContain(todo);
+        delete todo.isEmptyModel;
+      });
+    });
+
     describe("are not updated", () => {
       it("if the subscribe option is false", () => {
         sourceModel = new SubscribingSourceModel();
@@ -1289,6 +1377,23 @@ class SubscribingSourceModel extends Model {
       toSource: (attrs) => ({ _id: attrs._id, name: attrs.name }),
     },
   ];
+}
+
+// this model references a canonical model at a nested field that can be reassigned
+class SubscribingReferenceModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      idField: "updated_by._id",
+      fromSource: (attrs, current) => ({ updated_by: { ...current.updated_by, name: attrs.name } }),
+    },
+  ];
+}
+
+function canonicalCallbackContexts(id) {
+  return (canonicalModelCache.get(CanonicalTestModel)?.get(id)?._callbacks || []).map(
+    ({ context }) => context,
+  );
 }
 
 class SubscribingTargetModel extends Model {
