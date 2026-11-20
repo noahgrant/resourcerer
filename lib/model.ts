@@ -210,6 +210,11 @@ export default class Model<
    */
   set(attrs: Partial<T> = {}, options: SetOptions = {}): this {
     const prevId = this.id;
+    // keep a shallow copy of the previous attributes so that we can tell if any canonical model
+    // ids have changed after the set. a shallow copy is enough even for nested id fields (ie
+    // `updated_by.id`) because set replaces top-level values rather than mutating them, so the
+    // copy keeps references to the old nested objects.
+    const prevAttrs = { ...this.attributes };
     let hasSomethingChanged = false;
 
     // For each `set` attribute, update or delete the current value.
@@ -226,7 +231,7 @@ export default class Model<
     // the option.source check is to prevent infinite loops of updates
     // the option.subscribe check is to prevent updating from the empty model
     if (hasSomethingChanged && options.source !== "subscription" && options.subscribe !== false) {
-      this._updateSubscriptions(attrs, options);
+      this._updateSubscriptions(attrs, options, prevAttrs);
     }
 
     // Update the `id`.
@@ -447,27 +452,38 @@ export default class Model<
       const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs || {}, idField);
 
       if (id && !this.isEmptyModel) {
-        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
-
-        // remove any existing subscriptions. this could be more efficient.
-        canonicalModel.offUpdate(this);
-
-        /**
-         * This callback will get invoked when the canonical model is updated by any other
-         * subscribing model.
-         */
-        canonicalModel.onUpdate((canonicalAttrs, context) => {
-          // this will keep us from an infinite loop of updates
-          if (context === this || !fromSource) {
-            return;
-          }
-
-          this.set(fromSource(canonicalAttrs, this.toJSON()) as Partial<T>, {
-            source: "subscription",
-          });
-        }, this);
+        this._subscribeToCanonicalModel(CanonicalModel, id, fromSource);
       }
     }
+  }
+
+  /**
+   * Subscribes this model to updates on the canonical model instance at the given id.
+   */
+  _subscribeToCanonicalModel(
+    CanonicalModel: CanonicalModelSubscription["Model"],
+    id: string | number,
+    fromSource?: CanonicalModelSubscription["fromSource"],
+  ) {
+    const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
+
+    // remove any existing subscriptions. this could be more efficient.
+    canonicalModel.offUpdate(this);
+
+    /**
+     * This callback will get invoked when the canonical model is updated by any other
+     * subscribing model.
+     */
+    canonicalModel.onUpdate((canonicalAttrs, context) => {
+      // this will keep us from an infinite loop of updates
+      if (context === this || !fromSource) {
+        return;
+      }
+
+      this.set(fromSource(canonicalAttrs, this.toJSON()) as Partial<T>, {
+        source: "subscription",
+      });
+    }, this);
   }
 
   /**
@@ -524,15 +540,40 @@ export default class Model<
     }
   }
 
-  _updateSubscriptions(attrs: Partial<T> = {}, options: SetOptions = {}): void {
+  /**
+   * This gets called when a model's attributes are set (except when the update came from a
+   * canonical model). It does two things for each subscription:
+   *
+   * 1. If the canonical id has changed from what it was in `prevAttrs` (ie, an `updated_by.id`
+   *    field gets reassigned), it moves this model's subscription from the old canonical model
+   *    to the new one.
+   * 2. Pushes the update to the canonical model via the `toSource` function, if it exists.
+   */
+  _updateSubscriptions(
+    attrs: Partial<T> = {},
+    options: SetOptions = {},
+    prevAttrs?: Partial<T>,
+  ): void {
     const subscriptions = this._getSubscriptions();
     const idAttribute = (this.constructor as typeof Model).idAttribute;
 
-    for (const { Model: CanonicalModel, idField = idAttribute, toSource } of subscriptions) {
+    for (const {
+      Model: CanonicalModel,
+      idField = idAttribute,
+      toSource,
+      fromSource,
+    } of subscriptions) {
       const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs, idField);
+      const prevId = prevAttrs && getNestedValue(prevAttrs, idField);
 
-      // TODO: this breaks if the id itself changes because it's no longer keyed correctly in the cache
-      // should we prohibit the id attribute from being changed by not passing it to set?
+      if (prevId && prevId !== id && !this.isEmptyModel) {
+        CanonicalModelCache.getOrInsert(CanonicalModel, prevId).removeSubscription(this, prevId);
+
+        if (id) {
+          this._subscribeToCanonicalModel(CanonicalModel, id, fromSource);
+        }
+      }
+
       if (toSource && id && !this.isEmptyModel) {
         const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
 
