@@ -857,7 +857,7 @@ export class TodosCollection extends Collection<Todo> {
     // which model class we listen to updates on
     Model: CanonicalUserModel,
     // this is the field in Todo that corresponds to the id field for User. Dot-separated for nested strings.
-    // defaults to the idAttribute
+    // defaults to the idAttribute. can also be a function (see "Canonical ids in arrays" below)
     idField: "created_by.id",
     // takes an object of type User (the source) and returns the object that should be merged on the Todo
     fromSource: (attrs) => ({
@@ -909,7 +909,43 @@ export class UsersCollection extends Collection<User> {
 ```
 
 2. `subscriptions` and `CanonicalModel` static properties can also be set on `Model` definitions.
-   
+
+### Canonical ids in arrays
+
+Sometimes a model references many resources of the same type, like a Todo with a list of assignees:
+
+```js
+{
+  id: "todo1234",
+  name: "My Todo",
+  assignees: [{id: "user1234", name: "Bob Donut"}, {id: "user5678", name: "Alice Bagel"}]
+}
+```
+
+A dot-separated `idField` can't reach into an array, so `idField` can also be a function that returns the id&mdash;or a list of ids&mdash;from the model's attributes. The model then subscribes to the canonical model at _each_ id. Because a single subscription now spans multiple canonical models, `fromSource` and `toSource` are passed the id of the canonical model in question as a third argument, so you know which entry to update:
+
+```ts
+export class TodosCollection extends Collection<Todo> {
+  static subscriptions: [CanonicalModelSubscription<Todo, User>] = [{
+    Model: CanonicalUserModel,
+    idField: (attrs) => attrs.assignees?.map((assignee) => assignee.id),
+    // `id` is the id of the CanonicalUserModel that was updated
+    fromSource: (attrs, todo, id) => ({
+      assignees: todo.assignees.map((assignee) =>
+        assignee.id === id ? {...assignee, name: attrs.name} : assignee
+      )
+    })
+  }]
+}
+```
+
+Subscriptions follow the ids as they change: when an assignee is added to or removed from the list, the Todo subscribes to or unsubscribes from that user's canonical model. A few things to keep in mind:
+
+* The `idField` function may be called with partial attributes, so guard against missing fields (ie, with `?.`).
+* Update the field the ids come from via `set` (or `save`) with a new value, not by mutating the existing array or object in place.
+* `fromSource` should not change the ids themselves.
+* `toSource` is called once for each id whenever the model is set.
+
 
 # Differences between useResources and withResources
 

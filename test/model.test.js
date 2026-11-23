@@ -906,6 +906,138 @@ describe("Model", () => {
       });
     });
 
+    describe("with an idField function", () => {
+      let todo, ann, bea, cal;
+
+      beforeEach(() => {
+        ann = new SubscribingSourceModel({ _id: "ann", name: "Ann" });
+        bea = new SubscribingSourceModel({ _id: "bea", name: "Bea" });
+        cal = new SubscribingSourceModel({ _id: "cal", name: "Cal" });
+        todo = new SubscribingArrayModel({
+          id: "todo1",
+          assignees: [
+            { _id: "ann", name: "Ann" },
+            { _id: "bea", name: "Bea" },
+          ],
+        });
+      });
+
+      afterEach(() => {
+        [todo, ann, bea, cal].forEach((model) => model.unsubscribe());
+      });
+
+      it("subscribes to every id returned", () => {
+        expect(canonicalCallbackContexts("ann")).toContain(todo);
+        expect(canonicalCallbackContexts("bea")).toContain(todo);
+        expect(canonicalCallbackContexts("cal")).not.toContain(todo);
+      });
+
+      it("can return a single id", () => {
+        class SingleIdModel extends Model {
+          static subscriptions = [
+            { Model: CanonicalTestModel, idField: (attrs) => attrs.assignees?.[0]?._id },
+          ];
+        }
+
+        const model = new SingleIdModel({ assignees: [{ _id: "cal" }, { _id: "ann" }] });
+
+        expect(canonicalCallbackContexts("cal")).toContain(model);
+        expect(canonicalCallbackContexts("ann")).not.toContain(model);
+        model.unsubscribe();
+      });
+
+      it("does not subscribe if no ids are returned", () => {
+        const model = new SubscribingArrayModel({ id: "todo2", assignees: [] });
+        const model2 = new SubscribingArrayModel({ id: "todo3" });
+
+        expect(canonicalCallbackContexts("ann")).not.toContain(model);
+        expect(canonicalCallbackContexts("ann")).not.toContain(model2);
+      });
+
+      it("passes the canonical id to fromSource so only the matching entry is updated", () => {
+        bea.set({ name: "Bea 2" });
+
+        expect(todo.get("assignees")).toEqual([
+          { _id: "ann", name: "Ann" },
+          { _id: "bea", name: "Bea 2" },
+        ]);
+      });
+
+      it("passes the canonical id to toSource for each id", () => {
+        const toSource = vi.fn((attrs, current, id) => ({
+          name: attrs.assignees.find((assignee) => assignee._id === id)?.name,
+        }));
+
+        class ToSourceArrayModel extends Model {
+          static subscriptions = [
+            {
+              Model: CanonicalTestModel,
+              idField: (attrs) => attrs.assignees?.map((assignee) => assignee._id),
+              toSource,
+            },
+          ];
+        }
+
+        const model = new ToSourceArrayModel({ assignees: [{ _id: "ann", name: "Ann" }] });
+
+        toSource.mockClear();
+        model.set({
+          assignees: [
+            { _id: "ann", name: "Ann 2" },
+            { _id: "bea", name: "Bea 2" },
+          ],
+        });
+
+        expect(toSource).toHaveBeenCalledTimes(2);
+        expect(toSource.mock.calls.map(([, , id]) => id)).toEqual(["ann", "bea"]);
+        // which updates each canonical model with its own result
+        expect(canonicalModelCache.get(CanonicalTestModel).get("ann").get("name")).toBe("Ann 2");
+        expect(canonicalModelCache.get(CanonicalTestModel).get("bea").get("name")).toBe("Bea 2");
+        model.unsubscribe();
+      });
+
+      it("reconciles subscriptions when the ids change", () => {
+        todo.set({
+          assignees: [
+            { _id: "bea", name: "Bea" },
+            { _id: "cal", name: "Cal" },
+          ],
+        });
+
+        expect(canonicalCallbackContexts("ann")).not.toContain(todo);
+        expect(canonicalCallbackContexts("bea")).toContain(todo);
+        expect(canonicalCallbackContexts("cal")).toContain(todo);
+
+        ann.set({ name: "Ann 2" });
+        cal.set({ name: "Cal 2" });
+
+        expect(todo.get("assignees")).toEqual([
+          { _id: "bea", name: "Bea" },
+          { _id: "cal", name: "Cal 2" },
+        ]);
+      });
+
+      it("unsubscribes from every id", () => {
+        todo.unsubscribe();
+
+        expect(canonicalCallbackContexts("ann")).not.toContain(todo);
+        expect(canonicalCallbackContexts("bea")).not.toContain(todo);
+      });
+
+      it("keeps multiple models in sync with a shared id", () => {
+        const todo2 = new SubscribingArrayModel({
+          id: "todo2",
+          assignees: [{ _id: "bea", name: "Bea" }],
+        });
+
+        bea.set({ name: "Bea 2" });
+
+        expect(todo.get("assignees")[1]).toEqual({ _id: "bea", name: "Bea 2" });
+        expect(todo2.get("assignees")).toEqual([{ _id: "bea", name: "Bea 2" }]);
+        todo2.unsubscribe();
+      });
+    });
+
     describe("are not updated", () => {
       it("if the subscribe option is false", () => {
         sourceModel = new SubscribingSourceModel();
@@ -1386,6 +1518,21 @@ class SubscribingReferenceModel extends Model {
       Model: CanonicalTestModel,
       idField: "updated_by._id",
       fromSource: (attrs, current) => ({ updated_by: { ...current.updated_by, name: attrs.name } }),
+    },
+  ];
+}
+
+// this model references many canonical models within an array
+class SubscribingArrayModel extends Model {
+  static subscriptions = [
+    {
+      Model: CanonicalTestModel,
+      idField: (attrs) => attrs.assignees?.map((assignee) => assignee._id),
+      fromSource: (attrs, current, id) => ({
+        assignees: current.assignees.map((assignee) =>
+          assignee._id === id ? { ...assignee, name: attrs.name } : assignee,
+        ),
+      }),
     },
   ];
 }

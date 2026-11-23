@@ -13,16 +13,24 @@ export type ConstructorOptions = {
   parse?: boolean;
 };
 
+export type CanonicalId = string | number;
+
 export type CanonicalModelSubscription<
   M extends Record<string, any> = Record<string, any>,
   C extends Record<string, any> = Record<string, any>,
 > = {
   Model: typeof CanonicalModel<C>;
-  // notably, for our subscriptions, this is the field that corresponds
-  // to the canonical model's id, not the field for the subscribing model's id
-  idField?: NestedKeys<M>;
-  fromSource?: (attrs: Partial<C>, currentTarget: Partial<M>) => Partial<M>;
-  toSource?: (attrs: Partial<M>, currentSource: Partial<C>) => Partial<C>;
+  /**
+   * Notably, for our subscriptions, this is the field that corresponds to the canonical model's
+   * id, not the field for the subscribing model's id. It can be a dot-separated string for nested
+   * fields, or a function that returns the id or a list of ids (ie, when the ids live in an
+   * array). The function may receive partial attributes, so it should be defensive.
+   */
+  idField?: NestedKeys<M> | ((attrs: Partial<M>) => CanonicalId | CanonicalId[] | null | undefined);
+  // the id is that of the canonical model that was updated, which is useful when a model
+  // subscribes to multiple canonical models of the same class via an idField function
+  fromSource?: (attrs: Partial<C>, currentTarget: Partial<M>, id: CanonicalId) => Partial<M>;
+  toSource?: (attrs: Partial<M>, currentSource: Partial<C>, id: CanonicalId) => Partial<C>;
 };
 
 export type SetOptions = {
@@ -103,17 +111,11 @@ export default class Model<
 
     const attrs = { ...result(this.constructor, "defaults"), ...attributes };
 
-    if (options.subscribe !== false) {
-      /**
-       * In general, we want to subscribe to canonical models when a model is instantiated before we
-       * set the attributes so that we can broadcast the set call. However, the model needs to have an
-       * id field set before it can subscribe to a canonical model.
-       *
-       * So we pass the attributes to this fn as a fallback in case the id field is not yet set.
-       */
-      this._subscribe(attrs);
-    }
-
+    /**
+     * There's no need to explicitly subscribe to canonical models here: because the model starts
+     * with no attributes, any canonical ids in the initial attributes are new, and the set call
+     * will subscribe to them (unless `subscribe: false` is passed) before broadcasting the set.
+     */
     this.set(attrs, options);
   }
 
@@ -448,10 +450,14 @@ export default class Model<
     const subscriptions = this._getSubscriptions();
     const idAttribute = (this.constructor as typeof Model).idAttribute;
 
-    for (const { Model: CanonicalModel, idField = idAttribute, fromSource } of subscriptions) {
-      const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs || {}, idField);
+    if (this.isEmptyModel) {
+      return;
+    }
 
-      if (id && !this.isEmptyModel) {
+    for (const { Model: CanonicalModel, idField = idAttribute, fromSource } of subscriptions) {
+      const ids = this._getCanonicalIds(idField, this.toJSON(), attrs);
+
+      for (const id of ids) {
         this._subscribeToCanonicalModel(CanonicalModel, id, fromSource);
       }
     }
@@ -462,7 +468,7 @@ export default class Model<
    */
   _subscribeToCanonicalModel(
     CanonicalModel: CanonicalModelSubscription["Model"],
-    id: string | number,
+    id: CanonicalId,
     fromSource?: CanonicalModelSubscription["fromSource"],
   ) {
     const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
@@ -480,7 +486,7 @@ export default class Model<
         return;
       }
 
-      this.set(fromSource(canonicalAttrs, this.toJSON()) as Partial<T>, {
+      this.set(fromSource(canonicalAttrs, this.toJSON(), id) as Partial<T>, {
         source: "subscription",
       });
     }, this);
@@ -499,12 +505,8 @@ export default class Model<
     const idAttribute = (this.constructor as typeof Model).idAttribute;
 
     for (const { Model: CanonicalModel, idField = idAttribute } of subscriptions) {
-      const id = getNestedValue(this.toJSON(), idField);
-
-      if (id) {
-        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
-
-        canonicalModel.removeSubscription(this, id);
+      for (const id of this._getCanonicalIds(idField, this.toJSON())) {
+        CanonicalModelCache.getOrInsert(CanonicalModel, id).removeSubscription(this, id);
       }
     }
   }
@@ -530,12 +532,15 @@ export default class Model<
         continue;
       }
 
-      const id = getNestedValue(this.toJSON(), idField);
+      if (this.isEmptyModel) {
+        continue;
+      }
 
-      if (id && !this.isEmptyModel) {
-        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
-
-        canonicalModel.removeSubscribersFromCollection(CollectionClass, this);
+      for (const id of this._getCanonicalIds(idField, this.toJSON())) {
+        CanonicalModelCache.getOrInsert(CanonicalModel, id).removeSubscribersFromCollection(
+          CollectionClass,
+          this,
+        );
       }
     }
   }
@@ -544,10 +549,11 @@ export default class Model<
    * This gets called when a model's attributes are set (except when the update came from a
    * canonical model). It does two things for each subscription:
    *
-   * 1. If the canonical id has changed from what it was in `prevAttrs` (ie, an `updated_by.id`
-   *    field gets reassigned), it moves this model's subscription from the old canonical model
-   *    to the new one.
-   * 2. Pushes the update to the canonical model via the `toSource` function, if it exists.
+   * 1. If the canonical ids have changed from what they were in `prevAttrs` (ie, an `updated_by.id`
+   *    field gets reassigned, or an entry is added to or removed from an array of ids), it
+   *    unsubscribes this model from canonical models whose ids were removed and subscribes it to
+   *    canonical models whose ids were added.
+   * 2. Pushes the update to each canonical model via the `toSource` function, if it exists.
    */
   _updateSubscriptions(
     attrs: Partial<T> = {},
@@ -557,31 +563,47 @@ export default class Model<
     const subscriptions = this._getSubscriptions();
     const idAttribute = (this.constructor as typeof Model).idAttribute;
 
+    if (this.isEmptyModel) {
+      return;
+    }
+
     for (const {
       Model: CanonicalModel,
       idField = idAttribute,
       toSource,
       fromSource,
     } of subscriptions) {
-      const id = getNestedValue(this.toJSON(), idField) || getNestedValue(attrs, idField);
-      const prevId = prevAttrs && getNestedValue(prevAttrs, idField);
+      const ids = this._getCanonicalIds(idField, this.toJSON(), attrs);
 
-      if (prevId && prevId !== id && !this.isEmptyModel) {
-        CanonicalModelCache.getOrInsert(CanonicalModel, prevId).removeSubscription(this, prevId);
+      if (prevAttrs) {
+        const prevIds = this._getCanonicalIds(idField, prevAttrs);
 
-        if (id) {
-          this._subscribeToCanonicalModel(CanonicalModel, id, fromSource);
+        for (const prevId of prevIds) {
+          if (!ids.includes(prevId)) {
+            CanonicalModelCache.getOrInsert(CanonicalModel, prevId).removeSubscription(
+              this,
+              prevId,
+            );
+          }
+        }
+
+        for (const id of ids) {
+          if (!prevIds.includes(id)) {
+            this._subscribeToCanonicalModel(CanonicalModel, id, fromSource);
+          }
         }
       }
 
-      if (toSource && id && !this.isEmptyModel) {
-        const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
+      if (toSource) {
+        for (const id of ids) {
+          const canonicalModel = CanonicalModelCache.getOrInsert(CanonicalModel, id);
 
-        canonicalModel.set(
-          toSource({ ...this.attributes, ...attrs }, canonicalModel.toJSON()),
-          this as Model,
-          options,
-        );
+          canonicalModel.set(
+            toSource({ ...this.attributes, ...attrs }, canonicalModel.toJSON(), id),
+            this as Model,
+            options,
+          );
+        }
       }
     }
   }
@@ -615,6 +637,27 @@ export default class Model<
       : []),
       ...(subscriptions || []),
     ];
+  }
+
+  /**
+   * Returns the deduped list of canonical model ids for a subscription's idField, whether it is a
+   * (possibly nested) field name or a function. Takes one or more attribute objects and returns the
+   * ids from the first one that has any, ie to fall back to attributes not yet set on the model.
+   */
+  _getCanonicalIds(
+    idField: NonNullable<CanonicalModelSubscription["idField"]>,
+    ...attrsList: Partial<T>[]
+  ): CanonicalId[] {
+    for (const attrs of attrsList) {
+      const value = typeof idField === "function" ? idField(attrs) : getNestedValue(attrs, idField);
+      const ids = [...new Set([value].flat().filter(Boolean) as CanonicalId[])];
+
+      if (ids.length) {
+        return ids;
+      }
+    }
+
+    return [];
   }
 }
 
